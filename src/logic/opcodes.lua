@@ -95,6 +95,10 @@ GameBoy.opcodes = {
         if (bitAnd(cpu.registers.f, FLAGS_ZERO) > 0) then
             cpu.clock.m = cpu.clock.m + 8
         else
+            if (bitTest(offset, 0x80)) then
+                offset = -((0xFF - offset) + 1)
+            end
+
             cpu.registers.pc = cpu.registers.pc + offset
             cpu.clock.m = cpu.clock.m + 12
         end

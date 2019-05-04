@@ -12,7 +12,6 @@ local ROM_PATH = "data/Tetris.gb"
 
 function GameBoy:create()
     self.debugger = Debugger(self)
-    self.debugger:breakpoint(0x100)
 
     self.cpu = CPU(self)
 
