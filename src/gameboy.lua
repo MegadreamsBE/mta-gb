@@ -11,7 +11,10 @@ local ROM_PATH = "data/Tetris.gb"
 -----------------------------------
 
 function GameBoy:create()
-    self.cpu = CPU()
+    self.debugger = Debugger(self)
+    self.debugger:breakpoint(0x100)
+
+    self.cpu = CPU(self)
 
     if (not self:load(ROM_PATH)) then
         return Log.error("GameBoy", "Unable to load ROM.")

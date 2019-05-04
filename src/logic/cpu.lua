@@ -19,7 +19,7 @@ function CPU:create(gameboy)
         h = 0,
         l = 0,
         f = 0,
-        pc = 0x100, -- Skipping boot
+        pc = 0x0,
         sp = 0,
         clock = {
             m = 0,
@@ -40,6 +40,17 @@ end
 function CPU:reset()
     self.mmu:reset()
 
+    self.registers.a = 0x01
+    self.registers.b = 0x00
+    self.registers.c = 0x13
+    self.registers.d = 0x00
+    self.registers.e = 0xd8
+    self.registers.h = 0x01
+    self.registers.l = 0x4d
+    self.registers.f = 0xb0
+    self.registers.sp = 0xfffe
+    self.registers.pc = 0x100
+
     if (self.stepCallback) then
         removeEventHandler("onClientRender", root, self.stepCallback)
         self.stepCallback = nil
@@ -51,6 +62,7 @@ function CPU:pause()
 end
 
 function CPU:step()
+    self.gameboy.debugger:step()
     local nextOpcode = self.mmu:readByte(self.registers.pc)
 
     self.registers.pc = self.registers.pc + 1
@@ -59,10 +71,10 @@ function CPU:step()
 
     if (opcode == nil) then
         self:pause()
-        return Log.error("CPU", "Unknown opcode: 0x%s at 0x%s", string.format("%x", nextOpcode), string.format("%x", self.registers.pc))
+        return Log.error("CPU", "Unknown opcode: 0x%s at 0x%s", string.format("%.2x", nextOpcode), string.format("%.2x", self.registers.pc))
     end
 
-    Log.info("CPU", "Running opcode 0x%s at 0x%s", string.format("%x", nextOpcode), string.format("%x", self.registers.pc))
+    Log.info("CPU", "Running opcode 0x%s at 0x%s", string.format("%.2x", nextOpcode), string.format("%.2x", self.registers.pc))
 
     opcode(self)
 end
