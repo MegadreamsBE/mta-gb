@@ -6,12 +6,19 @@
     #########   Utils   ########
     -->
     <script src="src/utils/class.lua" type="client" />
-    <script src="src/utils/bytestream.lua" type="client" />
+    <script src="src/utils/log.lua" type="client" />
 
     <!--
     #########   Core   ########
     -->
-    <script src="src/core.lua" type="client" />
+    <script src="src/gameboy.lua" type="client" />
+    <script src="src/rom.lua" type="client" />
+
+    <!--
+    #########   Logic   ########
+    -->
+    <script src="src/logic/cpu.lua" type="client" />
+    <script src="src/logic/mmu.lua" type="client" />
 
     <oop>true</oop>
 </meta>
