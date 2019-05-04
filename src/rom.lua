@@ -1,12 +1,6 @@
 Rom = Class()
 
 -----------------------------------
--- * Locals (for perfomance)
------------------------------------
-
-local _utf8_char = utf8.char
-
------------------------------------
 -- * Functions
 -----------------------------------
 
@@ -26,7 +20,7 @@ function Rom:load()
     self.data = {}
 
     while (not file:isEOF(file)) do
-         self.data[#self.data + 1] = file:read(1)
+         self.data[#self.data + 1] = utf8.byte(file:read(1))
     end
 
     file:close()
