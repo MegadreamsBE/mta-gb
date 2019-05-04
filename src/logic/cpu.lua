@@ -1,15 +1,6 @@
 CPU = Class()
 
 -----------------------------------
--- * Constants
------------------------------------
-
-FLAGS_ZERO = bitLShift(1, 7)
-FLAGS_NEGATIVE = bitLShift(1, 6)
-FLAGS_HALFCARRY = bitLShift(1, 5)
-FLAGS_CARRY = bitLShift(1, 4)
-
------------------------------------
 -- * Functions
 -----------------------------------
 
@@ -68,8 +59,10 @@ function CPU:step()
 
     if (opcode == nil) then
         self:pause()
-        return Log.error("CPU", "Unknown opcode: 0x%s", string.format("%x", nextOpcode):upper())
+        return Log.error("CPU", "Unknown opcode: 0x%s at 0x%s", string.format("%x", nextOpcode), string.format("%x", self.registers.pc))
     end
+
+    Log.info("CPU", "Running opcode 0x%s at 0x%s", string.format("%x", nextOpcode), string.format("%x", self.registers.pc))
 
     opcode(self)
 end

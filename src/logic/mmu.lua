@@ -36,7 +36,7 @@ function MMU:readUInt16(address)
     local value = 0
 
     for i=0, 1 do
-        value = value + bitLShift(self:readByte(address + i), 8 * (1 - i))
+        value = value + bitLShift(self:readByte(address + i), 8 * i)
     end
 
     return value

@@ -1,3 +1,16 @@
+-----------------------------------
+-- * Constants
+-----------------------------------
+
+local FLAGS_ZERO = bitLShift(1, 7)
+local FLAGS_NEGATIVE = bitLShift(1, 6)
+local FLAGS_HALFCARRY = bitLShift(1, 5)
+local FLAGS_CARRY = bitLShift(1, 4)
+
+-----------------------------------
+-- * Locals
+-----------------------------------
+
 local _or = function(cpu, value)
     cpu.registers.a = bitOr(cpu.registers.a, value)
 
