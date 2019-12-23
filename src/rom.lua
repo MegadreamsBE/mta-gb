@@ -7,6 +7,7 @@ Rom = Class()
 function Rom:create(path)
     self.position = 0
     self.path = path
+    self.data = {}
 end
 
 function Rom:load()

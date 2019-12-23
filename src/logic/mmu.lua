@@ -24,34 +24,168 @@ local BIOS = {
     0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x20, 0xFE, 0x3E, 0x01, 0xE0, 0x50
 }
 
+MMU.MEMORY_SIZE = MEMORY_SIZE
+MMU.BIOS = BIOS
+
+-----------------------------------
+-- * Locals
+-----------------------------------
+
+local memoryViolation = function(address, pc)
+    Log.error("MMU", "Illegal memory access violation at 0x%s (0x%s).",
+        string.format("%.4x", address),
+        string.format("%.2x", pc))
+
+    return 0
+end
+
 -----------------------------------
 -- * Functions
 -----------------------------------
 
-function MMU:create()
-    self.memory = {}
+function MMU:create(cpu, gpu)
+    self.cpu = cpu
+    self.gpu = gpu
+
+    self.mram = {}
+    self.zram = {}
+    self.rom = nil
+
+    self.inBios = true
+    self.stackDebug = {}
 end
 
 function MMU:reset()
     self.memory = setmetatable({}, {__len = function() return MEMORY_SIZE end})
 end
 
-function MMU:loadRom(romData)
-    for index, byte in pairs(romData) do
-        self.memory[index] = byte
-    end
-
-    for i=1, #BIOS do
-        self.memory[i] = BIOS[i]
-    end
+function MMU:loadRom(rom)
+    self.rom = rom
 end
 
 function MMU:writeByte(address, value)
-    self.memory[address + 1] = value
+    local set = function(location)
+        location[address + 1] = value
+    end
+
+    switch(bitAnd(address, 0xF000))
+        .case(0x1000)
+        .case(0x2000)
+        .case(0x3000)
+        .case(0x4000)
+        .case(0x5000)
+        .case(0x6000)
+        .case(0x7000, function()
+            set(self.rom:getData())
+        end)
+        .case(0x8000)
+        .case(0x9000, function()
+            set(self.gpu.vram)
+        end)
+        .case(0xF000, function()
+            if (address >= 0xFF80) then
+                set(self.zram)
+            elseif (address >= 0xFF40) then
+                return
+            else
+                return
+            end
+        end)
+        .default(function()
+            return memoryViolation(address, self.cpu.registers.pc)
+        end)()
+end
+
+function MMU:writeShort(address, value)
+    local set = function(location)
+        location[address + 1] = bitRShift(bitAnd(0xFF00, value), 8)
+        location[address] = bitAnd(0x00FF, value)
+    end
+
+    switch(bitAnd(address, 0xF000))
+        .case(0x1000)
+        .case(0x2000)
+        .case(0x3000)
+        .case(0x4000)
+        .case(0x5000)
+        .case(0x6000)
+        .case(0x7000, function()
+            set(self.rom:getData())
+        end)
+        .case(0x8000)
+        .case(0x9000, function()
+            set(self.gpu.vram)
+        end)
+        .case(0xF000, function()
+            if (address >= 0xFF80) then
+                set(self.zram)
+            elseif (address >= 0xFF40) then
+                return
+            else
+                return
+            end
+        end)
+        .default(function()
+            return memoryViolation(address, self.cpu.registers.pc)
+        end)()
+end
+
+function MMU:pushStack(value)
+    self.cpu.registers.sp = self.cpu.registers.sp - 2
+    self:writeShort(self.cpu.registers.sp, value)
+    table.insert(self.stackDebug, 1, value)
+end
+
+function MMU:popStack()
+    local value = self:readInt16(self.cpu.registers.sp)
+    self.cpu.registers.sp = self.cpu.registers.sp + 2
+    table.remove(self.stackDebug, 1)
+    
+    return value
 end
 
 function MMU:readByte(address)
-    return self.memory[address + 1]
+    return switch(bitAnd(address, 0xF000))
+        .case(0x0, function()
+            if (self.inBios) then
+                if (address < 0x100) then
+                    return BIOS[address + 1] or 0
+                elseif (self.cpu.registers.pc == 0x100) then
+                    self.inBios = false
+                end
+            end
+
+            return self.rom:getData()[address + 1] or 0
+        end)
+        .case(0x1000)
+        .case(0x2000)
+        .case(0x3000)
+        .case(0x4000)
+        .case(0x5000)
+        .case(0x6000)
+        .case(0x7000, function()
+            return self.rom:getData()[address + 1] or 0
+        end)
+        .case(0x8000)
+        .case(0x9000, function()
+            return self.gpu.vram[address + 1] or 0
+        end)
+        .case(0xF000, function()
+            if (address >= 0xFF80) then
+                return self.zram[address] or 0
+            elseif (address >= 0xFF40) then
+                return 0
+            else
+                if (bitAnd(address, 0x3F) == 0x00) then
+                    return 0
+                else
+                    return 0
+                end
+            end
+        end)
+        .default(function()
+            return memoryViolation(address, self.cpu.registers.pc)
+        end)()
 end
 
 function MMU:readUInt16(address)
@@ -61,7 +195,7 @@ function MMU:readUInt16(address)
         value = value + bitLShift(self:readByte(address + i), 8 * i)
     end
 
-    return value
+    return bitAnd(value, 0xFFFF)
 end
 
 function MMU:readInt16(address)
@@ -71,5 +205,5 @@ function MMU:readInt16(address)
         value = -((0xFFFF - value) + 1)
     end
 
-    return value
+    return bitAnd(value, 0xFFFF)
 end

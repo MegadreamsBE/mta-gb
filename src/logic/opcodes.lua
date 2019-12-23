@@ -17,7 +17,6 @@ local _or = function(cpu, value)
     if (cpu.registers.a) then
         cpu.registers.f = bitAnd(cpu.registers.f, bitXor(0xFF, FLAGS_ZERO))
     else
-        outputDebugString("set zero: 1")
         cpu.registers.f = bitOr(cpu.registers.f, FLAGS_ZERO)
     end
 
@@ -45,7 +44,7 @@ local _inc = function(cpu, value)
 
     value = value + 1
 
-    if (value) then
+    if (value ~= 0) then
         cpu.registers.f = bitAnd(cpu.registers.f, bitXor(0xFF, FLAGS_ZERO))
     else
         cpu.registers.f = bitOr(cpu.registers.f, FLAGS_ZERO)
@@ -69,13 +68,31 @@ local _dec = function(cpu, value)
         value = 0xFF - (math.abs(value) - 1)
     end
 
-    if (value) then
+    if (value ~= 0) then
         cpu.registers.f = bitAnd(cpu.registers.f, bitXor(0xFF, FLAGS_ZERO))
     else
         cpu.registers.f = bitOr(cpu.registers.f, FLAGS_ZERO)
     end
 
     cpu.registers.f = bitOr(cpu.registers.f, FLAGS_NEGATIVE)
+
+    return value
+end
+
+local _leftRotate = function(value, positions)
+    for i=1, positions do
+        local bits = math.floor(math.log(value) / math.log(2)) + 1
+
+        if (bits % 8 == 0) then
+            local bit = bitExtract(value, bits - 1, 1)
+            value = bitLShift(value, 1)
+            value = bitReplace(value, 0, bits, 1)
+            value = bitReplace(value, bit, 0, 1)
+        else
+            value = bitLShift(value, 1)
+            value = bitReplace(value, 0, 0, 1)
+        end
+    end
 
     return value
 end
@@ -93,7 +110,13 @@ local writeTwoRegisters = function(cpu, r1, r2, value)
 end
 
 GameBoy.cbOpcodes = {
-    [0x20] = function (cpu)
+    [0x11] = function(cpu)
+        cpu.registers.c = _leftRotate(cpu.registers.c, 1)
+    end,
+    [0x17] = function(cpu)
+        cpu.registers.a = _leftRotate(cpu.registers.a, 1)
+    end,
+    [0x20] = function(cpu)
         local tmp = (bitAnd(cpu.registers.b, 0x80) and 0x10 or 0)
         cpu.registers.b = bitAnd(bitLShift(cpu.registers.b, 1), 255)
         cpu.registers.f = ((cpu.registers.b) and 0 or 0x80)
@@ -128,8 +151,12 @@ GameBoy.opcodes = {
         writeTwoRegisters(cpu, 'D', 'E', cpu.mmu:readUInt16(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 2
     end,
+    [0x13] = function(cpu)
+        local value = readTwoRegisters(cpu, 'd', 'e')
+        writeTwoRegisters(cpu, 'd', 'e', _inc(cpu, value))
+    end,
     [0x1a] = function(cpu)
-        local address = readTwoRegisters(cpu, 'D', 'E')
+        local address = readTwoRegisters(cpu, 'd', 'e')
         cpu.registers.a = cpu.mmu:readByte(address)
     end,
     [0x1d] = function(cpu)
@@ -153,6 +180,17 @@ GameBoy.opcodes = {
     [0x21] = function(cpu)
         writeTwoRegisters(cpu, 'h', 'l', cpu.mmu:readUInt16(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 2
+    end,
+    [0x22] = function(cpu)
+        local value = cpu.registers.a
+        local address = readTwoRegisters(cpu, 'h', 'l')
+
+        cpu.mmu:writeShort(address, value)
+        writeTwoRegisters(cpu, 'h', 'l', _inc(cpu, address))
+    end,
+    [0x23] = function(cpu)
+        local address = readTwoRegisters(cpu, 'h', 'l')
+        writeTwoRegisters(cpu, 'h', 'l', _inc(cpu, address))
     end,
     [0x25] = function(cpu)
         cpu.registers.h = _dec(cpu, cpu.registers.h)
@@ -196,6 +234,9 @@ GameBoy.opcodes = {
     [0x4d] = function(cpu)
         cpu.registers.c = cpu.registers.l
     end,
+    [0x4f] = function(cpu)
+        cpu.registers.c = cpu.registers.a
+    end,
     [0x77] = function(cpu)
         local address = readTwoRegisters(cpu, 'h', 'l')
         cpu.mmu:writeByte(address, cpu.registers.a)
@@ -206,11 +247,21 @@ GameBoy.opcodes = {
     [0xaf] = function(cpu)
         _xor(cpu, cpu.registers.a)
     end,
-    [0xb] = function(cpu)
+    [0xb0] = function(cpu)
         _or(cpu, cpu.registers.b)
+    end,
+    [0xc1] = function(cpu)
+        writeTwoRegisters(cpu, 'b', 'c', cpu.mmu:popStack())
     end,
     [0xc3] = function(cpu)
         cpu.registers.pc = cpu.mmu:readUInt16(cpu.registers.pc)
+    end,
+    [0xc5] = function(cpu)
+        cpu.mmu:pushStack(readTwoRegisters(cpu, 'b', 'c'))
+    end,
+    [0xc9] = function(cpu)
+        local address = cpu.mmu:popStack()
+        cpu.registers.pc = address
     end,
     [0xcb] = function(cpu)
         local opcode1 = cpu.mmu:readByte(cpu.registers.pc)
@@ -231,6 +282,11 @@ GameBoy.opcodes = {
 
         GameBoy.cbOpcodes[opcode1](cpu)
         GameBoy.cbOpcodes[opcode2](cpu)
+    end,
+    [0xcd] = function(cpu)
+        local value = cpu.mmu:readUInt16(cpu.registers.pc)
+        cpu.mmu:pushStack(cpu.registers.pc + 2)
+        cpu.registers.pc = value
     end,
     [0xe0] = function(cpu)
         cpu.mmu:writeByte(0xff00 + cpu.mmu:readByte(cpu.registers.pc), cpu.registers.a)

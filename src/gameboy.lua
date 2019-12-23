@@ -12,7 +12,7 @@ local ROM_PATH = "data/Tetris.gb"
 
 function GameBoy:create()
     self.debugger = Debugger(self)
-
+    self.gpu = GPU(self)
     self.cpu = CPU(self)
 
     if (not self:load(ROM_PATH)) then
@@ -20,6 +20,8 @@ function GameBoy:create()
     end
 
     self:start()
+    self.debugger:start()
+    self.debugger:breakpoint(0x2E)
 end
 
 function GameBoy:load(romPath)
@@ -29,7 +31,7 @@ end
 
 function GameBoy:start()
     self.cpu:reset()
-    self.cpu:loadRom(self.rom:getData())
+    self.cpu:loadRom(self.rom)
     self.cpu:run()
 end
 

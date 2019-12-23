@@ -28,14 +28,14 @@ function CPU:create(gameboy)
     }
 
     self.gameboy = gameboy
-    self.mmu = MMU()
+    self.mmu = MMU(self, gameboy.gpu)
 
     self.paused = false
     self.interrupts = false
 end
 
-function CPU:loadRom(romData)
-    self.mmu:loadRom(romData)
+function CPU:loadRom(rom)
+    self.mmu:loadRom(rom)
 end
 
 function CPU:reset()
