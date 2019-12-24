@@ -78,8 +78,10 @@ function CPU:step()
 
     opcode(self)
 
-    self.registers.clock.m = self.registers.clock.m + 1
-    self.registers.clock.t = self.registers.clock.t + 1
+    self.clock.m = self.clock.m + self.registers.clock.m
+    self.clock.t = self.clock.t + self.registers.clock.t
+
+    self.gameboy.gpu:step()
 end
 
 function CPU:run()

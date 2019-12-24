@@ -112,74 +112,149 @@ end
 GameBoy.cbOpcodes = {
     [0x11] = function(cpu)
         cpu.registers.c = _leftRotate(cpu.registers.c, 1)
+
+        cpu.registers.clock.m = cpu.registers.clock.m + 2
+        cpu.registers.clock.t = cpu.registers.clock.t + 8
     end,
     [0x17] = function(cpu)
         cpu.registers.a = _leftRotate(cpu.registers.a, 1)
+
+        cpu.registers.clock.m = cpu.registers.clock.m + 2
+        cpu.registers.clock.t = cpu.registers.clock.t + 8
     end,
     [0x20] = function(cpu)
         local tmp = (bitAnd(cpu.registers.b, 0x80) and 0x10 or 0)
         cpu.registers.b = bitAnd(bitLShift(cpu.registers.b, 1), 255)
         cpu.registers.f = ((cpu.registers.b) and 0 or 0x80)
         cpu.registers.f = bitAnd(cpu.registers.f, 0xEF) + tmp
-        cpu.registers.clock.m = 2
+
+        cpu.registers.clock.m = cpu.registers.clock.m + 2
+        cpu.registers.clock.t = cpu.registers.clock.t + 8
     end,
     [0x7C] = function (cpu)
         cpu.registers.f = bitAnd(cpu.registers.f, 0x1F)
         cpu.registers.f = bitOr(cpu.registers.f, 0x20)
         cpu.registers.f = (bitAnd(cpu.registers.d, 0x40) and 0 or 0x80)
-        cpu.registers.clock.m = 2
+
+        cpu.registers.clock.m = cpu.registers.clock.m + 2
+        cpu.registers.clock.t = cpu.registers.clock.t + 8
     end
 }
 
 GameBoy.opcodes = {
-    [0x00] = function(cpu) end,
+    [0x00] = function(cpu)
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x04] = function(cpu)
+        cpu.registers.b = _inc(cpu, cpu.registers.b)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
     [0x05] = function(cpu)
         cpu.registers.b = _dec(cpu, cpu.registers.b)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x06] = function(cpu)
         cpu.registers.b = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x0c] = function(cpu)
         cpu.registers.c = _inc(cpu, cpu.registers.c)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x0d] = function(cpu)
+        cpu.registers.c = _dec(cpu, cpu.registers.c)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x0e] = function(cpu)
         cpu.registers.c = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x11] = function(cpu)
         writeTwoRegisters(cpu, 'D', 'E', cpu.mmu:readUInt16(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 2
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x13] = function(cpu)
         local value = readTwoRegisters(cpu, 'd', 'e')
         writeTwoRegisters(cpu, 'd', 'e', _inc(cpu, value))
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 8
+    end,
+    [0x18] = function(cpu)
+        local offset = cpu.mmu:readByte(cpu.registers.pc)
+
+        if (bitTest(offset, 0x80)) then
+            offset = -((0xFF - offset) + 1)
+        end
+
+        cpu.registers.pc = cpu.registers.pc + 1
+        cpu.registers.pc = cpu.registers.pc + offset
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 12
     end,
     [0x1a] = function(cpu)
         local address = readTwoRegisters(cpu, 'd', 'e')
         cpu.registers.a = cpu.mmu:readByte(address)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 8
     end,
     [0x1d] = function(cpu)
         cpu.registers.e = _dec(cpu, cpu.registers.e)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x1e] = function(cpu)
+        cpu.registers.e = cpu.mmu:readByte(cpu.registers.pc)
+        cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x20] = function(cpu)
         local offset = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
 
         if (bitAnd(cpu.registers.f, FLAGS_ZERO) > 0) then
-            cpu.registers.clock.m = cpu.registers.clock.m + 8
+            cpu.registers.clock.m = 2
+            cpu.registers.clock.t = 8
         else
             if (bitTest(offset, 0x80)) then
                 offset = -((0xFF - offset) + 1)
             end
 
             cpu.registers.pc = cpu.registers.pc + offset
-            cpu.registers.clock.m = cpu.registers.clock.m + 12
+
+            cpu.registers.clock.m = 3
+            cpu.registers.clock.t = 12
         end
     end,
     [0x21] = function(cpu)
         writeTwoRegisters(cpu, 'h', 'l', cpu.mmu:readUInt16(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 2
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x22] = function(cpu)
         local value = cpu.registers.a
@@ -187,21 +262,60 @@ GameBoy.opcodes = {
 
         cpu.mmu:writeShort(address, value)
         writeTwoRegisters(cpu, 'h', 'l', _inc(cpu, address))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x23] = function(cpu)
         local address = readTwoRegisters(cpu, 'h', 'l')
         writeTwoRegisters(cpu, 'h', 'l', _inc(cpu, address))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x25] = function(cpu)
         cpu.registers.h = _dec(cpu, cpu.registers.h)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x28] = function(cpu)
+        local offset = cpu.mmu:readByte(cpu.registers.pc)
+        cpu.registers.pc = cpu.registers.pc + 1
+
+        if (bitAnd(cpu.registers.f, FLAGS_ZERO) == 0) then
+            cpu.registers.clock.m = 2
+            cpu.registers.clock.t = 8
+        else
+            if (bitTest(offset, 0x80)) then
+                offset = -((0xFF - offset) + 1)
+            end
+
+            cpu.registers.pc = cpu.registers.pc + offset
+            cpu.registers.clock.m = 3
+            cpu.registers.clock.t = 12
+        end
+    end,
+    [0x2e] = function(cpu)
+        cpu.registers.l = cpu.mmu:readByte(cpu.registers.pc)
+        cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x2f] = function(cpu)
         cpu.registers.a = (1- cpu.registers.a)
         cpu.registers.f = bitOr(cpu.registers.f, bitOr(bitLShift(1, FLAGS_NEGATIVE), bitLShift(1, FLAGS_HALFCARRY)))
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x31] = function(cpu)
         cpu.registers.sp = cpu.mmu:readUInt16(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 2
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x32] = function(cpu)
         local address = readTwoRegisters(cpu, 'h', 'l')
@@ -210,58 +324,138 @@ GameBoy.opcodes = {
 
         address = address - 1
         writeTwoRegisters(cpu, 'h', 'l', address)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x3d] = function(cpu)
+        cpu.registers.a = _dec(cpu, cpu.registers.a)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x3e] = function(cpu)
         cpu.registers.a = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x47] = function(cpu)
         cpu.registers.b = cpu.registers.a
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x48] = function(cpu)
         cpu.registers.c = cpu.registers.b
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
-    [0x49] = function(cpu) end,
+    [0x49] = function(cpu)
+        cpu.registers.c = cpu.registers.c
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
     [0x4a] = function(cpu)
         cpu.registers.c = cpu.registers.d
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x4b] = function(cpu)
         cpu.registers.c = cpu.registers.e
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x4c] = function(cpu)
         cpu.registers.c = cpu.registers.h
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x4d] = function(cpu)
         cpu.registers.c = cpu.registers.l
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x4f] = function(cpu)
         cpu.registers.c = cpu.registers.a
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x57] = function(cpu)
+        cpu.registers.d = cpu.registers.a
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x67] = function(cpu)
+        cpu.registers.h = cpu.registers.a
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x77] = function(cpu)
         local address = readTwoRegisters(cpu, 'h', 'l')
         cpu.mmu:writeByte(address, cpu.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x7b] = function(cpu)
+        cpu.registers.a = cpu.registers.e
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x7c] = function(cpu)
         cpu.registers.a = cpu.registers.h
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0xaf] = function(cpu)
         _xor(cpu, cpu.registers.a)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0xb0] = function(cpu)
         _or(cpu, cpu.registers.b)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0xc1] = function(cpu)
         writeTwoRegisters(cpu, 'b', 'c', cpu.mmu:popStack())
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0xc3] = function(cpu)
         cpu.registers.pc = cpu.mmu:readUInt16(cpu.registers.pc)
+
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0xc5] = function(cpu)
         cpu.mmu:pushStack(readTwoRegisters(cpu, 'b', 'c'))
+
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0xc9] = function(cpu)
         local address = cpu.mmu:popStack()
         cpu.registers.pc = address
+
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0xcb] = function(cpu)
         local opcode1 = cpu.mmu:readByte(cpu.registers.pc)
@@ -269,6 +463,9 @@ GameBoy.opcodes = {
 
         local opcode2 = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
 
         if (not GameBoy.cbOpcodes[opcode1]) then
             Log.error("CPU CB", "Unknown opcode: 0x%s at 0x%s", string.format("%.2x", opcode1), string.format("%.2x", cpu.registers.pc - 2))
@@ -287,15 +484,50 @@ GameBoy.opcodes = {
         local value = cpu.mmu:readUInt16(cpu.registers.pc)
         cpu.mmu:pushStack(cpu.registers.pc + 2)
         cpu.registers.pc = value
+
+        cpu.registers.clock.m = 6
+        cpu.registers.clock.t = 24
     end,
     [0xe0] = function(cpu)
         cpu.mmu:writeByte(0xff00 + cpu.mmu:readByte(cpu.registers.pc), cpu.registers.a)
         cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0xe2] = function(cpu)
         cpu.mmu:writeByte(0xff00 + cpu.registers.c, cpu.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xea] = function(cpu)
+        local address = cpu.mmu:readUInt16(cpu.registers.pc)
+        cpu.mmu:writeShort(address, cpu.registers.a)
+        cpu.registers.pc = cpu.registers.pc + 2
+
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xf0] = function(cpu)
+        local offset = cpu.mmu:readByte(cpu.registers.pc)
+        cpu.registers.pc = cpu.registers.pc + 1
+        cpu.registers.a = cpu.mmu:readByte(0xFF00 + offset)
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0xfb] = function(cpu)
         cpu.interrupts = true
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0xfe] = function(cpu)
+        _dec(cpu, cpu.registers.a - cpu.mmu:readByte(cpu.registers.pc))
+        cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
 }

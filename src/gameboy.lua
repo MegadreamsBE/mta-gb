@@ -21,7 +21,7 @@ function GameBoy:create()
 
     self:start()
     self.debugger:start()
-    self.debugger:breakpoint(0x2E)
+    --self.debugger:breakpoint(0x64)
 end
 
 function GameBoy:load(romPath)
