@@ -4,7 +4,7 @@ GameBoy = Class()
 -- * Constants
 -----------------------------------
 
-local ROM_PATH = "data/Tetris.gb"
+local ROM_PATH = "data/cpu_instrs.gb"
 
 -----------------------------------
 -- * Functions
@@ -21,7 +21,7 @@ function GameBoy:create()
 
     self:start()
     self.debugger:start()
-    --self.debugger:breakpoint(0x64)
+    self.debugger:breakpoint(0x0B1A)
 end
 
 function GameBoy:load(romPath)
@@ -30,6 +30,7 @@ function GameBoy:load(romPath)
 end
 
 function GameBoy:start()
+    self.gpu:reset()
     self.cpu:reset()
     self.cpu:loadRom(self.rom)
     self.cpu:run()

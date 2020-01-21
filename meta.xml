@@ -5,6 +5,7 @@
     <!--
     #########   Files   ########
     -->
+    <file src="data/cpu_instrs.gb" />
     <file src="data/Tetris.gb" />
 
     <!--
@@ -12,7 +13,6 @@
     -->
     <script src="src/utils/class.lua" type="client" />
     <script src="src/utils/log.lua" type="client" />
-    <script src="src/utils/switch.lua" type="client" />
 
     <!--
     #########   Core   ########
@@ -23,12 +23,12 @@
     <!--
     #########   Logic   ########
     -->
+    <script src="src/logic/opcodes.lua" type="client" />
     <script src="src/logic/cpu.lua" type="client" />
     <script src="src/logic/gpu.lua" type="client" />
     <script src="src/logic/debugger.lua" type="client" />
     <script src="src/logic/disassembler.lua" type="client" />
     <script src="src/logic/mmu.lua" type="client" />
-    <script src="src/logic/opcodes.lua" type="client" />
 
     <oop>true</oop>
 </meta>

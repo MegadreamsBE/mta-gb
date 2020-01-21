@@ -11,23 +11,17 @@ Class = setmetatable({}, {
 -- * Functions
 -----------------------------------
 
-function Class:create(extendsClass)
+function Class:create()
     local _class = {}
     _class.__index = _class
 
-    if (extendsClass ~= nil) then
-        _class.__index = extendsClass
-    end
-
     setmetatable(_class, {
         __call = function(_, ...)
-            local _object = setmetatable({}, _class)
-
-            if (_object.create ~= nil) then
-                _object:create(...)
+            if (_class.create ~= nil) then
+                _class:create(...)
             end
 
-            return _object
+            return _class
         end
     })
 

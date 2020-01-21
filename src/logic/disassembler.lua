@@ -1,6 +1,15 @@
 Disassembler = Class()
 
 -----------------------------------
+-- * Locals
+-----------------------------------
+
+local _bitLShift = bitLShift
+local _bitAnd = bitAnd
+local _bitTest = bitTest
+local _string_format = string.format
+
+-----------------------------------
 -- * Constants
 -----------------------------------
 
@@ -53,7 +62,7 @@ end
 
 function Disassembler:load(rom)
     self.data = {}
-    self.romData = (type(rom) == "table") and rom or rom:getData()
+    self.romData = rom
 
     local address = 0
 
@@ -73,11 +82,11 @@ function Disassembler:load(rom)
 
                 if (byteCount == 1) then
                     instruction = instruction:gsub("n",
-                        string.format("%.2x", self:readByte(address + 1)):upper())
+                        _string_format("%.2x", self:readByte(address + 1)):upper())
                     address = address + 1
                 elseif (byteCount == 2) then
                     instruction = instruction:gsub("nn",
-                        string.format("%.4x", self:readInt16(address + 1)):upper())
+                        _string_format("%.4x", self:readInt16(address + 1)):upper())
 
                     address = address + 2
                 end
@@ -101,21 +110,20 @@ end
 function Disassembler:readUInt16(address)
     local value = 0
 
-    for i=0, 1 do
-        value = value + bitLShift(self:readByte(address + i), 8 * i)
-    end
+    value = value + _bitLShift(self:readByte(address), 0)
+    value = value + _bitLShift(self:readByte(address + 1), 8)
 
-    return bitAnd(value, 0xFFFF)
+    return _bitAnd(value, 0xFFFF)
 end
 
 function Disassembler:readInt16(address)
     local value = self:readUInt16(address)
 
-    if (bitTest(value, 0x8000)) then
+    if (_bitTest(value, 0x8000)) then
         value = -((0xFFFF - value) + 1)
     end
 
-    return bitAnd(value, 0xFFFF)
+    return _bitAnd(value, 0xFFFF)
 end
 
 function Disassembler:getData()

@@ -1,6 +1,12 @@
 CPU = Class()
 
 -----------------------------------
+-- * Locals
+-----------------------------------
+
+local opcodes = GameBoy.opcodes
+
+-----------------------------------
 -- * Functions
 -----------------------------------
 
@@ -63,12 +69,15 @@ function CPU:pause()
 end
 
 function CPU:step()
-    self.gameboy.debugger:step()
+    if (self.gameboy.debugger and not self.gameboy.debugger:step()) then
+        return
+    end
+
     local nextOpcode = self.mmu:readByte(self.registers.pc)
 
     self.registers.pc = self.registers.pc + 1
 
-    local opcode = GameBoy.opcodes[nextOpcode]
+    local opcode = opcodes[nextOpcode]
 
     if (opcode == nil) then
         self:pause()
@@ -92,12 +101,16 @@ function CPU:run()
 
     self.stepCallback = function(delta)
         if (not self.paused) then
-            for i=1, 500 do
+            local currentCycles = 0
+
+            --while(currentCycles < 1000) do
+            while(currentCycles < 69905) do
                 if (self.paused) then
                     break
                 end
 
                 self:step()
+                currentCycles = currentCycles + self.registers.clock.t
             end
         end
     end
