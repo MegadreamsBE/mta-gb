@@ -32,7 +32,6 @@ MMU.BIOS = BIOS
 -----------------------------------
 
 local _bitAnd = bitAnd
-local _bitLShift = bitLShift
 local _bitRShift = bitRShift
 local _bitTest = bitTest
 local _string_format = string.format
@@ -212,8 +211,10 @@ end
 function MMU:readUInt16(address)
     local value = 0
 
-    value = value + _bitLShift(self:readByte(address), 0)
-    value = value + _bitLShift(self:readByte(address + 1), 8)
+    value = self:readByte(address + 1)
+
+    value = value * 0xFF + value
+    value = value + self:readByte(address)
 
     return value
 end
@@ -221,7 +222,7 @@ end
 function MMU:readInt16(address)
     local value = self:readUInt16(address)
 
-    if (_bitTest(value, 0x8000)) then
+    if (value >= 0x8000) then
         value = -((0xFFFF - value) + 1)
     end
 

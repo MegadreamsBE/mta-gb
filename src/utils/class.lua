@@ -17,11 +17,15 @@ function Class:create()
 
     setmetatable(_class, {
         __call = function(_, ...)
-            if (_class.create ~= nil) then
-                _class:create(...)
+            local object = setmetatable({}, {
+                __index = _class
+            })
+
+            if (object.create ~= nil) then
+                object:create(...)
             end
 
-            return _class
+            return object
         end
     })
 

@@ -5,7 +5,6 @@
 local _bitOr = bitOr
 local _bitAnd = bitAnd
 local _bitXor = bitXor
-local _bitExtract = bitExtract
 local _bitReplace = bitReplace
 local _bitLShift = bitLShift
 local _bitRShift = bitRShift
@@ -154,7 +153,7 @@ local _leftRotate = function(value, positions)
         local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
 
         if (bits % 8 == 0) then
-            local bit = _bitExtract(value, bits - 1, 1)
+            local bit = ((value / (2 ^ (bits - 1))) % 2 >= 1) and 1 or 0
             value = _bitLShift(value, 1)
             value = _bitReplace(value, 0, bits, 1)
             value = _bitReplace(value, bit, 0, 1)
@@ -168,8 +167,9 @@ local _leftRotate = function(value, positions)
 end
 
 local readTwoRegisters = function(cpu, r1, r2)
-    local value = cpu.registers[r2]
-    value = value + _bitLShift(cpu.registers[r1], 8)
+    local value = cpu.registers[r1]
+    value = value * 0xFF + value
+    value = value + cpu.registers[r2]
 
     return value
 end
@@ -305,7 +305,7 @@ GameBoy.opcodes = {
     [0x18] = function(cpu)
         local offset = cpu.mmu:readByte(cpu.registers.pc)
 
-        if (_bitTest(offset, 0x80)) then
+        if (offset >= 0x80) then
             offset = -((0xFF - offset) + 1)
         end
 
@@ -343,7 +343,7 @@ GameBoy.opcodes = {
             cpu.registers.clock.m = 2
             cpu.registers.clock.t = 8
         else
-            if (_bitTest(offset, 0x80)) then
+            if (offset >= 0x80) then
                 offset = -((0xFF - offset) + 1)
             end
 
@@ -398,7 +398,7 @@ GameBoy.opcodes = {
             cpu.registers.clock.m = 2
             cpu.registers.clock.t = 8
         else
-            if (_bitTest(offset, 0x80)) then
+            if (offset >= 0x80) then
                 offset = -((0xFF - offset) + 1)
             end
 

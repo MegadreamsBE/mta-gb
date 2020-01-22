@@ -184,7 +184,7 @@ function GPU:step()
 
     mmu:writeByte(0xFF41, lcdStatus)
 
-    if (_bitExtract(mmu:readByte(0xFF40), 7, 1) ~= 1) then
+    if ((mmu:readByte(0xFF40) / (2 ^ 7)) % 2 < 1) then
         return
     end
 
