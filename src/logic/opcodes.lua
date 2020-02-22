@@ -6,31 +6,18 @@ local _bitOr = bitOr
 local _bitAnd = bitAnd
 local _bitXor = bitXor
 local _bitReplace = bitReplace
-local _bitLShift = bitLShift
-local _bitRShift = bitRShift
 local _bitTest = bitTest
 local _math_abs = math.abs
 local _math_floor = math.floor
 local _math_log = math.log
 local _string_format = string.format
 
-local FLAGS_ZERO = bitLShift(1, 7)
-local FLAGS_NEGATIVE = bitLShift(1, 6)
-local FLAGS_HALFCARRY = bitLShift(1, 5)
-local FLAGS_CARRY = bitLShift(1, 4)
-
 local _or = function(cpu, value, against)
     against = against or cpu.registers.a
 
     value = _bitOr(against, value)
 
-    if (cpu.registers.a ~= 0) then
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-    else
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-    end
-
-    cpu.registers.f= _bitAnd(cpu.registers.f, _bitOr(_bitOr(FLAGS_ZERO, FLAGS_NEGATIVE), FLAGS_HALFCARRY))
+    cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
 
     return value
 end
@@ -40,171 +27,146 @@ local _xor = function(cpu, value, xor)
 
     value = _bitXor(xor, value)
 
-    if (cpu.registers.a ~= 0) then
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-    else
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-    end
-
-    cpu.registers.f= _bitAnd(cpu.registers.f, _bitOr(_bitOr(FLAGS_ZERO, FLAGS_NEGATIVE), FLAGS_HALFCARRY))
+    cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
 
     return value
 end
 
-local _add = function(cpu, value, add, dual)
-    if (_bitAnd(value, 0x0f) == 0x0f) then
-        cpu.registers.f= _bitOr(cpu.registers.f, FLAGS_HALFCARRY)
-    else
-        cpu.registers.f= _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_HALFCARRY))
-    end
+local _add = function(cpu, value, add)
+    cpu.registers.f[3] = (_bitAnd((_bitAnd(value, 0x0f) + _bitAnd(add, 0x0f)), 0x10) ~= 0) -- FLAG_HALFCARRY
+    cpu.registers.f[4] = (value > bitAnd((value + add), 0xff)) -- FLAG_CARRY
 
-    value = value + add
-    value = (dual) and value % 0x10000 or value % 0x100
+    value = (value + add) % 0x100
+    --value = (dual) and value % 0x10000 or value % 0x100
 
-    if (value ~= 0) then
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-    else
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-    end
-
-    if (value < 0) then
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_NEGATIVE)
-    else
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
-    end
+    cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
 
     return value
 end
 
-local _sub = function(cpu, value, sub, dual)
-    if (_bitAnd(value, 0x0f) == 0x0f) then
-        cpu.registers.f= _bitOr(cpu.registers.f, FLAGS_HALFCARRY)
-    else
-        cpu.registers.f= _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_HALFCARRY))
-    end
+local _sub = function(cpu, value, sub)
+    cpu.registers.f[3] = (_bitAnd(_math_abs(sub), 0x0f) > (_bitAnd(value, 0x0f))) -- FLAG_HALFCARRY
+    cpu.registers.f[4] = (_math_abs(sub) > value) -- FLAG_CARRY
 
-    value = value - sub
-    value = (dual) and value % 0x10000 or value % 0x100
+    value = (value - sub) % 0x100
 
-    if (value ~= 0) then
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-    else
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-    end
-
-    if (value < 0) then
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_NEGATIVE)
-    else
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
-    end
+    cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
+    cpu.registers.f[2] = true -- FLAG_SUBSTRACT
 
     return value
 end
 
-local _inc = function(cpu, value, dual)
-    if (_bitAnd(value, 0x0f) == 0x0f) then
-        cpu.registers.f= _bitOr(cpu.registers.f, FLAGS_HALFCARRY)
-    else
-        cpu.registers.f= _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_HALFCARRY))
-    end
+local _inc = function(cpu, value)
+    cpu.registers.f[3] = (((value / (2 ^ 3)) % 2) >= 1) -- FLAG_HALFCARRY
+    cpu.registers.f[4] = (((value / (2 ^ 7)) % 2) >= 1) -- FLAG_CARRY
 
-    value = value + 1
-    value = (dual) and value % 0x10000 or value % 0x100
+    value = (value + 1) % 0x100
 
-    if (value ~= 0) then
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-    else
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-    end
-
-    if (value < 0) then
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_NEGATIVE)
-    else
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
-    end
+    cpu.registers.f[3] = (_bitAnd(value, 0xf) == 0) -- FLAG_HALFCARRY
+    cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
 
     return value
 end
 
-local _dec = function(cpu, value, dual)
-    cpu.registers.f= _bitOr(cpu.registers.f, FLAGS_HALFCARRY)
-
-    value = value - 1
-    value = (dual) and value % 0x10000 or value % 0x100
-
-    if (value < 0) then
-        value = 0xFF - (_math_abs(value) - 1)
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_NEGATIVE)
+local _inc16 = function(cpu, value, isSP)
+    if (isSP) then
+        cpu.registers.f[3] = (((value / (2 ^ 3)) % 2) >= 1) -- FLAG_HALFCARRY
+        cpu.registers.f[4] = (((value / (2 ^ 7)) % 2) >= 1) -- FLAG_CARRY
     else
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
+        cpu.registers.f[3] = (((value / (2 ^ 11)) % 2) >= 1) -- FLAG_HALFCARRY
+        cpu.registers.f[4] = (((value / (2 ^ 15)) % 2) >= 1) -- FLAG_CARRY
     end
 
-    if (value ~= 0) then
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-    else
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-    end
+    value = (value + 1) % 0x10000
+
+    cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
 
     return value
 end
 
-local _leftRotate = function(value, positions)
+local _dec = function(cpu, value)
+    value = (value - 1) % 100
+
+    cpu.registers.f[3] = (_bitAnd(value, 0xf) == 0xf) -- FLAG_HALFCARRY
+    cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
+    cpu.registers.f[2] = true -- FLAG_SUBSTRACT
+
+    return value
+end
+
+local _dec16 = function(cpu, value, isSP)
+    if (isSP) then
+        cpu.registers.f[3] = (((value / (2 ^ 4)) % 2) >= 1) -- FLAG_HALFCARRY
+        cpu.registers.f[4] = ((value % 2) >= 1) -- FLAG_CARRY
+    else
+        cpu.registers.f[3] = (((value / (2 ^ 4)) % 2) >= 1) -- FLAG_HALFCARRY
+        cpu.registers.f[4] = ((value % 2) >= 1) -- FLAG_CARRY
+    end
+
+    value = (value - 1) % 0x10000
+
+    cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
+    cpu.registers.f[2] = true -- FLAG_SUBSTRACT
+
+    return value
+end
+
+local _leftRotate = function(cpu, value, positions)
+    cpu.registers.f[4] = (((value / (2 ^ 7)) % 2) > 1)  -- FLAG_CARRY
+
     for i=1, positions do
         local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
 
         if (bits % 8 == 0) then
             local bit = ((value / (2 ^ (bits - 1))) % 2 >= 1) and 1 or 0
-            value = _bitLShift(value, 1)
+            value = value * 2
             value = _bitReplace(value, 0, bits, 1)
             value = _bitReplace(value, bit, 0, 1)
         else
-            value = _bitLShift(value, 1)
+            value = value * 2
             value = _bitReplace(value, 0, 0, 1)
         end
     end
 
-    return value
-end
-
-local readTwoRegisters = function(cpu, r1, r2)
-    local value = cpu.registers[r1]
-    value = value * 0xFF + value
-    value = value + cpu.registers[r2]
+    cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+    cpu.registers.f[3] = false -- FLAG_HALFCARRY
 
     return value
-end
-
-local writeTwoRegisters = function(cpu, r1, r2, value)
-    cpu.registers[r1] = _bitRShift(_bitAnd(0xFF00, value), 8)
-    cpu.registers[r2] = _bitAnd(0x00FF, value)
 end
 
 GameBoy.cbOpcodes = {
     [0x11] = function(cpu)
-        cpu.registers.c = _leftRotate(cpu.registers.c, 1)
+        cpu.registers.c = _leftRotate(cpu, cpu.registers.c, 1)
 
         cpu.registers.clock.m = cpu.registers.clock.m + 2
         cpu.registers.clock.t = cpu.registers.clock.t + 8
     end,
     [0x17] = function(cpu)
-        cpu.registers.a = _leftRotate(cpu.registers.a, 1)
+        cpu.registers.a = _leftRotate(cpu, cpu.registers.a, 1)
 
         cpu.registers.clock.m = cpu.registers.clock.m + 2
         cpu.registers.clock.t = cpu.registers.clock.t + 8
     end,
     [0x20] = function(cpu)
-        local tmp = (_bitAnd(cpu.registers.b, 0x80) and 0x10 or 0)
-        cpu.registers.b = _bitAnd(_bitLShift(cpu.registers.b, 1), 255)
-        cpu.registers.f = ((cpu.registers.b) and 0 or 0x80)
-        cpu.registers.f = _bitAnd(cpu.registers.f, 0xEF) + tmp
+        local bitSet = (((cpu.registers.b / (2 ^ 7)) % 2) >= 1)
+        cpu.registers.b = cpu.registers.b * 2
+
+        cpu.registers.f[1] = (cpu.registers.b == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = false -- FLAG_HALFCARRY
+        cpu.registers.f[4] = bitSet -- FLAG_CARRY
 
         cpu.registers.clock.m = cpu.registers.clock.m + 2
         cpu.registers.clock.t = cpu.registers.clock.t + 8
     end,
-    [0x7C] = function (cpu)
-        cpu.registers.f = _bitAnd(cpu.registers.f, 0x1F)
-        cpu.registers.f = _bitOr(cpu.registers.f, 0x20)
-        cpu.registers.f = (_bitAnd(cpu.registers.d, 0x40) and 0 or 0x80)
+    [0x7c] = function(cpu)
+        cpu.registers.f[1] = (0 - (((cpu.registers.h / (2 ^ 7)) % 2 >= 1) and 1 or 0) == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = true -- FLAG_HALFCARRY
 
         cpu.registers.clock.m = cpu.registers.clock.m + 2
         cpu.registers.clock.t = cpu.registers.clock.t + 8
@@ -217,15 +179,21 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 4
     end,
     [0x01] = function(cpu)
-        writeTwoRegisters(cpu, 'b', 'c', cpu.mmu:readInt16(cpu.registers.pc))
+        cpu:writeTwoRegisters('b', 'c', cpu.mmu:readInt16(cpu.registers.pc))
 
         cpu.registers.pc = cpu.registers.pc + 2
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
     end,
+    [0x02] = function(cpu)
+        cpu.mmu:writeByte(cpu:readTwoRegisters('b', 'c'), self.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x03] = function(cpu)
-        writeTwoRegisters(cpu, 'b', 'c', _inc(cpu, readTwoRegisters(cpu, 'b', 'c'), true))
+        cpu:writeTwoRegisters('b', 'c', _inc16(cpu, cpu:readTwoRegisters('b', 'c')))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -249,9 +217,15 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
+    [0x0a] = function(cpu)
+        cpu.registers.a = cpu.mmu:readByte(cpu:readTwoRegisters('b', 'c'))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x0b] = function(cpu)
-        writeTwoRegisters(cpu, 'b', 'c',
-            _dec(cpu, readTwoRegisters(cpu, 'b', 'c'), true))
+        cpu:writeTwoRegisters('b', 'c',
+            _dec16(cpu, cpu:readTwoRegisters('b', 'c'), false))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -276,15 +250,21 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x11] = function(cpu)
-        writeTwoRegisters(cpu, 'd', 'e', cpu.mmu:readUInt16(cpu.registers.pc))
+        cpu:writeTwoRegisters('d', 'e', cpu.mmu:readUInt16(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 2
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
     end,
+    [0x12] = function(cpu)
+        cpu.mmu:writeByte(cpu:readTwoRegisters('d', 'e'), self.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x13] = function(cpu)
-        local value = readTwoRegisters(cpu, 'd', 'e')
-        writeTwoRegisters(cpu, 'd', 'e', _inc(cpu, value, true))
+        local value = cpu:readTwoRegisters('d', 'e')
+        cpu:writeTwoRegisters('d', 'e', _inc16(cpu, value, false))
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 8
@@ -316,7 +296,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 12
     end,
     [0x1a] = function(cpu)
-        local address = readTwoRegisters(cpu, 'd', 'e')
+        local address = cpu:readTwoRegisters('d', 'e')
         cpu.registers.a = cpu.mmu:readByte(address)
 
         cpu.registers.clock.m = 1
@@ -339,7 +319,7 @@ GameBoy.opcodes = {
         local offset = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
 
-        if (_bitAnd(cpu.registers.f, FLAGS_ZERO) > 0) then
+        if (cpu.registers.f[1]) then -- FLAG_ZERO
             cpu.registers.clock.m = 2
             cpu.registers.clock.t = 8
         else
@@ -355,7 +335,7 @@ GameBoy.opcodes = {
         end
     end,
     [0x21] = function(cpu)
-        writeTwoRegisters(cpu, 'h', 'l', cpu.mmu:readUInt16(cpu.registers.pc))
+        cpu:writeTwoRegisters('h', 'l', cpu.mmu:readUInt16(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 2
 
         cpu.registers.clock.m = 3
@@ -363,17 +343,17 @@ GameBoy.opcodes = {
     end,
     [0x22] = function(cpu)
         local value = cpu.registers.a
-        local address = readTwoRegisters(cpu, 'h', 'l')
+        local address = cpu:readTwoRegisters('h', 'l')
 
-        cpu.mmu:writeShort(address, value)
-        writeTwoRegisters(cpu, 'h', 'l', _inc(cpu, address, true))
+        cpu.mmu:writeByte(address, value)
+        cpu:writeTwoRegisters('h', 'l', _inc16(cpu, address, false))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
     [0x23] = function(cpu)
-        local address = readTwoRegisters(cpu, 'h', 'l')
-        writeTwoRegisters(cpu, 'h', 'l', _inc(cpu, address, true))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu:writeTwoRegisters('h', 'l', _inc16(cpu, address, false))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -390,11 +370,18 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
+    [0x26] = function(cpu)
+        cpu.registers.h = cpu.mmu:readByte(cpu.registers.pc)
+        cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x28] = function(cpu)
         local offset = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
 
-        if (_bitAnd(cpu.registers.f, FLAGS_ZERO) == 0) then
+        if (cpu.registers.f[1]) then -- FLAG_ZERO
             cpu.registers.clock.m = 2
             cpu.registers.clock.t = 8
         else
@@ -409,12 +396,12 @@ GameBoy.opcodes = {
         end
     end,
     [0x2a] = function(cpu)
-        local address = readTwoRegisters(cpu, 'h', 'l')
+        local address = cpu:readTwoRegisters('h', 'l')
         local value = cpu.mmu:readByte(address)
 
         cpu.registers.a = value
 
-        writeTwoRegisters(cpu, 'h', 'l', _inc(cpu, value, true))
+        cpu:writeTwoRegisters('h', 'l', _inc16(cpu, address, false))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -432,13 +419,6 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
-    [0x2f] = function(cpu)
-        cpu.registers.a = (1- cpu.registers.a)
-        cpu.registers.f = _bitOr(cpu.registers.f, _bitOr(_bitLShift(1, FLAGS_NEGATIVE), _bitLShift(1, FLAGS_HALFCARRY)))
-
-        cpu.registers.clock.m = 1
-        cpu.registers.clock.t = 4
-    end,
     [0x31] = function(cpu)
         cpu.registers.sp = cpu.mmu:readUInt16(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 2
@@ -447,18 +427,17 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 12
     end,
     [0x32] = function(cpu)
-        local address = readTwoRegisters(cpu, 'h', 'l')
+        local address = cpu:readTwoRegisters('h', 'l')
 
         cpu.mmu:writeByte(address, cpu.registers.a)
 
-        address = address - 1
-        writeTwoRegisters(cpu, 'h', 'l', address)
+        cpu:writeTwoRegisters('h', 'l', _dec16(cpu, address, false))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
     [0x36] = function(cpu)
-        local address = readTwoRegisters(cpu, 'h', 'l')
+        local address = cpu:readTwoRegisters('h', 'l')
         local value = cpu.mmu:readByte(cpu.registers.pc)
 
         cpu.mmu:writeByte(address, value)
@@ -467,6 +446,15 @@ GameBoy.opcodes = {
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
+    end,
+    [0x3a] = function(cpu)
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.registers.a = cpu.mmu:readByte(address)
+
+        cpu:writeTwoRegisters('h', 'h', _dec16(cpu, address, false))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x3c] = function(cpu)
         cpu.registers.a = _inc(cpu, cpu.registers.a)
@@ -483,6 +471,48 @@ GameBoy.opcodes = {
     [0x3e] = function(cpu)
         cpu.registers.a = cpu.mmu:readByte(cpu.registers.pc)
         cpu.registers.pc = cpu.registers.pc + 1
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x40] = function(cpu)
+        cpu.registers.b = cpu.registers.b
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x41] = function(cpu)
+        cpu.registers.b = cpu.registers.c
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x42] = function(cpu)
+        cpu.registers.b = cpu.registers.d
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x43] = function(cpu)
+        cpu.registers.b = cpu.registers.e
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x44] = function(cpu)
+        cpu.registers.b = cpu.registers.h
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x45] = function(cpu)
+        cpu.registers.b = cpu.registers.l
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x46] = function(cpu)
+        cpu.registers.b = cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -529,14 +559,110 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
+    [0x4e] = function(cpu)
+        cpu.registers.c = cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x4f] = function(cpu)
         cpu.registers.c = cpu.registers.a
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
+    [0x50] = function(cpu)
+        cpu.registers.d = cpu.registers.b
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x51] = function(cpu)
+        cpu.registers.d = cpu.registers.c
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x52] = function(cpu)
+        cpu.registers.d = cpu.registers.d
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x53] = function(cpu)
+        cpu.registers.d = cpu.registers.e
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x54] = function(cpu)
+        cpu.registers.d = cpu.registers.h
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x55] = function(cpu)
+        cpu.registers.d = cpu.registers.l
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x56] = function(cpu)
+        cpu.registers.d = cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x57] = function(cpu)
         cpu.registers.d = cpu.registers.a
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x58] = function(cpu)
+        cpu.registers.e = cpu.registers.b
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x59] = function(cpu)
+        cpu.registers.e = cpu.registers.c
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x5a] = function(cpu)
+        cpu.registers.e = cpu.registers.d
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x5b] = function(cpu)
+        cpu.registers.e = cpu.registers.e
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x5c] = function(cpu)
+        cpu.registers.e = cpu.registers.h
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x5d] = function(cpu)
+        cpu.registers.e = cpu.registers.l
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x5e] = function(cpu)
+        cpu.registers.e = cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x5f] = function(cpu)
+        cpu.registers.e = cpu.registers.a
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
@@ -547,8 +673,38 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
+    [0x61] = function(cpu)
+        cpu.registers.h = cpu.registers.c
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x62] = function(cpu)
+        cpu.registers.h = cpu.registers.d
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x63] = function(cpu)
+        cpu.registers.h = cpu.registers.e
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x64] = function(cpu)
+        cpu.registers.h = cpu.registers.h
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x65] = function(cpu)
+        cpu.registers.h = cpu.registers.l
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
     [0x66] = function(cpu)
-        cpu.registers.h = cpu.mmu:readByte(readTwoRegisters(cpu, 'h', 'l'))
+        cpu.registers.h = cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -559,8 +715,92 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
+    [0x68] = function(cpu)
+        cpu.registers.l = cpu.registers.b
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x69] = function(cpu)
+        cpu.registers.l = cpu.registers.c
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x6a] = function(cpu)
+        cpu.registers.l = cpu.registers.d
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x6b] = function(cpu)
+        cpu.registers.l = cpu.registers.e
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x6c] = function(cpu)
+        cpu.registers.l = cpu.registers.h
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x6d] = function(cpu)
+        cpu.registers.l = cpu.registers.l
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x6e] = function(cpu)
+        cpu.registers.l = cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x6f] = function(cpu)
+        cpu.registers.l = cpu.registers.a
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x70] = function(cpu)
+        cpu.writeByte(cpu:readTwoRegisters('h', 'l'), cpu.registers.b)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x71] = function(cpu)
+        cpu.writeByte(cpu:readTwoRegisters('h', 'l'), cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x72] = function(cpu)
+        cpu.writeByte(cpu:readTwoRegisters('h', 'l'), cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x73] = function(cpu)
+        cpu.writeByte(cpu:readTwoRegisters('h', 'l'), cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x74] = function(cpu)
+        cpu.writeByte(cpu:readTwoRegisters('h', 'l'), cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x75] = function(cpu)
+        cpu.writeByte(cpu:readTwoRegisters('h', 'l'), cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x77] = function(cpu)
-        local address = readTwoRegisters(cpu, 'h', 'l')
+        local address = cpu:readTwoRegisters('h', 'l')
         cpu.mmu:writeByte(address, cpu.registers.a)
 
         cpu.registers.clock.m = 2
@@ -568,6 +808,18 @@ GameBoy.opcodes = {
     end,
     [0x78] = function(cpu)
         cpu.registers.a = cpu.registers.b
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x79] = function(cpu)
+        cpu.registers.a = cpu.registers.c
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x7a] = function(cpu)
+        cpu.registers.a = cpu.registers.d
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
@@ -590,9 +842,21 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
+    [0x7e] = function(cpu)
+        cpu.registers.a = cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x7f] = function(cpu)
+        cpu.registers.a = cpu.registers.a
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
     [0x86] = function(cpu)
         cpu.registers.a = _add(cpu, cpu.registers.a,
-            cpu.mmu:readByte(readTwoRegisters(cpu, 'h', 'l')))
+            cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l')))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -606,15 +870,10 @@ GameBoy.opcodes = {
     [0xa9] = function(cpu)
         cpu.registers.a = _xor(cpu, cpu.registers.c)
 
-        if (cpu.registers.a ~= 0) then
-            cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-        else
-            cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-        end
-
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_CARRY))
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_HALFCARRY))
+        cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = false -- FLAG_CARRY
+        cpu.registers.f[4] = false -- FLAG_HALFCARRY
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
@@ -622,15 +881,10 @@ GameBoy.opcodes = {
     [0xaf] = function(cpu)
         cpu.registers.a = _xor(cpu, cpu.registers.a)
 
-        if (cpu.registers.a ~= 0) then
-            cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-        else
-            cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-        end
-
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_CARRY))
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_HALFCARRY))
+        cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = false -- FLAG_CARRY
+        cpu.registers.f[4] = false -- FLAG_HALFCARRY
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
@@ -644,29 +898,19 @@ GameBoy.opcodes = {
     [0xb1] = function(cpu)
         cpu.registers.a = _bitOr(cpu.registers.a, cpu.registers.c)
 
-        if (cpu.registers.a ~= 0) then
-            cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-        else
-            cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-        end
-
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_CARRY))
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_HALFCARRY))
+        cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = false -- FLAG_CARRY
+        cpu.registers.f[4] = false -- FLAG_HALFCARRY
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0xbe] = function(cpu)
-        local address = readTwoRegisters(cpu, 'h', 'l')
+        local address = cpu:readTwoRegisters('h', 'l')
 
-        if (cpu.registers.a - cpu.mmu:readByte(address) ~= 0) then
-            cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-        else
-            cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-        end
-
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_NEGATIVE)
+        cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -678,7 +922,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 4
     end,
     [0xc1] = function(cpu)
-        writeTwoRegisters(cpu, 'b', 'c', cpu.mmu:popStack())
+        cpu:writeTwoRegisters('b', 'c', cpu.mmu:popStack())
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -692,7 +936,7 @@ GameBoy.opcodes = {
     [0xc4] = function(cpu)
         local address = cpu.mmu:readUInt16(cpu.registers.pc)
 
-        if (_bitAnd(cpu.registers.f, FLAGS_ZERO) ~= 0) then
+        if (cpu.registers.f[1]) then -- FLAG_ZERO
             cpu.mmu:pushStack(cpu.registers.pc + 2)
             cpu.registers.pc = address
 
@@ -706,7 +950,7 @@ GameBoy.opcodes = {
         end
     end,
     [0xc5] = function(cpu)
-        cpu.mmu:pushStack(readTwoRegisters(cpu, 'b', 'c'))
+        cpu.mmu:pushStack(cpu:readTwoRegisters('b', 'c'))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -715,13 +959,8 @@ GameBoy.opcodes = {
         cpu.registers.a = _add(cpu, cpu.registers.a, cpu.mmu:readByte(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 1
 
-        if (cpu.registers.a ~= 0) then
-            cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-        else
-            cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-        end
-
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
+        cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -781,7 +1020,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 12
     end,
     [0xe1] = function(cpu)
-        writeTwoRegisters(cpu, 'h', 'l', cpu.mmu:popStack())
+        cpu:writeTwoRegisters('h', 'l', cpu.mmu:popStack())
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -793,7 +1032,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xe5] = function(cpu)
-        cpu.mmu:pushStack(readTwoRegisters(cpu, 'h', 'l'))
+        cpu.mmu:pushStack(cpu:readTwoRegisters('h', 'l'))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -802,22 +1041,17 @@ GameBoy.opcodes = {
         cpu.registers.a = _bitAnd(cpu.registers.a, cpu.mmu:readByte(cpu.registers.pc))
         cpu.registers.pc = cpu.registers.pc + 1
 
-        if (cpu.registers.a ~= 0) then
-            cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-        else
-            cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-        end
-
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_NEGATIVE))
-        cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_CARRY))
-        cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_HALFCARRY)
+        cpu.registers.f[1] = (cpu.registers.a == 0) -- FLAG_ZERO
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = false -- FLAG_CARRY
+        cpu.registers.f[4] = true -- FLAG_HALFCARRY
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
     [0xea] = function(cpu)
         local address = cpu.mmu:readUInt16(cpu.registers.pc)
-        cpu.mmu:writeShort(address, cpu.registers.a)
+        cpu.mmu:writeByte(address, cpu.registers.a)
         cpu.registers.pc = cpu.registers.pc + 2
 
         cpu.registers.clock.m = 4
@@ -832,12 +1066,14 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 12
     end,
     [0xf1] = function(cpu)
-        writeTwoRegisters(cpu, 'a', 'f', cpu.mmu:popStack())
+        cpu:writeTwoRegisters('a', 'f', cpu.mmu:popStack())
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
     end,
     [0xf2] = function(cpu)
+        cpu.registers.a = cpu.mmu:readByte(0xff00 + cpu.registers.c)
+
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
@@ -848,10 +1084,16 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 4
     end,
     [0xf5] = function(cpu)
-        cpu.mmu:pushStack(readTwoRegisters(cpu, 'a', 'f'))
+        cpu.mmu:pushStack(cpu:readTwoRegisters('a', 'f'))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
+    end,
+    [0xf9] = function(cpu)
+        cpu.registers.sp = cpu:readTwoRegisters('h', 'l')
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0xfa] = function(cpu)
         cpu.registers.a = cpu.mmu:readByte(cpu.mmu:readUInt16(cpu.registers.pc))
@@ -867,11 +1109,8 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 4
     end,
     [0xfe] = function(cpu)
-        if (cpu.registers.a - cpu.mmu:readByte(cpu.registers.pc) ~= 0) then
-            cpu.registers.f = _bitAnd(cpu.registers.f, _bitXor(0xFF, FLAGS_ZERO))
-        else
-            cpu.registers.f = _bitOr(cpu.registers.f, FLAGS_ZERO)
-        end
+        cpu.registers.f[1] =
+            (cpu.registers.a - cpu.mmu:readByte(cpu.registers.pc) == 0) -- FLAG_ZERO
 
         cpu.registers.pc = cpu.registers.pc + 1
 

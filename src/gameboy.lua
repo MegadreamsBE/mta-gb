@@ -11,29 +11,44 @@ local ROM_PATH = "data/cpu_instrs.gb"
 -----------------------------------
 
 function GameBoy:create()
-    self.debugger = Debugger(self)
     self.gpu = GPU(self)
     self.cpu = CPU(self)
 
-    if (not self:load(ROM_PATH)) then
-        return Log.error("GameBoy", "Unable to load ROM.")
-    end
-
-    self:start()
-    self.debugger:start()
-    self.debugger:breakpoint(0x0B1A)
+    --self.debugger:breakpoint(0x00)
 end
 
 function GameBoy:load(romPath)
     self.rom = Rom(romPath)
-    return self.rom:load()
+
+    if (not self.rom:load()) then
+        Log.error("GameBoy", "Unable to load ROM.")
+    end
 end
 
 function GameBoy:start()
     self.gpu:reset()
     self.cpu:reset()
-    self.cpu:loadRom(self.rom)
+
+    if (self.rom ~= nil) then
+        self.cpu:loadRom(self.rom)
+    end
+
     self.cpu:run()
+end
+
+function GameBoy:pause()
+    self.cpu:pause()
+end
+
+function GameBoy:stop()
+    self:pause()
+    self.gpu:reset()
+    self.cpu:reset()
+end
+
+function GameBoy:attachDebugger(debugger)
+    self.debugger = debugger
+    self.debugger:start(self)
 end
 
 -----------------------------------
@@ -41,5 +56,9 @@ end
 -----------------------------------
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
-    GameBoy()
+    local gameboy = GameBoy()
+
+    gameboy:load(ROM_PATH)
+    gameboy:attachDebugger(Debugger())
+    gameboy:start()
 end)

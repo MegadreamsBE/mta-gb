@@ -6,7 +6,6 @@ GPU = Class()
 
 local _bitExtract = bitExtract
 local _bitReplace = bitReplace
-local _bitLShift = bitLShift
 local _bitOr = bitOr
 
 -----------------------------------

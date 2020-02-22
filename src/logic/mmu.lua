@@ -32,9 +32,9 @@ MMU.BIOS = BIOS
 -----------------------------------
 
 local _bitAnd = bitAnd
-local _bitRShift = bitRShift
 local _bitTest = bitTest
 local _string_format = string.format
+local _math_floor = math.floor
 
 local memoryViolation = function(address, pc)
     Log.error("MMU", "Illegal memory access violation at 0x%s (0x%s).",
@@ -80,15 +80,7 @@ function MMU:writeByte(address, value)
         outputDebugString(utf8.char(self:readByte(0xFF01)))
     end
 
-    if ((address >= 0x1000 and address < 0x2000) or
-        (address >= 0x2000 and address < 0x3000) or
-        (address >= 0x3000 and address < 0x4000) or
-        (address >= 0x4000 and address < 0x5000) or
-        (address >= 0x5000 and address < 0x6000) or
-        (address >= 0x6000 and address < 0x7000) or
-        (address >= 0x7000 and address < 0x8000)) then
-        self.rom[address + 1] = value
-    elseif ((address >= 0x8000 and address < 0x9000) or
+    if ((address >= 0x8000 and address < 0x9000) or
         (address >= 0x9000 and address < 0xA000)) then
         address = address - 0x8000
         self.gpu.vram[address + 1] = value
@@ -112,33 +104,24 @@ function MMU:writeByte(address, value)
 end
 
 function MMU:writeShort(address, value)
-    if ((address >= 0x1000 and address < 0x2000) or
-        (address >= 0x2000 and address < 0x3000) or
-        (address >= 0x3000 and address < 0x4000) or
-        (address >= 0x4000 and address < 0x5000) or
-        (address >= 0x5000 and address < 0x6000) or
-        (address >= 0x6000 and address < 0x7000) or
-        (address >= 0x7000 and address < 0x8000)) then
-        self.rom[address + 2] = _bitRShift(_bitAnd(0xFF00, value), 8)
-        self.rom[address + 1] = _bitAnd(0x00FF, value)
-    elseif ((address >= 0x8000 and address < 0x9000) or
+    if ((address >= 0x8000 and address < 0x9000) or
         (address >= 0x9000 and address < 0xA000)) then
         address = address - 0x8000
-        self.gpu.vram[address + 2] = _bitRShift(_bitAnd(0xFF00, value), 8)
+        self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
         self.gpu.vram[address + 1] = _bitAnd(0x00FF, value)
     elseif ((address >= 0xC000 and address < 0xD000) or
         (address >= 0xD000 and address < 0xF000)) then
         address = address - 0xC000
-        self.ram[address + 2] = _bitRShift(_bitAnd(0xFF00, value), 8)
+        self.ram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
         self.ram[address + 1] = _bitAnd(0x00FF, value)
     elseif (address >= 0xF000) then
         if (address >= 0xFF80) then
             address = address - 0xFF80
-            self.zram[address + 2] = _bitRShift(_bitAnd(0xFF00, value), 8)
+            self.zram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
             self.zram[address + 1] = _bitAnd(0x00FF, value)
         elseif (address >= 0xFF40) then
             address = address - 0x8000
-            self.gpu.vram[address + 2] = _bitRShift(_bitAnd(0xFF00, value), 8)
+            self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
             self.gpu.vram[address + 1] = _bitAnd(0x00FF, value)
         else
             return
@@ -209,18 +192,19 @@ function MMU:readByte(address)
 end
 
 function MMU:readUInt16(address)
-    local value = 0
+    local value = self:readByte(address + 1)
 
-    value = self:readByte(address + 1)
-
-    value = value * 0xFF + value
+    value = value * 128
     value = value + self:readByte(address)
 
     return value
 end
 
 function MMU:readInt16(address)
-    local value = self:readUInt16(address)
+    local value = self:readByte(address + 1)
+
+    value = value * 128
+    value = value + self:readByte(address)
 
     if (value >= 0x8000) then
         value = -((0xFFFF - value) + 1)

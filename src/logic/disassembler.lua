@@ -4,7 +4,6 @@ Disassembler = Class()
 -- * Locals
 -----------------------------------
 
-local _bitLShift = bitLShift
 local _bitAnd = bitAnd
 local _bitTest = bitTest
 local _string_format = string.format
@@ -108,22 +107,25 @@ function Disassembler:readByte(address)
 end
 
 function Disassembler:readUInt16(address)
-    local value = 0
+    local value = self:readByte(address + 1)
 
-    value = value + _bitLShift(self:readByte(address), 0)
-    value = value + _bitLShift(self:readByte(address + 1), 8)
+    value = value * 0xFF + value
+    value = value + self:readByte(address)
 
-    return _bitAnd(value, 0xFFFF)
+    return value
 end
 
 function Disassembler:readInt16(address)
-    local value = self:readUInt16(address)
+    local value = self:readByte(address + 1)
 
-    if (_bitTest(value, 0x8000)) then
+    value = value * 0xFF + value
+    value = value + self:readByte(address)
+
+    if (value >= 0x8000) then
         value = -((0xFFFF - value) + 1)
     end
 
-    return _bitAnd(value, 0xFFFF)
+    return value
 end
 
 function Disassembler:getData()

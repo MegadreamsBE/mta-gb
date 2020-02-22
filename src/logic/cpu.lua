@@ -6,6 +6,9 @@ CPU = Class()
 
 local opcodes = GameBoy.opcodes
 
+local _bitAnd = bitAnd
+local _math_floor = math.floor
+
 -----------------------------------
 -- * Functions
 -----------------------------------
@@ -24,7 +27,9 @@ function CPU:create(gameboy)
         e = 0,
         h = 0,
         l = 0,
-        f = 0,
+        f = {
+            false, false, false, false
+        },
         pc = 0,
         sp = 0,
         clock = {
@@ -54,7 +59,7 @@ function CPU:reset()
     self.registers.e = 0
     self.registers.h = 0
     self.registers.l = 0
-    self.registers.f = 0
+    self.registers.f = { false, false, false, false }
     self.registers.sp = 0
     self.registers.pc = 0
 
@@ -91,6 +96,37 @@ function CPU:step()
     self.clock.t = self.clock.t + self.registers.clock.t
 
     self.gameboy.gpu:step()
+end
+
+function CPU:readTwoRegisters(r1, r2)
+    local value = self.registers[r1]
+    value = value * 128
+
+    if (r2 == "f") then
+        value = value + (
+            ((self.registers.f[1]) and 1 or 0) * 128 +
+            ((self.registers.f[2]) and 1 or 0) * 64 +
+            ((self.registers.f[3]) and 1 or 0) * 32 +
+            ((self.registers.f[4]) and 1 or 0) * 16
+        )
+    else
+        value = value + self.registers[r2]
+    end
+
+    return value
+end
+
+function CPU:writeTwoRegisters(r1, r2, value)
+    self.registers[r1] = _math_floor(_bitAnd(0xFF00, value) / 128)
+
+    if (r2 == "f") then
+        self.registers.f[1] = (((value / (2 ^ 7)) % 2) > 1)
+        self.registers.f[2] = (((value / (2 ^ 6)) % 2) > 1)
+        self.registers.f[3] = (((value / (2 ^ 5)) % 2) > 1)
+        self.registers.f[4] = (((value / (2 ^ 4)) % 2) > 1)
+    else
+        self.registers[r2] = _bitAnd(0x00FF, value)
+    end
 end
 
 function CPU:run()

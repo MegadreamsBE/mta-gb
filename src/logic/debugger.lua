@@ -21,9 +21,7 @@ local DEBUGGER_REGISTERS = {
 -- * Locals
 -----------------------------------
 
-local _bitLShift = bitLShift
 local _bitExtract = bitExtract
-local _math_fmod = math.fmod
 local _math_floor = math.floor
 local _string_format = string.format
 
@@ -37,7 +35,7 @@ local binaryFormat = function(value, minLen)
     end
 
     while num > 0 do
-        local rest = _math_fmod(num, 2)
+        local rest = num % 2
         bits[#bits + 1] = rest
         num = (num - rest) / 2
     end
@@ -61,8 +59,8 @@ end
 -- * Functions
 -----------------------------------
 
-function Debugger:create(gameboy)
-    self.gameboy = gameboy
+function Debugger:create()
+    self.gameboy = nil
     self.debuggingBios = true
     self.disassembler = Disassembler()
 
@@ -75,7 +73,8 @@ function Debugger:create(gameboy)
     self.debugMemoryPointer = -1
 end
 
-function Debugger:start()
+function Debugger:start(gameboy)
+    self.gameboy = gameboy
     self.disassembler:load(self.gameboy.cpu.mmu.BIOS)
 
     if (RENDER) then
@@ -173,6 +172,10 @@ function Debugger:start()
 end
 
 function Debugger:step()
+    if (self.gameboy == nil) then
+        return true
+    end
+
     if (self.breakpoints[self.gameboy.cpu.registers.pc] and not self.debuggerInducedPause) then
         self.gameboy.cpu:pause()
         self.debuggerInducedPause = true
@@ -196,6 +199,10 @@ function Debugger:performStep()
 end
 
 function Debugger:render()
+    if (self.gameboy == nil) then
+        return
+    end
+
     local gpu = self.gameboy.gpu
 
     local screenStartX = (SCREEN_WIDTH / 2) - ((DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)) / 2)
@@ -326,8 +333,18 @@ function Debugger:render()
 
         for _, registerPair in pairs(DEBUGGER_REGISTERS) do
             if (type(registerPair) == "table") then
-                local value = cpu.registers[registerPair[2]]
-                value = value + _bitLShift(cpu.registers[registerPair[1]], 8)
+                local value = cpu.registers[registerPair[1]] * 128
+
+                if (registerPair[2] == "f") then
+                    value = value + (
+                        ((cpu.registers.f[1]) and 1 or 0) * 128 +
+                        ((cpu.registers.f[2]) and 1 or 0) * 64 +
+                        ((cpu.registers.f[3]) and 1 or 0) * 32 +
+                        ((cpu.registers.f[4]) and 1 or 0) * 16
+                    )
+                else
+                    value = value + cpu.registers[registerPair[2]]
+                end
 
                 dxDrawText(registerPair[1]:upper()..registerPair[2]:upper()
                     .." = ".._string_format("%.4x", value):upper()
