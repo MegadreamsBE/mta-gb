@@ -45,7 +45,5 @@ Override.override = function()
         texture.pixels = pixels
     end
 
-    dxDrawImage = function()
-
-    end
+    dxDrawImage = function() end
 end

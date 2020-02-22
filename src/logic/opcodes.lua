@@ -187,7 +187,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 12
     end,
     [0x02] = function(cpu)
-        cpu.mmu:writeByte(cpu:readTwoRegisters('b', 'c'), self.registers.a)
+        cpu.mmu:writeByte(cpu:readTwoRegisters('b', 'c'), cpu.registers.a)
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -257,7 +257,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 12
     end,
     [0x12] = function(cpu)
-        cpu.mmu:writeByte(cpu:readTwoRegisters('d', 'e'), self.registers.a)
+        cpu.mmu:writeByte(cpu:readTwoRegisters('d', 'e'), cpu.registers.a)
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
