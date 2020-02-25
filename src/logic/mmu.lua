@@ -52,12 +52,28 @@ function MMU:create(cpu, gpu)
     self.cpu = cpu
     self.gpu = gpu
 
+    self.mbc = {
+        {},
+        {
+            rombank = 0,
+            rambank = 0,
+            ramon = 0,
+            mode = 0
+        }
+    }
+
+    self.romOffset = 0x4000
+    self.ramOffset = 0x0000
+    self.cartridgeType = 0
+
+    self.eram = {}
     self.mram = {}
     self.zram = {}
     self.ram = {}
     self.rom = nil
 
     for i=1, 0xF000 do
+        self.eram[i] = 0
         self.mram[i] = 0
         self.zram[i] = 0
         self.ram[i] = 0
@@ -68,11 +84,23 @@ function MMU:create(cpu, gpu)
 end
 
 function MMU:reset()
+    self.mbc = {
+        {},
+        {
+            rombank = 0,
+            rambank = 0,
+            ramon = 0,
+            mode = 0
+        }
+    }
 
+    self.romOffset = 0x4000
+    self.ramOffset = 0x0000
 end
 
 function MMU:loadRom(rom)
     self.rom = rom:getData()
+    self.cartridgeType = self.rom[0x0147 + 1]
 end
 
 function MMU:writeByte(address, value)
@@ -80,12 +108,43 @@ function MMU:writeByte(address, value)
         outputDebugString("SERIAL: "..utf8.char(self:readByte(0xFF01)))
     end
 
-    if ((address >= 0x8000 and address < 0x9000) or
-        (address >= 0x9000 and address < 0xA000)) then
+    if (address >= 0x0000 and address < 0x2000) then
+        if (self.cartridgeType == 2 or self.cartridgeType == 3) then
+            self.mbc[2].ramon = (_bitAnd(value, 0x0F) == 0x0A)
+        end
+    elseif (address >= 0x2000 and address < 0x4000) then
+        if (self.cartridgeType >= 1 and self.cartridgeType <= 3) then
+            value = _bitAnd(value, 0x1F)
+
+            if (value == 0) then
+                value = 1
+            end
+
+            self.mbc[2].rombank = _bitAnd(self.mbc[2].rombank, 0x60) + value
+            self.romOffset = self.mbc[2].rombank * 0x4000
+        end
+    elseif (address >= 0x4000 and address < 0x6000) then
+        if (self.cartridgeType >= 1 and self.cartridgeType <= 3) then
+            if (self.mbc[2].mode == 1) then
+                self.mbc[2].rambank = _bitAnd(value, 0x03)
+                self.ramOffset = self.mbc[2].rambank * 0x2000
+            else
+                self.mbc[2].rombank = _bitAnd(self.mbc[2].rombank, 0x1F)
+                    + _bitLShift(_bitAnd(value, 0x03), 5)
+
+                self.romOffset = self.mbc[2].rombank * 0x4000
+            end
+        end
+    elseif (address >= 0x6000 and address < 0x8000) then
+        if (self.cartridgeType == 2 or self.cartridgeType == 3) then
+            self.mbc[2].mode = _bitAnd(value, 0x01)
+        end
+    elseif (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
         self.gpu.vram[address + 1] = value
-    elseif ((address >= 0xC000 and address < 0xD000) or
-        (address >= 0xD000 and address < 0xF000)) then
+    elseif (address >= 0xA000 and address < 0xC000) then
+        self.eram[self.ramOffset + (address - 0xA000)] = value
+    elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         self.ram[address + 1] = value
     elseif (address >= 0xF000) then
@@ -104,13 +163,11 @@ function MMU:writeByte(address, value)
 end
 
 function MMU:writeShort(address, value)
-    if ((address >= 0x8000 and address < 0x9000) or
-        (address >= 0x9000 and address < 0xA000)) then
+    if (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
         self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
         self.gpu.vram[address + 1] = _bitAnd(0x00FF, value)
-    elseif ((address >= 0xC000 and address < 0xD000) or
-        (address >= 0xD000 and address < 0xF000)) then
+    elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         self.ram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
         self.ram[address + 1] = _bitAnd(0x00FF, value)
@@ -156,20 +213,17 @@ function MMU:readByte(address)
         end
 
         return self.rom[address + 1] or 0
-    elseif ((address >= 0x1000 and address < 0x2000) or
-        (address >= 0x2000 and address < 0x3000) or
-        (address >= 0x3000 and address < 0x4000) or
-        (address >= 0x4000 and address < 0x5000) or
-        (address >= 0x5000 and address < 0x6000) or
-        (address >= 0x6000 and address < 0x7000) or
-        (address >= 0x7000 and address < 0x8000)) then
+    elseif (address >= 0x1000 and address < 0x4000) then
         return self.rom[address + 1] or 0
-    elseif ((address >= 0x8000 and address < 0x9000) or
-        (address >= 0x9000 and address < 0xA000)) then
+    elseif (address >= 0x4000 and address < 0x8000) then
+        return self.rom[self.romOffset + (_bitAnd(address, 0x333F) + 1)] or 0
+    elseif (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
         return self.gpu.vram[address + 1] or 0
-    elseif ((address >= 0xC000 and address < 0xD000) or
-        (address >= 0xD000 and address < 0xF000)) then
+    elseif (address >= 0xA000 and address < 0xC000) then
+        return self.eram[(self.ramOffset + (_bitAnd(address, 0x333F) + 1))
+             - 0xA000] or 0
+    elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         return self.ram[address + 1] or 0
     elseif (address >= 0xF000) then
