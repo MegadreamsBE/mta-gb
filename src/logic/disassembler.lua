@@ -85,7 +85,7 @@ function Disassembler:load(rom)
                     address = address + 1
                 elseif (byteCount == 2) then
                     instruction = instruction:gsub("nn",
-                        _string_format("%.4x", self:readInt16(address + 1)):upper())
+                        _string_format("%.4x", self:readUInt16(address + 1)):upper())
 
                     address = address + 2
                 end

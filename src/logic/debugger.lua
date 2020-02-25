@@ -66,6 +66,7 @@ function Debugger:create()
 
     self.breakpoints = {}
     self.debuggerInducedPause = false
+    self.passthrough = false
 
     self.memoryPointerMemory = {}
 
@@ -97,6 +98,7 @@ function Debugger:start(gameboy)
             self.debuggerInducedPause = false
             self.gameboy.cpu.paused = false
             self.debugMemoryPointer = -1
+            self.passthrough = true
         end)
 
         bindKey("arrow_u", "up", function()
@@ -176,7 +178,8 @@ function Debugger:step()
         return true
     end
 
-    if (self.breakpoints[self.gameboy.cpu.registers.pc] and not self.debuggerInducedPause) then
+    if (self.breakpoints[self.gameboy.cpu.registers.pc] and not self.debuggerInducedPause
+        and not self.passthrough) then
         self.gameboy.cpu:pause()
         self.debuggerInducedPause = true
         return false
@@ -187,6 +190,8 @@ function Debugger:step()
         self.debuggingBios = false
         self.disassembler:load(self.gameboy.rom:getData())
     end
+
+    self.passthrough = false
 
     return true
 end
@@ -333,7 +338,7 @@ function Debugger:render()
 
         for _, registerPair in pairs(DEBUGGER_REGISTERS) do
             if (type(registerPair) == "table") then
-                local value = cpu.registers[registerPair[1]] * 128
+                local value = cpu.registers[registerPair[1]] * 256
 
                 if (registerPair[2] == "f") then
                     value = value + (

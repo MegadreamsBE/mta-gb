@@ -6,6 +6,7 @@ GPU = Class()
 
 local _bitExtract = bitExtract
 local _bitReplace = bitReplace
+local _bitLShift = bitLShift
 local _bitOr = bitOr
 
 -----------------------------------
@@ -188,11 +189,12 @@ function GPU:step()
     end
 
     modeclock = modeclock + self.gameboy.cpu.registers.clock.t
+
     mmu:writeByte(0xFF44, line)
 
     if (mode == 0) then
         if (modeclock >= 204) then
-            self.modeclock = 0
+            modeclock = 0
             line = line + 1
 
             if (line == 143) then
@@ -206,7 +208,7 @@ function GPU:step()
         end
     elseif (mode == 1) then
         if (modeclock >= 456) then
-            self.modeclock = 0
+            modeclock = 0
             line = line + 1
 
             if (line > 153) then
@@ -218,15 +220,17 @@ function GPU:step()
         end
     elseif (mode == 2) then
         if (modeclock >= 80) then
-            self.modeclock = 0
+            modeclock = 0
             self.mode = 3
         end
     elseif (self.mode == 3) then
-        if (self.modeclock >= 172) then
-            self.modeclock = 0
+        if (modeclock >= 172) then
+            modeclock = 0
             self.mode = 0
 
             self:renderScan()
         end
     end
+
+    self.modeclock = modeclock
 end

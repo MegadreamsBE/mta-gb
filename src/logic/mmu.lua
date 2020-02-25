@@ -77,7 +77,7 @@ end
 
 function MMU:writeByte(address, value)
     if (address == 0xFF02 and value == 0x81) then
-        outputDebugString(utf8.char(self:readByte(0xFF01)))
+        outputDebugString("SERIAL: "..utf8.char(self:readByte(0xFF01)))
     end
 
     if ((address >= 0x8000 and address < 0x9000) or
@@ -107,21 +107,21 @@ function MMU:writeShort(address, value)
     if ((address >= 0x8000 and address < 0x9000) or
         (address >= 0x9000 and address < 0xA000)) then
         address = address - 0x8000
-        self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
+        self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
         self.gpu.vram[address + 1] = _bitAnd(0x00FF, value)
     elseif ((address >= 0xC000 and address < 0xD000) or
         (address >= 0xD000 and address < 0xF000)) then
         address = address - 0xC000
-        self.ram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
+        self.ram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
         self.ram[address + 1] = _bitAnd(0x00FF, value)
     elseif (address >= 0xF000) then
         if (address >= 0xFF80) then
             address = address - 0xFF80
-            self.zram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
+            self.zram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
             self.zram[address + 1] = _bitAnd(0x00FF, value)
         elseif (address >= 0xFF40) then
             address = address - 0x8000
-            self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 128)
+            self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
             self.gpu.vram[address + 1] = _bitAnd(0x00FF, value)
         else
             return
@@ -194,7 +194,7 @@ end
 function MMU:readUInt16(address)
     local value = self:readByte(address + 1)
 
-    value = value * 128
+    value = value * 256
     value = value + self:readByte(address)
 
     return value
@@ -203,7 +203,7 @@ end
 function MMU:readInt16(address)
     local value = self:readByte(address + 1)
 
-    value = value * 128
+    value = value * 256
     value = value + self:readByte(address)
 
     if (value >= 0x8000) then

@@ -79,7 +79,8 @@ end
 function TestHandler:assertEquals(expected, actual)
     if (expected ~= actual) then
         Log.error(self.suiteName..": "..self.testName..": assertEquals",
-            "Expected %d but got %d.",
+            "Expected "..((type(expected) == "number") and "%d" or "%b").." but got "..
+                ((type(actual) == "number") and "%d" or "%b")..".",
             expected, actual)
     end
 end

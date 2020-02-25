@@ -13,8 +13,6 @@ local ROM_PATH = "data/cpu_instrs.gb"
 function GameBoy:create()
     self.gpu = GPU(self)
     self.cpu = CPU(self)
-
-    --self.debugger:breakpoint(0x00)
 end
 
 function GameBoy:load(romPath)
@@ -57,8 +55,11 @@ end
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     local gameboy = GameBoy()
+    local debugger = Debugger()
+
+    --debugger:breakpoint(0xe0)
 
     gameboy:load(ROM_PATH)
-    gameboy:attachDebugger(Debugger())
+    gameboy:attachDebugger(debugger)
     gameboy:start()
 end)

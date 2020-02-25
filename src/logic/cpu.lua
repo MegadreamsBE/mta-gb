@@ -100,7 +100,7 @@ end
 
 function CPU:readTwoRegisters(r1, r2)
     local value = self.registers[r1]
-    value = value * 128
+    value = value * 256
 
     if (r2 == "f") then
         value = value + (
@@ -117,7 +117,7 @@ function CPU:readTwoRegisters(r1, r2)
 end
 
 function CPU:writeTwoRegisters(r1, r2, value)
-    self.registers[r1] = _math_floor(_bitAnd(0xFF00, value) / 128)
+    self.registers[r1] = _math_floor(_bitAnd(0xFF00, value) / 256)
 
     if (r2 == "f") then
         self.registers.f[1] = (((value / (2 ^ 7)) % 2) > 1)
