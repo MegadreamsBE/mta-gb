@@ -394,7 +394,7 @@ function Debugger:render()
         end
     end
 
-    --[[local color =
+    local color =
         {{255, 255, 255}, {192, 192, 192}, {96, 96, 96}, {0, 0, 0}}
 
     local currentX = romMemoryWindowStartX
@@ -426,11 +426,12 @@ function Debugger:render()
 
         currentX = currentX + (8 * size) + 2
 
-        if (currentX > romMemoryWindowStartX + screenWidth) then
+        if (currentX > romMemoryWindowStartX +
+            (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
             currentX = romMemoryWindowStartX
             currentY = currentY + (8 * size) + 2
         end
-    end]]
+    end
 end
 
 function Debugger:breakpoint(address)

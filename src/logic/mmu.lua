@@ -191,6 +191,16 @@ function MMU:readByte(address)
     end
 end
 
+function MMU:readSignedByte(address)
+    local value = self:readByte(address)
+
+    if (value >= 0x80) then
+        value = -((0xFF - value) + 1)
+    end
+
+    return value
+end
+
 function MMU:readUInt16(address)
     local value = self:readByte(address + 1)
 

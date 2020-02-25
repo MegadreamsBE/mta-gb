@@ -57,7 +57,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     local gameboy = GameBoy()
     local debugger = Debugger()
 
-    --debugger:breakpoint(0xe0)
+    --debugger:breakpoint(0x1d)
 
     gameboy:load(ROM_PATH)
     gameboy:attachDebugger(debugger)

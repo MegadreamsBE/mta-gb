@@ -70,22 +70,28 @@ function GPU:renderScan()
     local windowX = mmu:readByte(0xFF4B) - 7
 
     if (_bitExtract(mmu:readByte(0xFF40), 5, 1) == 1) then
-       if (windowY <= mmu:readbyte(0xFF44)) then
+       if (windowY <= mmu:readByte(0xFF44)) then
            usingWindow = true
        end
     end
 
-    if (_bitExtract(mmu:readByte(0xFF40), 4, 1) ~= 1) then
+    if (_bitExtract(mmu:readByte(0xFF40), 4, 1) == 1) then
+        tileData = 0x8000
+    else
         tileData = 0x8800
         unsigned = false
     end
 
     if (not usingWindow) then
-        if (_bitExtract(mmu:readByte(0xFF40), 3, 1) ~= 1) then
+        if (_bitExtract(mmu:readByte(0xFF40), 3, 1) == 1) then
+            backgroundMemory = 0x9C00
+        else
             backgroundMemory = 0x9800
         end
     else
-        if (_bitExtract(mmu:readByte(0xFF40), 6, 1) ~= 1) then
+        if (_bitExtract(mmu:readByte(0xFF40), 6, 1) == 1) then
+            backgroundMemory = 0x9C00
+        else
             backgroundMemory = 0x9800
         end
     end
@@ -98,7 +104,7 @@ function GPU:renderScan()
         yPos = mmu:readByte(0xFF44) - windowY
     end
 
-    local row = (yPos / 8) * 32
+    local row = math.floor(yPos / 8) * 32
 
     for i=0, 159 do
         local xPos = i + scrollX
@@ -109,14 +115,24 @@ function GPU:renderScan()
             end
         end
 
-        local column = (xPos / 8)
+        local column = math.floor(xPos / 8)
         local tileNum = 0
 
         local tileAddress = backgroundMemory + row + column
 
-        tileNum = mmu:readByte(tileAddress)
+        if (unsigned) then
+            tileNum = mmu:readByte(tileAddress)
+        else
+            tileNum = mmu:readSignedByte(tileAddress)
+        end
 
-        local tileLocation = tileData + tileNum * 16
+        local tileLocation = tileData
+
+        if (unsigned) then
+            tileLocation = tileLocation + tileNum * 16
+        else
+            tileLocation = tileLocation + (tileNum + 128) * 16
+        end
 
         local line = (yPos % 8) * 2
         local data1 = mmu:readByte(tileLocation + line)
