@@ -20,26 +20,6 @@ function CPU:create(gameboy)
         t = 0
     }
 
-    --[[self.registers = {
-        a = 0x0,
-        b = 0x0,
-        c = 0x0,
-        d = 0x0,
-        e = 0x0,
-        h = 0x0,
-        l = 0x0,
-        f = {
-            -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
-            false, false, false, false
-        },
-        pc = 0x0,
-        sp = 0x0,
-        clock = {
-            m = 0,
-            t = 0
-        }
-    }]]
-
     self.registers = {
         a = 0x01,
         b = 0x00,
@@ -77,16 +57,25 @@ function CPU:reset()
 
     self.interrupts = true
 
-    --[[self.registers.a = 0
-    self.registers.b = 0
-    self.registers.c = 0
-    self.registers.d = 0
-    self.registers.e = 0
-    self.registers.h = 0
-    self.registers.l = 0
-    self.registers.f = { false, false, false, false }
-    self.registers.sp = 0
-    self.registers.pc = 0]]
+    self.registers = {
+        a = 0x01,
+        b = 0x00,
+        c = 0x13,
+        d = 0x00,
+        e = 0xd8,
+        h = 0x01,
+        l = 0x4d,
+        f = {
+            -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
+            true, false, true, true
+        },
+        pc = 0x100,
+        sp = 0xfffe,
+        clock = {
+            m = 0,
+            t = 0
+        }
+    }
 
     if (self.stepCallback) then
         removeEventHandler("onClientPreRender", root, self.stepCallback)

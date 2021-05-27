@@ -5,7 +5,7 @@ Debugger = Class()
 -----------------------------------
 
 local RENDER = true
-local LOG_TRACE = true
+local LOG_TRACE = false
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 
 local DEBUGGER_WIDTH, DEBUGGER_HEIGHT = 1280, 768
