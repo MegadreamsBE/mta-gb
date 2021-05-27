@@ -5,6 +5,7 @@ Debugger = Class()
 -----------------------------------
 
 local RENDER = true
+local LOG_TRACE = true
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 
 local DEBUGGER_WIDTH, DEBUGGER_HEIGHT = 1280, 768
@@ -72,15 +73,44 @@ function Debugger:create()
 
     self.currentMenu = 0
     self.debugMemoryPointer = -1
+
+    self.traceFile = nil
 end
 
 function Debugger:start(gameboy)
     self.gameboy = gameboy
-    self.disassembler:load(self.gameboy.cpu.mmu.BIOS)
+    self.disassembler:disassemble(self.gameboy.cpu.mmu)
+    self.lastPC = -1
+
+    if (LOG_TRACE) then
+        if (self.traceFile) then
+            fileClose(self.traceFile)
+        end
+
+        if (fileExists("trace.txt")) then
+            fileDelete("trace.txt")
+        end
+
+        self.traceFile = fileCreate("trace.txt")
+    end
+
+    setTimer(function()
+        self.disassembler:disassemble(self.gameboy.cpu.mmu)
+    end, 1000, 0)
 
     if (RENDER) then
         addEventHandler("onClientRender", root, function()
             self:render()
+        end)
+
+        addCommandHandler("breakpoint", function(_, address)
+            address = tonumber(address, 16)
+
+            if (self.breakpoints[address]) then
+                self:removeBreakpoint(address)
+            else
+                self:breakpoint(address)
+            end
         end)
 
         bindKey("f3", "up", function()
@@ -178,17 +208,45 @@ function Debugger:step()
         return true
     end
 
+    if (LOG_TRACE and self.traceFile) then
+        local flags = ""
+
+        flags = flags..((self.gameboy.cpu.registers.f[1]) and "Z" or "-")
+        flags = flags..((self.gameboy.cpu.registers.f[2]) and "N" or "-")
+        flags = flags..((self.gameboy.cpu.registers.f[3]) and "H" or "-")
+        flags = flags..((self.gameboy.cpu.registers.f[4]) and "C" or "-")
+
+        local instruction = "[??]0x"..string.format("%.4x", self.gameboy.cpu.registers.pc)..": "
+        local opcode = self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc)
+        local instructionBytes = ""
+
+        for i=1, self.disassembler:getOpcodeLength(opcode + 1) do
+            instructionBytes = instructionBytes..string.format("%.2x", self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc + (i - 1))):lower().." "
+        end
+
+        instruction = instruction..string.format("%-09s", instructionBytes)
+        instruction = instruction.." "..(self.disassembler:getData()[self.gameboy.cpu.registers.pc + 1] or "unknown"):lower()
+
+        fileWrite(self.traceFile, 
+            "A:"..string.format("%.2x", self.gameboy.cpu.registers.a):upper()..
+            " F:"..flags..
+            " BC:"..string.format("%.4x", self.gameboy.cpu:readTwoRegisters('b', 'c')):lower()..
+            " DE:"..string.format("%.4x", self.gameboy.cpu:readTwoRegisters('d', 'e')):lower()..
+            " HL:"..string.format("%.4x", self.gameboy.cpu:readTwoRegisters('h', 'l')):lower()..
+            " SP:"..string.format("%.4x", self.gameboy.cpu.registers.sp)..
+            " PC:"..string.format("%.4x", self.gameboy.cpu.registers.pc)..
+            " (cy: "..self.gameboy.cpu.clock.t..")"..
+            " ppu:"..((self.gameboy.gpu.screenEnabled) and "+" or "-")..self.gameboy.gpu.mode..
+            " |"..instruction..
+            " {"..string.format("%.2x", self.gameboy.cpu.mmu:readByte(0xFF44))..", "..self.gameboy.gpu.modeclock.."}"..
+            "\n")
+    end
+
     if (self.breakpoints[self.gameboy.cpu.registers.pc] and not self.debuggerInducedPause
         and not self.passthrough) then
         self.gameboy.cpu:pause()
         self.debuggerInducedPause = true
         return false
-    end
-
-    if (self.debuggingBios and (not self.gameboy.cpu.mmu.inBios
-        or self.gameboy.cpu.registers.pc == 0x100)) then
-        self.debuggingBios = false
-        self.disassembler:load(self.gameboy.rom:getData())
     end
 
     self.passthrough = false
@@ -310,10 +368,19 @@ function Debugger:render()
                     r, g, b = 255, 51, 11
                 end
 
+                if (self.breakpoints[i]) then
+                    dxDrawText("X", romX, romY,
+                        romWindowStartX + romWindowWidth - (10 * (1920 / SCREEN_WIDTH)),
+                        0, tocolor(255, 0, 0), 1, "default-bold")
+
+                    romX = romX + (15 * (1920 / SCREEN_WIDTH))
+                end
+
                 dxDrawText(_string_format("%.4x", i):upper()..": "..romValue, romX, romY,
                     romWindowStartX + romWindowWidth - (10 * (1920 / SCREEN_WIDTH)),
                     0, tocolor(r, g, b), 1, "default-bold")
 
+                romX = romWindowStartX + (10 * (1920 / SCREEN_WIDTH))
                 romY = romY + yPadding
 
                 if (romY > (romWindowStartY + romWindowHeight - yPadding)) then
@@ -386,7 +453,7 @@ function Debugger:render()
         registersY = registersY + yPadding
 
         for _, address in pairs(cpu.mmu.stackDebug) do
-            dxDrawText("0x".._string_format("%.8x", address):upper(), registersX, registersY,
+            dxDrawText("0x".._string_format("%.4x", address):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -
                 (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
 
@@ -400,7 +467,7 @@ function Debugger:render()
     local currentX = romMemoryWindowStartX
     local currentY = romMemoryWindowStartY + romMemoryWindowHeight
 
-    local size = 2
+    local size = (2 * (1920 / SCREEN_WIDTH))
     local palette = cpu.mmu:readByte(0xFF47)
 
     for tile=0, 384 do
@@ -429,11 +496,59 @@ function Debugger:render()
         if (currentX > romMemoryWindowStartX +
             (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
             currentX = romMemoryWindowStartX
-            currentY = currentY + (8 * size) + 2
+            currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+        end
+    end
+
+    currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+
+    local currentX = romMemoryWindowStartX
+    local currentY = currentY + (10 * (1920 / SCREEN_WIDTH))
+
+    local size = 2
+
+    for oam=0, 39 do
+        local y = cpu.mmu:readByte(0xFE00 + (oam * 4))
+        local x = cpu.mmu:readByte(0xFE00 + (oam * 4) + 1)
+        local tile = cpu.mmu:readByte(0xFE00 + (oam * 4) + 2)
+        local options = cpu.mmu:readByte(0xFE00 + (oam * 4) + 3)
+
+        palette = cpu.mmu:readByte((_bitExtract(options, 4, 1) == 1) and 0xFF49 or 0xFF48)
+
+        local address = 0x8000 + (tile * 16)
+
+        for row=1, 8 do
+            local byte1 = cpu.mmu:readByte(address)
+            local byte2 = cpu.mmu:readByte(address + 1)
+
+            for column=1, 8 do
+                local paletteId = ((_bitExtract(byte2, 8 - column, 1) == 1) and 2 or 0)
+                    + ((_bitExtract(byte1, 8 - column, 1) == 1) and 1 or 0)
+
+                local colorIndex = _bitExtract(palette, 8 - (2 * paletteId), 2)
+                columnColor = color[colorIndex + 1]
+
+                dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                    tocolor(columnColor[1], columnColor[2], columnColor[3]))
+            end
+
+            address = address + 2
+        end
+
+        currentX = currentX + (8 * size) + 2
+
+        if (currentX > romMemoryWindowStartX +
+            (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
+            currentX = romMemoryWindowStartX
+            currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
         end
     end
 end
 
 function Debugger:breakpoint(address)
     self.breakpoints[address] = true
+end
+
+function Debugger:removeBreakpoint(address)
+    self.breakpoints[address] = false
 end

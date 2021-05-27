@@ -56,24 +56,45 @@ local OPCODE_TABLE = {
 
 function Disassembler:create()
     self.data = {}
-    self.romData = {}
 end
 
-function Disassembler:load(rom)
+function Disassembler:getOpcodeLength(opcode)
+    if ((opcode - 1) == 0xcb) then
+        return 2
+    end
+
+    local instruction = OPCODE_TABLE[opcode]
+
+    if (instruction ~= nil) then
+        local byteCount = (instruction:match("nn") ~= nil) and 2 or
+            ((instruction:match("n") ~= nil) and 1 or 0)
+
+        if (byteCount == 1) then
+            return 2
+        elseif (byteCount == 2) then
+            return 3
+        end
+
+        return 1
+    end
+
+    return 0
+end
+
+function Disassembler:disassemble(mmu)
     self.data = {}
-    self.romData = rom
 
     local address = 0
 
-    while (address < #self.romData) do
-        local opcode = self:readByte(address) + 1
-        local instruction = OPCODE_TABLE[self:readByte(address) + 1]
+    while address < 0xffff do
+        local opcode = (mmu:readByte(address) or 0) + 1
+        local instruction = OPCODE_TABLE[opcode]
         local pc = address
 
         if (opcode - 1 == 0xCB) then
             instruction = instruction
-            address = address + 2
-            self.data[pc + 1] = instruction
+            address = address + 1
+            self.data[pc + 1] = instruction.. " "..(mmu:readByte(address + 1) or 0)
         else
             if (instruction ~= nil) then
                 local byteCount = (instruction:match("nn") ~= nil) and 2 or
@@ -81,11 +102,11 @@ function Disassembler:load(rom)
 
                 if (byteCount == 1) then
                     instruction = instruction:gsub("n",
-                        _string_format("%.2x", self:readByte(address + 1)):upper())
+                        _string_format("%.2x", mmu:readByte(address + 1)):upper())
                     address = address + 1
                 elseif (byteCount == 2) then
                     instruction = instruction:gsub("nn",
-                        _string_format("%.4x", self:readUInt16(address + 1)):upper())
+                        _string_format("%.4x", mmu:readUInt16(address + 1)):upper())
 
                     address = address + 2
                 end
@@ -98,34 +119,6 @@ function Disassembler:load(rom)
 
         address = address + 1
     end
-
-    self.romData = {}
-end
-
-function Disassembler:readByte(address)
-    return self.romData[address + 1]
-end
-
-function Disassembler:readUInt16(address)
-    local value = self:readByte(address + 1)
-
-    value = value * 0xFF + value
-    value = value + self:readByte(address)
-
-    return value
-end
-
-function Disassembler:readInt16(address)
-    local value = self:readByte(address + 1)
-
-    value = value * 0xFF + value
-    value = value + self:readByte(address)
-
-    if (value >= 0x8000) then
-        value = -((0xFFFF - value) + 1)
-    end
-
-    return value
 end
 
 function Disassembler:getData()

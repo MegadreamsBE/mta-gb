@@ -33,7 +33,12 @@ MMU.BIOS = BIOS
 
 local _bitAnd = bitAnd
 local _bitTest = bitTest
+local _bitExtract = bitExtract
+local _bitReplace = bitReplace
+local _bitLShift = bitLShift
 local _string_format = string.format
+local _table_insert = table.insert
+local _table_remove = table.remove
 local _math_floor = math.floor
 
 local memoryViolation = function(address, pc)
@@ -61,6 +66,9 @@ function MMU:create(cpu, gpu)
             mode = 0
         }
     }
+
+    self.interrupts = 0x0
+    self.interruptFlags = 0x0
 
     self.romOffset = 0x4000
     self.ramOffset = 0x0000
@@ -104,10 +112,6 @@ function MMU:loadRom(rom)
 end
 
 function MMU:writeByte(address, value)
-    if (address == 0xFF02 and value == 0x81) then
-        outputDebugString("SERIAL: "..utf8.char(self:readByte(0xFF01)))
-    end
-
     if (address >= 0x0000 and address < 0x2000) then
         if (self.cartridgeType == 2 or self.cartridgeType == 3) then
             self.mbc[2].ramon = (_bitAnd(value, 0x0F) == 0x0A)
@@ -148,14 +152,61 @@ function MMU:writeByte(address, value)
         address = address - 0xC000
         self.ram[address + 1] = value
     elseif (address >= 0xF000) then
-        if (address >= 0xFF80) then
-            address = address - 0xFF80
-            self.zram[address + 1] = value
-        elseif (address >= 0xFF40) then
-            address = address - 0x8000
-            self.gpu.vram[address + 1] = value
-        else
-            return
+        local innerAddress = _bitAnd(address, 0x0F00)
+
+        if (innerAddress >= 0x0 and innerAddress <= 0xD00) then
+            self.ram[_bitAnd(address, 0x1FFF) + 1] = value
+        elseif (innerAddress == 0xE00) then
+            if (_bitAnd(address, 0xFF) < 0xA0) then
+                address = address - 0xFE00
+                self.gpu.oam[address + 1] = value
+            end
+        elseif (innerAddress == 0xF00) then
+            if (address == 0xFFFF) then
+                self.interrupts = value
+            elseif (address > 0xFF7F) then
+                self.zram[_bitAnd(address, 0x7F) + 1] = value
+            else
+                local case = _bitAnd(address, 0xF0)
+
+                if (case == 0x0) then
+                    local internalCase = _bitAnd(address, 0xF)
+
+                    if (internalCase == 0) then
+                        self.cpu.gameboy:writeKeypad(value)
+                    elseif (internalCase == 2) then
+                        outputDebugString("SERIAL ("..string.format("%.4x", self.cpu.registers.pc):upper()..") ("..self:readByte(0xFF01).."): "..utf8.char(self:readByte(0xFF01)))
+                        value = 0x00
+                    elseif (internalCase >= 4 and internalCase <= 7) then
+                        return 0
+                    elseif (internalCase == 15) then
+                        self.interruptFlags = value
+                    else
+                        self.ram[address + 1] = value
+                    end
+                elseif (case == 0x10 or case == 0x20 or case == 0x30) then
+                    return 0
+                elseif (case == 0x40 or case == 0x50 or case == 0x60 or case == 0x70) then
+                    if (address == 0xFF40) then
+                        if (_bitExtract(value, 7, 1) == 1) then
+                            self.gpu:enableScreen()
+                        else
+                            self.gpu:disableScreen()
+                        end
+                    elseif (address == 0xFF46) then
+                        local dmaAddress = _bitLShift(value, 8)
+
+                        if (dmaAddress >= 0x8000 and dmaAddress < 0xE000) then
+                            for i=1, 0xA0 do
+                                self:writeByte(0xFE00 + (i - 1), self:readByte(dmaAddress + (i - 1)))
+                            end
+                        end
+                    end
+
+                    address = address - 0x8000
+                    self.gpu.vram[address + 1] = value
+                end
+            end
         end
     else
         return memoryViolation(address, self.cpu.registers.pc)
@@ -163,41 +214,20 @@ function MMU:writeByte(address, value)
 end
 
 function MMU:writeShort(address, value)
-    if (address >= 0x8000 and address < 0xA000) then
-        address = address - 0x8000
-        self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
-        self.gpu.vram[address + 1] = _bitAnd(0x00FF, value)
-    elseif (address >= 0xC000 and address < 0xF000) then
-        address = address - 0xC000
-        self.ram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
-        self.ram[address + 1] = _bitAnd(0x00FF, value)
-    elseif (address >= 0xF000) then
-        if (address >= 0xFF80) then
-            address = address - 0xFF80
-            self.zram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
-            self.zram[address + 1] = _bitAnd(0x00FF, value)
-        elseif (address >= 0xFF40) then
-            address = address - 0x8000
-            self.gpu.vram[address + 2] = _math_floor(_bitAnd(0xFF00, value) / 256)
-            self.gpu.vram[address + 1] = _bitAnd(0x00FF, value)
-        else
-            return
-        end
-    else
-        return memoryViolation(address, self.cpu.registers.pc)
-    end
+    self:writeByte(address, _bitAnd(0x00FF, value))
+    self:writeByte(address + 1, _math_floor(_bitAnd(0xFF00, value) / 256))
 end
 
 function MMU:pushStack(value)
     self.cpu.registers.sp = self.cpu.registers.sp - 2
     self:writeShort(self.cpu.registers.sp, value)
-    --table.insert(self.stackDebug, 1, value)
+    _table_insert(self.stackDebug, 1, value)
 end
 
 function MMU:popStack()
-    local value = self:readInt16(self.cpu.registers.sp)
+    local value = self:readUInt16(self.cpu.registers.sp)
     self.cpu.registers.sp = self.cpu.registers.sp + 2
-    --table.remove(self.stackDebug, 1)
+    _table_remove(self.stackDebug, 1)
 
     return value
 end
@@ -216,7 +246,8 @@ function MMU:readByte(address)
     elseif (address >= 0x1000 and address < 0x4000) then
         return self.rom[address + 1] or 0
     elseif (address >= 0x4000 and address < 0x8000) then
-        return self.rom[self.romOffset + (_bitAnd(address, 0x333F) + 1)] or 0
+        --return self.rom[self.romOffset + (_bitAnd(address, 0x333F) + 1)] or 0
+        return self.rom[address + 1] or 0
     elseif (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
         return self.gpu.vram[address + 1] or 0
@@ -227,17 +258,43 @@ function MMU:readByte(address)
         address = address - 0xC000
         return self.ram[address + 1] or 0
     elseif (address >= 0xF000) then
-        if (address >= 0xFF80) then
-            address = address - 0xFF80
-            return self.zram[address + 1] or 0
-        elseif (address >= 0xFF40) then
-            address = address - 0x8000
-            return self.gpu.vram[address + 1] or 0
-        else
-            if (_bitAnd(address, 0x3F) == 0x00) then
-                return 0
+        local innerAddress = _bitAnd(address, 0x0F00)
+
+        if (innerAddress >= 0x0 and innerAddress <= 0xD00) then
+            return self.ram[_bitAnd(address, 0x1FFF) + 1] or 0
+        elseif (innerAddress == 0xE00) then
+            if (_bitAnd(address, 0x0FF) < 0xA0) then 
+                address = address - 0xFE00
+                return self.gpu.oam[address + 1] or 0
+            end
+            
+            return 0
+        elseif (innerAddress == 0xF00) then
+            if (address == 0xFFFF) then
+                return self.interrupts
+            elseif (address > 0xFF7F) then
+                return self.zram[_bitAnd(address, 0x7F) + 1]
             else
-                return 0
+                local case = _bitAnd(address, 0xF0)
+
+                if (case == 0x0) then
+                    local internalCase = _bitAnd(address, 0xF)
+
+                    if (internalCase == 0) then
+                        return self.cpu.gameboy:readKeypad()
+                    elseif (internalCase >= 4 and internalCase <= 7) then
+                        return 0
+                    elseif (internalCase == 15) then
+                        return self.interruptFlags
+                    else
+                        return self.ram[address + 1] or 0
+                    end
+                elseif (case == 0x10 or case == 0x20 or case == 0x30) then
+                    return 0
+                elseif (case == 0x40 or case == 0x50 or case == 0x60 or case == 0x70) then
+                    address = address - 0x8000
+                    return self.gpu.vram[address + 1] or 0
+                end
             end
         end
     else

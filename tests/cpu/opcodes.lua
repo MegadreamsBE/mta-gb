@@ -127,7 +127,7 @@ function TestOpcodes:testOpcode07Carry()
     cpu.registers.a = 0xEC -- 1110 1100
     cpu:step()
 
-    self.handler:assertEquals(0xD9, cpu.registers.a) -- 1101 1001
+    self.handler:assertEquals(0xD8, cpu.registers.a) -- 1101 1000
     self.handler:assertEquals(true, cpu.registers.f[4])
 end
 
@@ -140,7 +140,7 @@ function TestOpcodes:testOpcode08()
     cpu:step()
 
     self.handler:assertEquals(0xFFF6, cpu.mmu:readUInt16(0x8045))
-    self.handler:assertClock(3, 12)
+    self.handler:assertClock(5, 20)
 end
 
 function TestOpcodes:testOpcode09()
