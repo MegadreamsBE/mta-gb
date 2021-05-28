@@ -1,5 +1,5 @@
-# MTA-GB - GameBoy emulator in Multi Theft Auto
-This project aims to create a fully playable GameBoy emulator within Multi Theft Auto.
+# MTA-GB - Game Boy emulator in Multi Theft Auto
+This project aims to create a fully playable Game Boy emulator within Multi Theft Auto.
 
 ## Loading ROMs
 At this stage it is not possible to dynamically decide which ROM to load. Instead it is currently hardcoded to run the Tetris ROM but this can be adjusted in **src/core.lua**. This ROM is _not_ included in this repository.
@@ -34,10 +34,10 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 
 ## FAQ
 1. Why Multi Theft Auto?    
-   I wanted to develop this for a platform that not yet has a Gameboy emulator and at the same time poses a bigger challenge for optimization due to its poor performance. MTA not having a Gameboy emulator and at the same time have plenty of performance issues fit this criteria very well. Once finished and properly optimized this emulator could be used as a way of keeping players entertained at times when they have to wait (such as after dying on a race deatchmatch map).
+   I wanted to develop this for a platform that not yet has a Game Boy emulator and at the same time poses a bigger challenge for optimization due to its poor performance. MTA not having a Game Boy emulator and at the same time have plenty of performance issues fit this criteria very well. Once finished and properly optimized this emulator could be used as a way of keeping players entertained at times when they have to wait (such as after dying on a race deatchmatch map).
    
 2. Will this also support Game Boy Color?    
-   Yes. This will be introduced once the Gameboy emulation is stable and optimized well enough in a new branch. It will be possible to toggle which of the two you want to use to run a ROM.
+   Yes. This will be introduced once the Game Boy emulation is stable and optimized well enough in a new branch. It will be possible to toggle which of the two you want to use to run a ROM.
    
 3. Will this support Game Boy Advance games?    
    Perhaps. This would be far into the future and only if optimization methods deem it feasable.
