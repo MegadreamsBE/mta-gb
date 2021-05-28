@@ -12,6 +12,7 @@ local _bitXor = bitXor
 local _bitNot = bitNot
 local _bitExtract = bitExtract
 local _bitReplace = bitReplace
+local _bitLShift = bitLShift
 
 local _string_format = string.format
 
@@ -49,7 +50,7 @@ local helper_add = function(cpu, value, add)
     result = (value + add) % 0x100
 
     cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, add), result), 0x10) == 0x10) -- FLAG_HALFCARRY
-    cpu.registers.f[4] = (result < value or value + add > result) -- FLAG_CARRY
+    cpu.registers.f[4] = (value + add > 0xFF)  -- FLAG_CARRY
 
     cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
@@ -60,10 +61,10 @@ end
 local helper_adc = function(cpu, value, add)
     local carry = cpu.registers.f[4] and 1 or 0
 
-    result = (value + add) % 0x100
+    result = (value + add + carry) % 0x100
 
     cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, add), result), 0x10) == 0x10) -- FLAG_HALFCARRY
-    cpu.registers.f[4] = (result < (value + carry) or (value + add + carry) > result) -- FLAG_CARRY
+    cpu.registers.f[4] = (value + add + carry > 0xFF) -- FLAG_CARRY
 
     cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
@@ -75,7 +76,7 @@ local helper_add_sp = function(cpu, value, add)
     result = (value + add) % 0x10000
 
     cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, add), result), 0x1000) == 0x1000) -- FLAG_HALFCARRY
-    cpu.registers.f[4] = (result < value or value + add > result) -- FLAG_CARRY
+    cpu.registers.f[4] = (value + add > 0xFFFF) -- FLAG_CARRY
 
     cpu.registers.f[1] = false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
@@ -87,9 +88,9 @@ local helper_add16 = function(cpu, value, add)
     result = (value + add) % 0x10000
 
     cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, add), result), 0x1000) == 0x1000) -- FLAG_HALFCARRY
-    cpu.registers.f[4] = (result < value or value + add > result) -- FLAG_CARRY
+    cpu.registers.f[4] = (value + add > 0xFFFF) -- FLAG_CARRY
 
-    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    --cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
 
     return result
@@ -99,7 +100,7 @@ local helper_sub = function(cpu, value, sub)
     result = (value - sub) % 0x100
 
     cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, sub), result), 0x10) == 0x10) -- FLAG_HALFCARRY
-    cpu.registers.f[4] = (result > value or value - sub < result) -- FLAG_CARRY
+    cpu.registers.f[4] = (sub > value) -- FLAG_CARRY
 
     cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = true -- FLAG_SUBSTRACT
@@ -166,6 +167,10 @@ local helper_lrotate = function(cpu, value, withCarry, bitSize)
         value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
     end
 
+    if (withCarry) then
+        value = _bitOr(value, oldCarry and 1 or 0)
+    end
+
     cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
     cpu.registers.f[3] = false -- FLAG_HALFCARRY
@@ -199,6 +204,10 @@ local helper_rrotate = function(cpu, value, withCarry, bitSize)
         value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
     end
 
+    if (withCarry) then
+        value = _bitOr(value, oldCarry and _bitLShift(1, 7) or 0)
+    end
+
     cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
     cpu.registers.f[3] = false -- FLAG_HALFCARRY
@@ -226,6 +235,10 @@ local helper_lshift = function(cpu, value, withCarry, bitSize)
         value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
     end
 
+    if (withCarry) then
+        value = _bitOr(value, oldCarry and 1 or 0)
+    end
+
     cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
     cpu.registers.f[3] = false -- FLAG_HALFCARRY
@@ -251,6 +264,10 @@ local helper_rshift = function(cpu, value, withCarry, bitSize)
 
     if (bits > bitSize) then
         value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
+    end
+
+    if (withCarry) then
+        value = _bitOr(value, oldCarry and _bitLShift(1, 7) or 0)
     end
 
     cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
@@ -823,6 +840,8 @@ GameBoy.opcodes = {
     [0x1f] = function(cpu)
         cpu.registers.a = helper_rrotate(cpu, cpu.registers.a, true, 8)
     
+        cpu.registers.f[1] = false -- FLAG_ZERO
+
         cpu.registers.clock.m = cpu.registers.clock.m + 1
         cpu.registers.clock.t = cpu.registers.clock.t + 4
     end,
@@ -2052,10 +2071,8 @@ GameBoy.opcodes = {
     end,
     [0xce] = function(cpu)
         cpu.registers.a = helper_adc(cpu, cpu.registers.a,
-            cpu.mmu:readByte(cpu.registers.pc)
-            + ((cpu.registers.f[4]) and 1 or 0))
+            cpu.mmu:readByte(cpu.registers.pc))
 
-        cpu.registers.f[2] = false
         cpu.registers.pc = cpu.registers.pc + 1
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8

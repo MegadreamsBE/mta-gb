@@ -11,6 +11,15 @@ local _bitRShift = bitRShift
 local _bitOr = bitOr
 local _bitAnd = bitAnd
 
+local COLORS = {
+    {255, 255, 255},
+    {192, 192, 192},
+    {92, 92, 92},
+    {0, 0, 0}
+}
+
+_COLORS = COLORS
+
 -----------------------------------
 -- * Functions
 -----------------------------------
@@ -60,7 +69,7 @@ function GPU:reset()
         end
     end
 
-    self.mode = 1
+    self.mode = 2
     self.modeclock = 0
     self.line = 0
 
@@ -178,18 +187,8 @@ function GPU:renderTiles()
         local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
         color = _bitOr(color, _bitExtract(palette, lo, 1))
 
-        local r, g, b = 0, 0, 0
-
-        if (color == 0) then
-            r, g, b = 255, 255, 255
-        elseif (color == 1) then
-            r, g, b = 192, 192, 192
-        elseif (color == 2) then
-            r, g, b = 92, 92, 92
-        end
-
         if (scanLine >= 0 and scanLine <= 143 and i >= 0 and i <= 159) then
-            dxSetPixelColor(self.screenPixels, i, scanLine, r, g, b, 255)
+            dxSetPixelColor(self.screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
         end
     end
 end
@@ -267,21 +266,11 @@ function GPU:renderSprites()
                 color = _bitOr(color, _bitExtract(palette, lo, 1))
 
                 if (color ~= 0) then
-                    local r, g, b = 0, 0, 0
-
-                    if (color == 0) then
-                        r, g, b = 255, 255, 255
-                    elseif (color == 1) then
-                        r, g, b = 192, 192, 192
-                    elseif (color == 2) then
-                        r, g, b = 92, 92, 92
-                    end
-
                     local xPixel = (-tilePixel) + 7
                     local pixel = xPos + xPixel
 
                     if (scanLine >= 0 and scanLine <= 143 and pixel >= 0 and pixel <= 159) then
-                        dxSetPixelColor(self.screenPixels, pixel, scanLine, r, g, b, 255)
+                        dxSetPixelColor(self.screenPixels, pixel, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
                     end
                 end
             end
@@ -364,7 +353,7 @@ function GPU:step()
             modeclock = modeclock - 456
             self.line = self.line + 1
 
-            if (self.line > 153) then
+            if (self.line == 154) then
                 self.mode = 2
 
                 lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
@@ -431,7 +420,7 @@ function GPU:disableScreen()
 
     self.screenEnabled = false
 
-    self.mode = 1
+    self.mode = 2
     self.modeclock = 0
     self.line = 0
     self.delayCyclesLeft = 0

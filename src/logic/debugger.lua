@@ -23,6 +23,8 @@ local DEBUGGER_REGISTERS = {
 -----------------------------------
 
 local _bitExtract = bitExtract
+local _bitLShift = bitLShift
+local _bitOr = bitOr
 local _math_floor = math.floor
 local _string_format = string.format
 
@@ -75,6 +77,7 @@ function Debugger:create()
     self.debugMemoryPointer = -1
 
     self.traceFile = nil
+    self.nextStepTick = -1
 end
 
 function Debugger:start(gameboy)
@@ -113,9 +116,14 @@ function Debugger:start(gameboy)
             end
         end)
 
+        bindKey("f3", "down", function()
+            self.nextStepTick = getTickCount() + 500
+        end)
+
         bindKey("f3", "up", function()
             self:performStep()
             self.debugMemoryPointer = -1
+            self.nextStepTick = -1
         end)
 
         bindKey("f4", "up", function()
@@ -219,8 +227,13 @@ function Debugger:step()
         local instruction = "[??]0x"..string.format("%.4x", self.gameboy.cpu.registers.pc)..": "
         local opcode = self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc)
         local instructionBytes = ""
+        local opcodeLen = self.disassembler:getOpcodeLength(opcode + 1)
 
-        for i=1, self.disassembler:getOpcodeLength(opcode + 1) do
+        if ((self.disassembler:getData()[self.gameboy.cpu.registers.pc + 1] or "NOP"):upper() == "NOP") then
+            self.disassembler:disassemble(self.gameboy.cpu.mmu)
+        end
+
+        for i=1, opcodeLen do
             instructionBytes = instructionBytes..string.format("%.2x", self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc + (i - 1))):lower().." "
         end
 
@@ -264,6 +277,11 @@ end
 function Debugger:render()
     if (self.gameboy == nil) then
         return
+    end
+
+    if (self.nextStepTick ~= -1 and getTickCount() > self.nextStepTick) then
+        self:performStep()
+        self.nextStepTick = getTickCount() + 50
     end
 
     local gpu = self.gameboy.gpu
@@ -434,6 +452,10 @@ function Debugger:render()
             registersY = registersY + yPadding
         end
 
+        dxDrawText("LY".." = ".._string_format("%.2x", self.gameboy.gpu.line):upper(), registersX, registersY,
+            registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
+
+        registersY = registersY + yPadding
         registersY = registersY + yPadding
 
         for i=0xFF40, 0xFF52 do
@@ -461,9 +483,6 @@ function Debugger:render()
         end
     end
 
-    local color =
-        {{255, 255, 255}, {192, 192, 192}, {96, 96, 96}, {0, 0, 0}}
-
     local currentX = romMemoryWindowStartX
     local currentY = romMemoryWindowStartY + romMemoryWindowHeight
 
@@ -478,11 +497,32 @@ function Debugger:render()
             local byte2 = cpu.mmu:readByte(address + 1)
 
             for column=1, 8 do
-                local paletteId = ((_bitExtract(byte2, 8 - column, 1) == 1) and 2 or 0)
-                    + ((_bitExtract(byte1, 8 - column, 1) == 1) and 1 or 0)
+                local colorBit = ((column % 8) - 7) * -1
 
-                local colorIndex = _bitExtract(palette, 8 - (2 * paletteId), 2)
-                columnColor = color[colorIndex + 1]
+                local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
+                colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
+
+                local hi = 0
+                local lo = 0
+
+                if (colorNum == 0) then
+                    hi = 1
+                    lo = 0
+                elseif (colorNum == 1) then
+                    hi = 3
+                    lo = 2
+                elseif (colorNum == 2) then
+                    hi = 5
+                    lo = 4
+                elseif (colorNum == 3) then
+                    hi = 7
+                    lo = 6
+                end
+
+                local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
+                color = _bitOr(color, _bitExtract(palette, lo, 1))
+
+                local columnColor = _COLORS[color + 1]
 
                 dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
                     tocolor(columnColor[1], columnColor[2], columnColor[3]))
@@ -522,11 +562,32 @@ function Debugger:render()
             local byte2 = cpu.mmu:readByte(address + 1)
 
             for column=1, 8 do
-                local paletteId = ((_bitExtract(byte2, 8 - column, 1) == 1) and 2 or 0)
-                    + ((_bitExtract(byte1, 8 - column, 1) == 1) and 1 or 0)
+                local colorBit = ((column % 8) - 7) * -1
 
-                local colorIndex = _bitExtract(palette, 8 - (2 * paletteId), 2)
-                columnColor = color[colorIndex + 1]
+                local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
+                colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
+
+                local hi = 0
+                local lo = 0
+
+                if (colorNum == 0) then
+                    hi = 1
+                    lo = 0
+                elseif (colorNum == 1) then
+                    hi = 3
+                    lo = 2
+                elseif (colorNum == 2) then
+                    hi = 5
+                    lo = 4
+                elseif (colorNum == 3) then
+                    hi = 7
+                    lo = 6
+                end
+
+                local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
+                color = _bitOr(color, _bitExtract(palette, lo, 1))
+
+                local columnColor = _COLORS[color + 1]
 
                 dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
                     tocolor(columnColor[1], columnColor[2], columnColor[3]))
