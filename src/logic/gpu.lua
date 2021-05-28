@@ -69,7 +69,7 @@ function GPU:reset()
         end
     end
 
-    self.mode = 2
+    self.mode = 1
     self.modeclock = 0
     self.line = 0
 
@@ -320,14 +320,14 @@ function GPU:step()
 
     local lcdStatus = mmu:readByte(0xFF41)
 
-    modeclock = modeclock + self.gameboy.cpu.registers.clock.t
+    modeclock = modeclock + self.gameboy.cpu.registers.clock.m
 
     local lastMode = self.mode
     local requireInterrupt = false
 
     if (mode == 0) then
-        if (modeclock >= 204) then
-            modeclock = modeclock - 204
+        if (modeclock >= 51) then
+            modeclock = modeclock - 51
             self.line = self.line + 1
 
             if (self.line == 144) then
@@ -349,11 +349,11 @@ function GPU:step()
             end
         end
     elseif (mode == 1) then
-        if (modeclock >= 456) then
-            modeclock = modeclock - 456
+        if (modeclock >= 114) then
+            modeclock = modeclock - 114
             self.line = self.line + 1
 
-            if (self.line == 154) then
+            if (self.line >= 154) then
                 self.mode = 2
 
                 lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
@@ -364,8 +364,8 @@ function GPU:step()
             end
         end
     elseif (mode == 2) then
-        if (modeclock >= 80) then
-            modeclock = modeclock - 80
+        if (modeclock >= 20) then
+            modeclock = modeclock - 20
 
             lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
             lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
@@ -373,8 +373,8 @@ function GPU:step()
             self.mode = 3
         end
     elseif (mode == 3) then
-        if (modeclock >= 172) then
-            modeclock = modeclock - 172
+        if (modeclock >= 43) then
+            modeclock = modeclock - 43
             self.mode = 0
 
             lcdStatus = _bitReplace(lcdStatus, 0, 1, 1)
@@ -400,7 +400,6 @@ function GPU:step()
     end
 
     mmu:writeByte(0xFF41, lcdStatus)
-    mmu:writeByte(0xFF44, self.line)
 
     self.modeclock = modeclock
 end
@@ -420,15 +419,15 @@ function GPU:disableScreen()
 
     self.screenEnabled = false
 
-    self.mode = 2
+    self.mode = 1
     self.modeclock = 0
     self.line = 0
     self.delayCyclesLeft = 0
 
     local lcdStatus = self.gameboy.cpu.mmu:readByte(0xFF41)
 
-    lcdStatus = _bitAnd(lcdStatus, 0xFC)
     lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
+    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
     self.gameboy.cpu.mmu:writeByte(0xFF41, lcdStatus)
     self.gameboy.cpu.mmu:writeByte(0xFF44, self.line)

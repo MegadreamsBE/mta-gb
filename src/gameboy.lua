@@ -36,6 +36,16 @@ function GameBoy:load(romPath)
     end
 end
 
+function GameBoy:loadBios(biosPath)
+    local bios = Rom(biosPath)
+
+    if (not bios:load()) then
+        Log.error("GameBoy", "Unable to load BIOS.")
+    end
+
+    self.cpu.mmu.bios = bios:getData()
+end
+
 function GameBoy:start()
     self.gpu:reset()
     self.cpu:reset()
@@ -146,7 +156,9 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
 
     --debugger:breakpoint(0x100)
 
+    --gameboy:loadBios("data/bios.gb")
     gameboy:load(ROM_PATH)
+    
     gameboy:start()
     gameboy:attachDebugger(debugger)
 end)

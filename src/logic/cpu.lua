@@ -21,18 +21,18 @@ function CPU:create(gameboy)
     }
 
     self.registers = {
-        a = 0x01,
-        b = 0x00,
-        c = 0x13,
-        d = 0x00,
-        e = 0xd8,
-        h = 0x01,
-        l = 0x4d,
+        a = 0x0,
+        b = 0x0,
+        c = 0x0,
+        d = 0x0,
+        e = 0x0,
+        h = 0x0,
+        l = 0x0,
         f = {
             -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
-            true, false, true, true
+            false, false, false, false
         },
-        pc = 0x100,
+        pc = 0x0,
         sp = 0xfffe,
         clock = {
             m = 0,
@@ -57,25 +57,48 @@ function CPU:reset()
 
     self.interrupts = true
 
-    self.registers = {
-        a = 0x01,
-        b = 0x00,
-        c = 0x13,
-        d = 0x00,
-        e = 0xd8,
-        h = 0x01,
-        l = 0x4d,
-        f = {
-            -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
-            true, false, true, true
-        },
-        pc = 0x100,
-        sp = 0xfffe,
-        clock = {
-            m = 0,
-            t = 0
+    -- If we have a BIOS we want to ensure all registers are zeroed out.
+    if (#self.mmu.bios > 0) then
+        self.registers = {
+            a = 0x0,
+            b = 0x0,
+            c = 0x0,
+            d = 0x0,
+            e = 0x0,
+            h = 0x0,
+            l = 0x0,
+            f = {
+                -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
+                false, false, false, false
+            },
+            pc = 0x0,
+            sp = 0xfffe,
+            clock = {
+                m = 0,
+                t = 0
+            }
         }
-    }
+    else
+        self.registers = {
+            a = 0x01,
+            b = 0x00,
+            c = 0x13,
+            d = 0x00,
+            e = 0xd8,
+            h = 0x01,
+            l = 0x4d,
+            f = {
+                -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
+                true, false, true, true
+            },
+            pc = 0x100,
+            sp = 0xfffe,
+            clock = {
+                m = 0,
+                t = 0
+            }
+        }
+    end
 
     if (self.stepCallback) then
         removeEventHandler("onClientPreRender", root, self.stepCallback)

@@ -7,7 +7,6 @@ MMU = Class()
 local MEMORY_SIZE = 0xFFFFFF
 
 MMU.MEMORY_SIZE = MEMORY_SIZE
-MMU.BIOS = {}
 
 -----------------------------------
 -- * Locals
@@ -38,6 +37,7 @@ end
 function MMU:create(cpu, gpu)
     self.cpu = cpu
     self.gpu = gpu
+    self.bios = {}
 
     self.mbc = {
         {},
@@ -191,6 +191,8 @@ function MMU:writeByte(address, value)
                         else
                             self.gpu:disableScreen()
                         end
+                    elseif (address == 0xFF44) then
+                        return
                     elseif (address == 0xFF46) then
                         local dmaAddress = _bitLShift(value, 8)
 
@@ -234,7 +236,7 @@ function MMU:readByte(address)
     if (address >= 0x0 and address < 0x1000) then
         if (self.inBios) then
             if (address < 0x100) then
-                return self.BIOS[address + 1] or 0
+                return self.bios[address + 1] or 0
             elseif (self.cpu.registers.pc == 0x100) then
                 self.inBios = false
             end
@@ -290,6 +292,10 @@ function MMU:readByte(address)
                 elseif (case == 0x10 or case == 0x20 or case == 0x30) then
                     return 0
                 elseif (case == 0x40 or case == 0x50 or case == 0x60 or case == 0x70) then
+                    if (address == 0xFF44) then
+                        return self.gpu.line
+                    end
+
                     address = address - 0x8000
                     return self.gpu.vram[address + 1] or 0
                 end

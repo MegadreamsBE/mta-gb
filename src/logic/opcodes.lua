@@ -597,6 +597,12 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.m = cpu.registers.clock.m + 2
         cpu.registers.clock.t = cpu.registers.clock.t + 8
     end,
+    [0x7d] = function(cpu)
+        helper_test(cpu, 7, cpu.registers.l)
+
+        cpu.registers.clock.m = cpu.registers.clock.m + 2
+        cpu.registers.clock.t = cpu.registers.clock.t + 8
+    end,
     [0x7e] = function(cpu)
         helper_test(cpu, 7, cpu:readTwoRegisters('h', 'l'))
 
@@ -2167,6 +2173,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
     end,
+    [0xdb] = function(cpu) end,
     [0xdc] = function(cpu)
         if (cpu.registers.f[4]) then
             cpu.mmu:pushStack(cpu.registers.pc)
@@ -2204,6 +2211,8 @@ GameBoy.opcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
+    [0xe3] = function(cpu) end,
+    [0xe4] = function(cpu) end,
     [0xe5] = function(cpu)
         cpu.mmu:pushStack(cpu:readTwoRegisters('h', 'l'))
 
