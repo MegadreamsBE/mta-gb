@@ -24,8 +24,8 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 - Improve debugging tools by using a proper dxGUI.
 
 ## Known Problems
-- Tetris resets when attempting to start a game.
 - Dr. Mario freezes when attempting to start a game.
+- Timer supporting is missing and therefore randomization.
 - CPU test ROMs do not display anything but do output to the serial bus as expected.
 - GPU timings are slightly off.
 - GPU doesn't trigger all necessary interrupts yet.

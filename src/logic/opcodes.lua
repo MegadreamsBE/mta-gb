@@ -800,6 +800,48 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
+    [0x51] = function(cpu)
+        helper_test(cpu, 2, cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x52] = function(cpu)
+        helper_test(cpu, 2, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x53] = function(cpu)
+        helper_test(cpu, 2, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x54] = function(cpu)
+        helper_test(cpu, 2, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x55] = function(cpu)
+        helper_test(cpu, 2, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x56] = function(cpu)
+        helper_test(cpu, 2, cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x57] = function(cpu)
+        helper_test(cpu, 2, cpu.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x58] = function(cpu)
         helper_test(cpu, 3, cpu.registers.b)
 
