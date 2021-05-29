@@ -224,14 +224,12 @@ function Debugger:step()
         flags = flags..((self.gameboy.cpu.registers.f[3]) and "H" or "-")
         flags = flags..((self.gameboy.cpu.registers.f[4]) and "C" or "-")
 
+        self.disassembler:singleInstruction(self.gameboy.cpu.mmu, self.gameboy.cpu.registers.pc)
+
         local instruction = "[??]0x"..string.format("%.4x", self.gameboy.cpu.registers.pc)..": "
         local opcode = self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc)
         local instructionBytes = ""
         local opcodeLen = self.disassembler:getOpcodeLength(opcode + 1)
-
-        if ((self.disassembler:getData()[self.gameboy.cpu.registers.pc + 1] or "NOP"):upper() == "NOP") then
-            self.disassembler:disassemble(self.gameboy.cpu.mmu)
-        end
 
         for i=1, opcodeLen do
             instructionBytes = instructionBytes..string.format("%.2x", self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc + (i - 1))):lower().." "

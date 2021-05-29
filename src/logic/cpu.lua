@@ -56,6 +56,8 @@ function CPU:reset()
     self.gameboy.gpu:reset()
 
     self.interrupts = true
+    self.queuedEnableInterrupts = false
+    self.queuedDisableInterrupts = false
 
     -- If we have a BIOS we want to ensure all registers are zeroed out.
     if (#self.mmu.bios > 0) then
@@ -115,11 +117,11 @@ function CPU:halt(haltScreen)
 end
 
 function CPU:enableInterrupts()
-    self.interrupts = true
+    self.queuedEnableInterrupts = true
 end
 
 function CPU:disableInterrupts()
-    self.interrupts = false
+    self.queuedDisableInterrupts = true
 end
 
 function CPU:step()
@@ -147,6 +149,18 @@ function CPU:step()
     self.clock.t = self.clock.t + self.registers.clock.t
 
     self.gameboy.gpu:step()
+
+    if (self.queuedEnableInterrupts) then
+        self.queuedEnableInterrupts = false
+        self.queuedDisableInterrupts = false
+        self.interrupts = true
+    end
+
+    if (self.queuedDisableInterrupts) then
+        self.queuedEnableInterrupts = false
+        self.queuedDisableInterrupts = false
+        self.interrupts = false
+    end
 end
 
 function CPU:readTwoRegisters(r1, r2)

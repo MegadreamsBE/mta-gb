@@ -75,8 +75,8 @@ end
 local helper_add_sp = function(cpu, value, add)
     result = (value + add) % 0x10000
 
-    cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, add), result), 0x1000) == 0x1000) -- FLAG_HALFCARRY
-    cpu.registers.f[4] = (value + add > 0xFFFF) -- FLAG_CARRY
+    cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, add), result), 0x10) == 0x10) -- FLAG_HALFCARRY
+    cpu.registers.f[4] = (_bitAnd(_bitXor(_bitXor(value, add), result), 0x100) == 0x100) -- FLAG_CARRY
 
     cpu.registers.f[1] = false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
@@ -1106,7 +1106,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x3b] = function(cpu)
-        cpu.registers.pc = helper_dec16(cpu, cpu.registers.sp)
+        cpu.registers.sp = helper_dec16(cpu, cpu.registers.sp)
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -2235,7 +2235,7 @@ GameBoy.opcodes = {
     end,
     [0xe8] = function(cpu)
         cpu.registers.sp = helper_add_sp(cpu, cpu.registers.sp,
-            cpu.mmu:readByte(cpu.registers.pc))
+            cpu.mmu:readSignedByte(cpu.registers.pc))
 
         cpu.registers.pc = cpu.registers.pc + 1
         cpu.registers.clock.m = 4
@@ -2315,7 +2315,7 @@ GameBoy.opcodes = {
     end,
     [0xf8] = function(cpu)
         local address = cpu.registers.sp
-        local value = cpu.mmu:readByte(cpu.registers.pc)
+        local value = cpu.mmu:readSignedByte(cpu.registers.pc)
 
         cpu:writeTwoRegisters('h', 'l', helper_add_sp(cpu, address, value))
 
