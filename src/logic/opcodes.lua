@@ -416,7 +416,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x06] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_rlc(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_rlc(cpu, cpu.mmu:readByte(address), 8))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -464,7 +465,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x0e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_rrc(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_rrc(cpu, cpu.mmu:readByte(address), 8))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -512,7 +514,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x16] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_rl(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_rl(cpu, cpu.mmu:readByte(address), 8))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -560,7 +563,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x1e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_rr(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_rr(cpu, cpu.mmu:readByte(address), 8))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -608,7 +612,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x26] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_sla(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_sla(cpu, cpu.mmu:readByte(address), 8))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -656,7 +661,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x2e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_sra(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_sra(cpu, cpu.mmu:readByte(address), 8))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -705,7 +711,7 @@ GameBoy.cbOpcodes = {
     end,
     [0x36] = function(cpu)
         local address = cpu:readTwoRegisters('h', 'l')
-        cpu.mmu:writeByte(address, helper_swap(cpu, cpu.mmu:readByte(address)))
+        cpu.mmu:writeByte(address, helper_swap(cpu, cpu.mmu:readByte(address), 8))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -753,7 +759,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x3e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_srl(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_srl(cpu, cpu.mmu:readByte(address), 8))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -801,7 +808,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x46] = function(cpu)
-        helper_test(cpu, 0, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 0, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -849,7 +857,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x4e] = function(cpu)
-        helper_test(cpu, 1, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 1, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -897,7 +906,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x56] = function(cpu)
-        helper_test(cpu, 2, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 2, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -945,7 +955,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x5e] = function(cpu)
-        helper_test(cpu, 3, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 3, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -993,7 +1004,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x66] = function(cpu)
-        helper_test(cpu, 4, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 4, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -1041,7 +1053,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x6e] = function(cpu)
-        helper_test(cpu, 5, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 5, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -1089,7 +1102,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x76] = function(cpu)
-        helper_test(cpu, 6, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 6, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -1137,7 +1151,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x7e] = function(cpu)
-        helper_test(cpu, 7, cpu:readTwoRegisters('h', 'l'))
+        local address = cpu:readTwoRegisters('h', 'l')
+        helper_test(cpu, 7, cpu.mmu:readByte(address))
 
         cpu.registers.clock.m = 3
         cpu.registers.clock.t = 12
@@ -1185,7 +1200,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x86] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 0, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 0, cpu.mmu:readByte(address)))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1233,7 +1249,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x8e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 1, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 1, cpu.mmu:readByte(address)))
 
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1281,7 +1298,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x96] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 2, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 2, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1329,7 +1347,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x9e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 3, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 3, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1377,7 +1396,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xa6] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 4, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 4, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1425,7 +1445,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xae] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 5, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 5, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1473,7 +1494,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xb6] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 6, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 6, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1521,7 +1543,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xbe] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 7, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_reset(cpu, 7, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1569,8 +1592,9 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xc6] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 0, cpu:readTwoRegisters('h', 'l')))
-    
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 0, cpu.mmu:readByte(address)))
+
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
     end,
@@ -1617,7 +1641,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xce] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 1, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 1, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1665,7 +1690,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xd6] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 2, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 2, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1713,7 +1739,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xde] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 3, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 3, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1761,7 +1788,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xe6] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 4, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 4, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1809,7 +1837,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xee] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 5, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 5, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1857,7 +1886,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xf6] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 6, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 6, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -1905,7 +1935,8 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.t = 8
     end,
     [0xfe] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 7, cpu:readTwoRegisters('h', 'l')))
+        local address = cpu:readTwoRegisters('h', 'l')
+        cpu.mmu:writeByte(address, helper_set(cpu, 7, cpu.mmu:readByte(address)))
     
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
@@ -2897,8 +2928,7 @@ GameBoy.opcodes = {
     end,
     [0x8e] = function(cpu)
         cpu.registers.a = helper_adc(cpu, cpu.registers.a,
-            cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
-            + ((cpu.registers.f[4]) and 1 or 0))
+            cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l')))
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 2
