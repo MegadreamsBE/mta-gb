@@ -13,6 +13,7 @@ MMU.MEMORY_SIZE = MEMORY_SIZE
 -----------------------------------
 
 local _bitAnd = bitAnd
+local _bitOr = bitOr
 local _bitTest = bitTest
 local _bitExtract = bitExtract
 local _bitReplace = bitReplace
@@ -88,20 +89,37 @@ function MMU:reset()
     self.ramOffset = 0x0000
 
     self:writeByte(0xFF00, 0xFF)
-    self:writeByte(0xFF04, 0x0)
-    self:writeByte(0xFF05, 0x0)
-    self:writeByte(0xFF06, 0x0)
-    self:writeByte(0xFF07, 0x0)
+    self:writeByte(0xFF05, 0x00)
+    self:writeByte(0xFF06, 0x00)
+    self:writeByte(0xFF07, 0x00)
+    self:writeByte(0xFF10, 0x80)
+    self:writeByte(0xFF11, 0xBF)
+    self:writeByte(0xFF12, 0xF3)
+    self:writeByte(0xFF14, 0xBF)
+    self:writeByte(0xFF16, 0x3F)
+    self:writeByte(0xFF17, 0x00)
+    self:writeByte(0xFF19, 0xBF)
+    self:writeByte(0xFF1A, 0x7F)
+    self:writeByte(0xFF1B, 0xFF)
+    self:writeByte(0xFF1C, 0x9F)
+    self:writeByte(0xFF1E, 0xBF)
+    self:writeByte(0xFF20, 0xFF)
+    self:writeByte(0xFF21, 0x00)
+    self:writeByte(0xFF22, 0x00)
+    self:writeByte(0xFF23, 0xBF)
+    self:writeByte(0xFF24, 0x77)
+    self:writeByte(0xFF25, 0xF3)
+    self:writeByte(0xFF26, 0xF1)
     self:writeByte(0xFF40, 0x91)
-    self:writeByte(0xFF42, 0x0)
-    self:writeByte(0xFF43, 0x0)
-    self:writeByte(0xFF44, 0x0)
-    self:writeByte(0xFF45, 0x0)
+    self:writeByte(0xFF42, 0x00)
+    self:writeByte(0xFF43, 0x00)
+    self:writeByte(0xFF45, 0x00)
     self:writeByte(0xFF47, 0xFC)
     self:writeByte(0xFF48, 0xFF)
     self:writeByte(0xFF49, 0xFF)
-    self:writeByte(0xFF4A, 0x0)
-    self:writeByte(0xFF4B, 0x0)
+    self:writeByte(0xFF4A, 0x00)
+    self:writeByte(0xFF4B, 0x00)
+    self:writeByte(0xFFFF, 0x00)
 end
 
 function MMU:loadRom(rom)
@@ -296,8 +314,13 @@ function MMU:readByte(address)
                         return self.gpu.line
                     end
 
-                    address = address - 0x8000
-                    return self.gpu.vram[address + 1] or 0
+                    local value = self.gpu.vram[(address - 0x8000) + 1] or 0
+
+                    if (address == 0xFF41) then
+                        value = _bitOr(value, 0x80)
+                    end
+
+                    return value
                 end
             end
         end

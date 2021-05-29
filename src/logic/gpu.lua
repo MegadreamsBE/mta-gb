@@ -75,6 +75,13 @@ function GPU:reset()
 
     self.screenEnabled = true
     self.delayCyclesLeft = 0
+
+    local lcdStatus = self.gameboy.cpu.mmu:readByte(0xFF41)
+
+    lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
+    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+
+    self.gameboy.cpu.mmu:writeByte(0xFF41, lcdStatus)
 end
 
 function GPU:renderTiles()
@@ -87,10 +94,10 @@ function GPU:renderTiles()
     local backgroundMemory = 0x9C00
 
     local scanLine = self.line
-    local scrollY = mmu:readByte(0xFF42)
-    local scrollX = mmu:readByte(0xFF43)
-    local windowY = mmu:readByte(0xFF4A)
-    local windowX = mmu:readByte(0xFF4B) - 7
+    local scrollY = mmu:readSignedByte(0xFF42)
+    local scrollX = mmu:readSignedByte(0xFF43)
+    local windowY = mmu:readSignedByte(0xFF4A)
+    local windowX = mmu:readSignedByte(0xFF4B) - 7
 
     if (_bitExtract(mmu:readByte(0xFF40), 5, 1) == 1) then
        if (windowY <= mmu:readByte(0xFF44)) then
@@ -299,26 +306,17 @@ function GPU:step()
         return
     end
 
-    --[[if (not self.screenEnabled) then
-        if (self.delayCyclesLeft > 0) then
-            self.delayCyclesLeft = self.delayCyclesLeft - self.gameboy.cpu.registers.clock.t
-
-            if (self.delayCyclesLeft <= 0) then
-                self.screenEnabled = true
-
-                self.mode = 0
-                self.modeclock = 0
-                self.line = 0
-                self.delayCyclesLeft = 0
-
-                return
-            end
-        end
-
-        return
-    end]]
-
     local lcdStatus = mmu:readByte(0xFF41)
+
+    if (_bitExtract(mmu:readByte(0xFF40), 7) ~= 1) then
+        mmu:writeByte(0xFF41, 0)
+
+        lcdStatus = _bitAnd(lcdStatus, 0xFC)
+        lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
+
+        mmu:writeByte(0xFF41, lcdStatus)
+        return
+    end
 
     modeclock = modeclock + self.gameboy.cpu.registers.clock.m
 
@@ -392,11 +390,13 @@ function GPU:step()
     end
 
     if (self.line == mmu:readByte(0xFF45)) then
-        lcdStatus = _bitReplace(lcdStatus, 0, 2, 1)
+        lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
         
         if (_bitExtract(lcdStatus, 6, 1) == 1) then
             self.gameboy.cpu:requestInterrupt(1)
         end
+    else
+        lcdStatus = _bitReplace(lcdStatus, 0, 2, 1)
     end
 
     mmu:writeByte(0xFF41, lcdStatus)
