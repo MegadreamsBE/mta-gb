@@ -97,10 +97,27 @@ local helper_add16 = function(cpu, value, add)
 end
 
 local helper_sub = function(cpu, value, sub)
-    result = (value - sub) % 0x100
+    result = value - sub
 
-    cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, sub), result), 0x10) == 0x10) -- FLAG_HALFCARRY
-    cpu.registers.f[4] = (sub > value) -- FLAG_CARRY
+    cpu.registers.f[3] = (_bitAnd(_bitXor(_bitXor(value, sub), result), 0x10) ~= 0) -- FLAG_HALFCARRY
+    cpu.registers.f[4] = (_bitAnd(_bitXor(_bitXor(value, sub), result), 0x100) ~= 0) -- FLAG_CARRY
+
+    result = result % 0x100
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    cpu.registers.f[2] = true -- FLAG_SUBSTRACT
+
+    return result
+end
+
+local helper_sbc = function(cpu, value, sub)
+    local carry = cpu.registers.f[4] and 1 or 0
+    result = value - sub - carry
+
+    cpu.registers.f[3] = ((_bitAnd(value, 0x0F) - _bitAnd(sub, 0x0F) - carry) < 0) -- FLAG_HALFCARRY
+    cpu.registers.f[4] = (result < 0) -- FLAG_CARRY
+
+    result = result % 0x100
 
     cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = true -- FLAG_SUBSTRACT
@@ -141,88 +158,8 @@ local helper_xor = function(cpu, value1, value2)
     return value
 end
 
-local helper_lrotate = function(cpu, value, withCarry, bitSize)
-    local oldCarry = cpu.registers.f[4]
-
-    if (withCarry) then
-        cpu.registers.f[4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
-    end
-
+local helper_lshift = function(cpu, value, bitSize)
     value = value * 2
-
-    if (withCarry) then
-        value = _bitReplace(value, (oldCarry) and 1 or 0, 0, 1)
-    else
-        local bit = ((value / (2 ^ (bitSize - 1))) % 2 >= 1) and 1 or 0
-        value = _bitReplace(value, bit, 0, 1)
-    end
-
-    local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
-
-    if (bits < 0) then
-        bits = 0
-    end
-
-    if (bits > bitSize) then
-        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
-    end
-
-    if (withCarry) then
-        value = _bitOr(value, oldCarry and 1 or 0)
-    end
-
-    cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
-    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
-    cpu.registers.f[3] = false -- FLAG_HALFCARRY
-
-    return value
-end
-
-local helper_rrotate = function(cpu, value, withCarry, bitSize)
-    local oldCarry = cpu.registers.f[4]
-
-    if (withCarry) then
-        cpu.registers.f[4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
-    end
-
-    value = value / 2
-
-    if (withCarry) then
-        value = _bitReplace(value, (oldCarry) and 1 or 0, bitSize - 1, 1)
-    else
-        local bit = ((value / (2 ^ 0)) % 2 >= 1) and 1 or 0
-        value = _bitReplace(value, bit, bitSize - 1, 1)
-    end
-
-    local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
-
-    if (bits < 0) then
-        bits = 0
-    end
-
-    if (bits > bitSize) then
-        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
-    end
-
-    if (withCarry) then
-        value = _bitOr(value, oldCarry and _bitLShift(1, 7) or 0)
-    end
-
-    cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
-    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
-    cpu.registers.f[3] = false -- FLAG_HALFCARRY
-
-    return value
-end
-
-local helper_lshift = function(cpu, value, withCarry, bitSize)
-    local oldCarry = cpu.registers.f[4]
-
-    if (withCarry) then
-        cpu.registers.f[4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
-    end
-
-    value = value / 2
     value = _bitReplace(value, 0, 0, 1)
 
     local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
@@ -235,24 +172,10 @@ local helper_lshift = function(cpu, value, withCarry, bitSize)
         value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
     end
 
-    if (withCarry) then
-        value = _bitOr(value, oldCarry and 1 or 0)
-    end
-
-    cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
-    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
-    cpu.registers.f[3] = false -- FLAG_HALFCARRY
-
     return value
 end
 
-local helper_rshift = function(cpu, value, withCarry, bitSize)
-    local oldCarry = cpu.registers.f[4]
-
-    if (withCarry) then
-        cpu.registers.f[4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
-    end
-
+local helper_rshift = function(cpu, value, bitSize)
     value = value / 2
     value = _bitReplace(value, 0, bitSize - 1, 1)
 
@@ -266,15 +189,139 @@ local helper_rshift = function(cpu, value, withCarry, bitSize)
         value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
     end
 
-    if (withCarry) then
-        value = _bitOr(value, oldCarry and _bitLShift(1, 7) or 0)
+    return value
+end
+
+local helper_lrotate = function(cpu, value, bitSize)
+    local bit = ((value / (2 ^ (bitSize - 1))) % 2 >= 1) and 1 or 0
+
+    value = value * 2
+    value = _bitReplace(value, bit, 0, 1)
+
+    local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
+
+    if (bits < 0) then
+        bits = 0
     end
 
-    cpu.registers.f[1] = (value == 0) and true or false -- FLAG_ZERO
+    if (bits > bitSize) then
+        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
+    end
+
+    return value
+end
+
+local helper_rrotate = function(cpu, value, bitSize)
+    local bit = ((value / (2 ^ 0)) % 2 >= 1) and 1 or 0
+
+    value = value / 2
+    value = _bitReplace(value, bit, bitSize - 1, 1)
+
+    local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
+
+    if (bits < 0) then
+        bits = 0
+    end
+
+    if (bits > bitSize) then
+        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
+    end
+
+    return value
+end
+
+local helper_rl = function(cpu, value, bitSize)
+    local carry = cpu.registers.f[4] and 1 or 0
+
+    cpu.registers.f[4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
+
+    local result = helper_lshift(cpu, value, bitSize)
+    result = _bitOr(result, carry)
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
     cpu.registers.f[3] = false -- FLAG_HALFCARRY
 
-    return value
+    return result
+end
+
+local helper_rlc = function(cpu, value, bitSize)
+    cpu.registers.f[4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
+
+    local result = helper_lrotate(cpu, value, bitSize)
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+    cpu.registers.f[3] = false -- FLAG_HALFCARRY
+
+    return result
+end
+
+local helper_rr = function(cpu, value, bitSize)
+    local carry = cpu.registers.f[4] and 0x80 or 0
+
+    cpu.registers.f[4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
+
+    local result = helper_rshift(cpu, value, bitSize)
+    result = _bitOr(result, carry)
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+    cpu.registers.f[3] = false -- FLAG_HALFCARRY
+
+    return result
+end
+
+local helper_rrc = function(cpu, value, bitSize)
+    cpu.registers.f[4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
+
+    local result = helper_rrotate(cpu, value, bitSize)
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+    cpu.registers.f[3] = false -- FLAG_HALFCARRY
+
+    return result
+end
+
+local helper_sla = function(cpu, value, bitSize)
+    cpu.registers.f[4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
+
+    local result = helper_lshift(cpu, value, bitSize)
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+    cpu.registers.f[3] = false -- FLAG_HALFCARRY
+
+    return result
+end
+
+local helper_sra = function(cpu, value, bitSize)
+    cpu.registers.f[4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
+
+    local result = helper_rshift(cpu, value, bitSize)
+
+    if ((_bitAnd(value, 0x80) ~= 0)) then
+        result = _bitOr(result, 0x80)
+    end
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+    cpu.registers.f[3] = false -- FLAG_HALFCARRY
+
+    return result
+end
+
+local helper_srl = function(cpu, value, bitSize)
+    cpu.registers.f[4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
+
+    local result = helper_rshift(cpu, value, bitSize)
+
+    cpu.registers.f[1] = (result == 0) and true or false -- FLAG_ZERO
+    cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+    cpu.registers.f[3] = false -- FLAG_HALFCARRY
+
+    return result
 end
 
 local helper_cp = function(cpu, value, cmp)
@@ -285,10 +332,10 @@ local helper_cp = function(cpu, value, cmp)
 end
 
 local helper_swap = function(cpu, value)
-    local upperNible = _bitAnd(value, 0xF0) / 16
+    local upperNibble = _bitAnd(value, 0xF0) / 16
     local lowerNibble = _bitAnd(value, 0x0F)
 
-    value = (lowerNibble * 16) + upperNible
+    value = (lowerNibble * 16) + upperNibble
 
     cpu.registers.f[1] = (value == 0) -- FLAG_ZERO
     cpu.registers.f[2] = false -- FLAG_SUBSTRACT
@@ -332,318 +379,540 @@ local ldn_nn = function(cpu, reg1, reg2, value16)
 end
 
 GameBoy.cbOpcodes = {
-    [0x11] = function(cpu)
-        cpu.registers.c = helper_lrotate(cpu, cpu.registers.c, true, 8)
+    [0x00] = function(cpu)
+        cpu.registers.b = helper_rlc(cpu, cpu.registers.b, 8)
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x01] = function(cpu)
+        cpu.registers.c = helper_rlc(cpu, cpu.registers.c, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x02] = function(cpu)
+        cpu.registers.d = helper_rlc(cpu, cpu.registers.d, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x03] = function(cpu)
+        cpu.registers.e = helper_rlc(cpu, cpu.registers.e, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x04] = function(cpu)
+        cpu.registers.h = helper_rlc(cpu, cpu.registers.h, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x05] = function(cpu)
+        cpu.registers.l = helper_rlc(cpu, cpu.registers.l, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x06] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_rlc(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x07] = function(cpu)
+        cpu.registers.a = helper_rlc(cpu, cpu.registers.a, 8)
+    
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
+    end,
+    [0x08] = function(cpu)
+        cpu.registers.b = helper_rrc(cpu, cpu.registers.b, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x09] = function(cpu)
+        cpu.registers.c = helper_rrc(cpu, cpu.registers.c, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x0a] = function(cpu)
+        cpu.registers.d = helper_rrc(cpu, cpu.registers.d, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x0b] = function(cpu)
+        cpu.registers.e = helper_rrc(cpu, cpu.registers.e, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x0c] = function(cpu)
+        cpu.registers.h = helper_rrc(cpu, cpu.registers.h, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x0d] = function(cpu)
+        cpu.registers.l = helper_rrc(cpu, cpu.registers.l, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x0e] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_rrc(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x0f] = function(cpu)
+        cpu.registers.a = helper_rrc(cpu, cpu.registers.a, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x10] = function(cpu)
+        cpu.registers.b = helper_rl(cpu, cpu.registers.b, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x11] = function(cpu)
+        cpu.registers.c = helper_rl(cpu, cpu.registers.c, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x12] = function(cpu)
+        cpu.registers.d = helper_rl(cpu, cpu.registers.d, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x13] = function(cpu)
+        cpu.registers.e = helper_rl(cpu, cpu.registers.e, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x14] = function(cpu)
+        cpu.registers.h = helper_rl(cpu, cpu.registers.h, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x15] = function(cpu)
+        cpu.registers.l = helper_rl(cpu, cpu.registers.l, 8)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x16] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_rl(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x17] = function(cpu)
-        cpu.registers.a = helper_lrotate(cpu, cpu.registers.a, true, 8)
-    
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.a = helper_rl(cpu, cpu.registers.a, 8)
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x18] = function(cpu)
-        cpu.registers.b = helper_rrotate(cpu, cpu.registers.b, true, 8)
+        cpu.registers.b = helper_rr(cpu, cpu.registers.b, 8)
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x19] = function(cpu)
-        cpu.registers.c = helper_rrotate(cpu, cpu.registers.c, true, 8)
+        cpu.registers.c = helper_rr(cpu, cpu.registers.c, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x1a] = function(cpu)
-        cpu.registers.d = helper_rrotate(cpu, cpu.registers.d, true, 8)
+        cpu.registers.d = helper_rr(cpu, cpu.registers.d, 8)
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x1b] = function(cpu)
-        cpu.registers.e = helper_rrotate(cpu, cpu.registers.e, true, 8)
+        cpu.registers.e = helper_rr(cpu, cpu.registers.e, 8)
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x1c] = function(cpu)
-        cpu.registers.h = helper_rrotate(cpu, cpu.registers.h, true, 8)
+        cpu.registers.h = helper_rr(cpu, cpu.registers.h, 8)
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x1d] = function(cpu)
-        cpu.registers.l = helper_rrotate(cpu, cpu.registers.l, true, 8)
+        cpu.registers.l = helper_rr(cpu, cpu.registers.l, 8)
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x1e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_rrotate(cpu, cpu:readTwoRegisters('h', 'l'), true, 16))
+        cpu:writeTwoRegisters('h', 'l', helper_rr(cpu, cpu:readTwoRegisters('h', 'l'), 16))
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x1f] = function(cpu)
-        cpu.registers.a = helper_rrotate(cpu, cpu.registers.a, true, 8)
+        cpu.registers.a = helper_rr(cpu, cpu.registers.a, 8)
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x20] = function(cpu)
+        cpu.registers.b = helper_sla(cpu, cpu.registers.b, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x21] = function(cpu)
+        cpu.registers.c = helper_sla(cpu, cpu.registers.c, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x22] = function(cpu)
+        cpu.registers.d = helper_sla(cpu, cpu.registers.d, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x23] = function(cpu)
+        cpu.registers.e = helper_sla(cpu, cpu.registers.e, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x24] = function(cpu)
+        cpu.registers.h = helper_sla(cpu, cpu.registers.h, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x25] = function(cpu)
+        cpu.registers.l = helper_sla(cpu, cpu.registers.l, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x26] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_sla(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x27] = function(cpu)
-        cpu.registers.c = helper_lshift(cpu, cpu.registers.c, true, 8)
+        cpu.registers.a = helper_sla(cpu, cpu.registers.a, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x28] = function(cpu)
+        cpu.registers.b = helper_sra(cpu, cpu.registers.b, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x29] = function(cpu)
+        cpu.registers.c = helper_sra(cpu, cpu.registers.c, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x2a] = function(cpu)
+        cpu.registers.d = helper_sra(cpu, cpu.registers.d, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x2b] = function(cpu)
+        cpu.registers.e = helper_sra(cpu, cpu.registers.e, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x2c] = function(cpu)
+        cpu.registers.h = helper_sra(cpu, cpu.registers.h, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x2d] = function(cpu)
+        cpu.registers.l = helper_sra(cpu, cpu.registers.l, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x2e] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_sra(cpu, cpu:readTwoRegisters('h', 'l'), 16))
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x2f] = function(cpu)
+        cpu.registers.a = helper_sra(cpu, cpu.registers.a, 8)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x30] = function(cpu)
         cpu.registers.b = helper_swap(cpu, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x31] = function(cpu)
         cpu.registers.c = helper_swap(cpu, cpu.registers.c)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x32] = function(cpu)
         cpu.registers.d = helper_swap(cpu, cpu.registers.d)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x33] = function(cpu)
         cpu.registers.e = helper_swap(cpu, cpu.registers.e)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x34] = function(cpu)
         cpu.registers.h = helper_swap(cpu, cpu.registers.h)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x35] = function(cpu)
         cpu.registers.l = helper_swap(cpu, cpu.registers.l)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x36] = function(cpu)
         local address = cpu:readTwoRegisters('h', 'l')
         cpu.mmu:writeByte(address, helper_swap(cpu, cpu.mmu:readByte(address)))
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x37] = function(cpu)
         cpu.registers.a = helper_swap(cpu, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x38] = function(cpu)
-        cpu.registers.b = helper_rshift(cpu, cpu.registers.b, true, 8)
+        cpu.registers.b = helper_srl(cpu, cpu.registers.b, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x39] = function(cpu)
-        cpu.registers.c = helper_rshift(cpu, cpu.registers.c, true, 8)
+        cpu.registers.c = helper_srl(cpu, cpu.registers.c, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x3a] = function(cpu)
-        cpu.registers.d = helper_rshift(cpu, cpu.registers.d, true, 8)
+        cpu.registers.d = helper_srl(cpu, cpu.registers.d, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x3b] = function(cpu)
-        cpu.registers.e = helper_rshift(cpu, cpu.registers.e, true, 8)
+        cpu.registers.e = helper_srl(cpu, cpu.registers.e, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x3c] = function(cpu)
-        cpu.registers.h = helper_rshift(cpu, cpu.registers.h, true, 8)
+        cpu.registers.h = helper_srl(cpu, cpu.registers.h, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x3d] = function(cpu)
-        cpu.registers.l = helper_rshift(cpu, cpu.registers.l, true, 8)
+        cpu.registers.l = helper_srl(cpu, cpu.registers.l, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x3e] = function(cpu)
-        cpu:writeTwoRegisters('h', 'l', helper_rshift(cpu, cpu:readTwoRegisters('h', 'l'), true, 16))
+        cpu:writeTwoRegisters('h', 'l', helper_srl(cpu, cpu:readTwoRegisters('h', 'l'), 16))
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x3f] = function(cpu)
-        cpu.registers.a = helper_rshift(cpu, cpu.registers.a, true, 8)
+        cpu.registers.a = helper_srl(cpu, cpu.registers.a, 8)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x40] = function(cpu)
         helper_test(cpu, 0, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x41] = function(cpu)
         helper_test(cpu, 0, cpu.registers.c)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x46] = function(cpu)
         helper_test(cpu, 0, cpu:readTwoRegisters('h', 'l'))
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x47] = function(cpu)
         helper_test(cpu, 0, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x48] = function(cpu)
         helper_test(cpu, 1, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x50] = function(cpu)
         helper_test(cpu, 2, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x58] = function(cpu)
         helper_test(cpu, 3, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x5f] = function(cpu)
         helper_test(cpu, 3, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x60] = function(cpu)
         helper_test(cpu, 4, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x61] = function(cpu)
         helper_test(cpu, 4, cpu.registers.c)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x68] = function(cpu)
         helper_test(cpu, 5, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x69] = function(cpu)
         helper_test(cpu, 5, cpu.registers.c)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x6f] = function(cpu)
         helper_test(cpu, 5, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x70] = function(cpu)
         helper_test(cpu, 6, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x77] = function(cpu)
         helper_test(cpu, 6, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x78] = function(cpu)
         helper_test(cpu, 7, cpu.registers.b)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x7c] = function(cpu)
         helper_test(cpu, 7, cpu.registers.h)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x7d] = function(cpu)
         helper_test(cpu, 7, cpu.registers.l)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x7e] = function(cpu)
         helper_test(cpu, 7, cpu:readTwoRegisters('h', 'l'))
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x7f] = function(cpu)
         helper_test(cpu, 7, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0x86] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 0, cpu:readTwoRegisters('h', 'l')))
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x87] = function(cpu)
         cpu.registers.a = helper_reset(cpu, 0, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0xbe] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 7, cpu:readTwoRegisters('h', 'l')))
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0xcf] = function(cpu)
         cpu.registers.a = helper_set(cpu, 1, cpu.registers.a)
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 2
-        cpu.registers.clock.t = cpu.registers.clock.t + 8
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0xfe] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 7, cpu:readTwoRegisters('h', 'l')))
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 4
-        cpu.registers.clock.t = cpu.registers.clock.t + 16
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
 }
 
@@ -691,10 +960,11 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x07] = function(cpu)
-        cpu.registers.a = helper_lrotate(cpu, cpu.registers.a, true, 8)
+        cpu.registers.a = helper_rlc(cpu, cpu.registers.a, 8)
+        cpu.registers.f[1] = false
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 1
-        cpu.registers.clock.t = cpu.registers.clock.t + 4
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x08] = function(cpu)
         cpu.mmu:writeShort(cpu.mmu:readUInt16(cpu.registers.pc), cpu.registers.sp)
@@ -742,10 +1012,11 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x0f] = function(cpu)
-        cpu.registers.a = helper_rrotate(cpu, cpu.registers.a, true, 8)
+        cpu.registers.a = helper_rrc(cpu, cpu.registers.a, 8)
+        cpu.registers.f[1] = false
     
-        cpu.registers.clock.m = cpu.registers.clock.m + 1
-        cpu.registers.clock.t = cpu.registers.clock.t + 4
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x10] = function(cpu)
         cpu:halt(true)
@@ -792,10 +1063,11 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x17] = function(cpu)
-        cpu.registers.a = helper_lrotate(cpu, cpu.registers.a, true, 8)
-    
-        cpu.registers.clock.m = cpu.registers.clock.m + 1
-        cpu.registers.clock.t = cpu.registers.clock.t + 4
+        cpu.registers.a = helper_rl(cpu, cpu.registers.a, 8)
+        cpu.registers.f[1] = false
+
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x18] = function(cpu)
         local addition = cpu.mmu:readSignedByte(cpu.registers.pc)
@@ -844,12 +1116,12 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x1f] = function(cpu)
-        cpu.registers.a = helper_rrotate(cpu, cpu.registers.a, true, 8)
+        cpu.registers.a = helper_rr(cpu, cpu.registers.a, 8)
     
         cpu.registers.f[1] = false -- FLAG_ZERO
 
-        cpu.registers.clock.m = cpu.registers.clock.m + 1
-        cpu.registers.clock.t = cpu.registers.clock.t + 4
+        cpu.registers.clock.m = 1
+        cpu.registers.clock.t = 4
     end,
     [0x20] = function(cpu)
         if (not cpu.registers.f[1]) then
@@ -1068,8 +1340,8 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 12
     end,
     [0x37] = function(cpu)
-        cpu.registers.f[2] = true -- FLAG_SUBSTRACT
-        cpu.registers.f[3] = true -- FLAG_HALFCARRY
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = false -- FLAG_HALFCARRY
         cpu.registers.f[4] = true
 
         cpu.registers.clock.m = 1
@@ -1131,8 +1403,8 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x3f] = function(cpu)
-        cpu.registers.f[2] = true -- FLAG_SUBSTRACT
-        cpu.registers.f[3] = true -- FLAG_HALFCARRY
+        cpu.registers.f[2] = false -- FLAG_SUBSTRACT
+        cpu.registers.f[3] = false -- FLAG_HALFCARRY
         cpu.registers.f[4] = not cpu.registers.f[4] -- FLAG_CARRY
 
         cpu.registers.clock.m = 1
@@ -1580,55 +1852,49 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 4
     end,
     [0x88] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a, cpu.registers.b
-            + ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a, cpu.registers.b)
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x89] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a, cpu.registers.c
-            + ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a, cpu.registers.c)
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x8a] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a, cpu.registers.d
-            + ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a, cpu.registers.d)
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x8b] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a, cpu.registers.e
-            + ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a, cpu.registers.e)
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x8c] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a, cpu.registers.h
-            + ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a, cpu.registers.h)
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x8d] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a, cpu.registers.l
-            + ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a, cpu.registers.l)
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x8e] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a,
             cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
             + ((cpu.registers.f[4]) and 1 or 0))
 
@@ -1637,8 +1903,7 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 8
     end,
     [0x8f] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a, cpu.registers.a
-            + ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_adc(cpu, cpu.registers.a, cpu.registers.a)
 
         cpu.registers.f[2] = false
         cpu.registers.clock.m = 1
@@ -1694,58 +1959,49 @@ GameBoy.opcodes = {
         cpu.registers.clock.t = 4
     end,
     [0x98] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.registers.b - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.registers.b)
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x99] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.registers.c - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.registers.c)
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x9a] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.registers.d - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.registers.d)
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x9b] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.registers.e - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.registers.e)
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x9c] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.registers.h - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.registers.h)
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x9d] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.registers.l - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.registers.l)
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
     end,
     [0x9e] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l'))
-            - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.mmu:readByte(cpu:readTwoRegisters('h', 'l')))
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
     [0x9f] = function(cpu)
-        cpu.registers.a = helper_add(cpu, cpu.registers.a,
-            cpu.registers.a - ((cpu.registers.f[4]) and 1 or 0))
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.registers.a)
 
         cpu.registers.clock.m = 1
         cpu.registers.clock.t = 4
@@ -2057,14 +2313,17 @@ GameBoy.opcodes = {
     end,
     [0xcc] = function(cpu)
         if (cpu.registers.f[1]) then
-            cpu.mmu:pushStack(cpu.registers.pc)
+            cpu.mmu:pushStack(cpu.registers.pc + 2)
             cpu.registers.pc = cpu.mmu:readUInt16(cpu.registers.pc)
+
+            cpu.registers.clock.m = 6
+            cpu.registers.clock.t = 24
         else
             cpu.registers.pc = cpu.registers.pc + 2
-        end
 
-        cpu.registers.clock.m = 3
-        cpu.registers.clock.t = 12
+            cpu.registers.clock.m = 3
+            cpu.registers.clock.t = 12
+        end
     end,
     [0xcd] = function(cpu)
         local value = cpu.mmu:readUInt16(cpu.registers.pc)
@@ -2119,14 +2378,17 @@ GameBoy.opcodes = {
     end,
     [0xd4] = function(cpu)
         if (not cpu.registers.f[4]) then
-            cpu.mmu:pushStack(cpu.registers.pc)
+            cpu.mmu:pushStack(cpu.registers.pc + 2)
             cpu.registers.pc = cpu.mmu:readUInt16(cpu.registers.pc)
+
+            cpu.registers.clock.m = 6
+            cpu.registers.clock.t = 24
         else
             cpu.registers.pc = cpu.registers.pc + 2
-        end
 
-        cpu.registers.clock.m = 3
-        cpu.registers.clock.t = 12
+            cpu.registers.clock.m = 3
+            cpu.registers.clock.t = 12
+        end
     end,
     [0xd5] = function(cpu)
         cpu.mmu:pushStack(cpu:readTwoRegisters('d', 'e'))
@@ -2176,14 +2438,24 @@ GameBoy.opcodes = {
     [0xdb] = function(cpu) end,
     [0xdc] = function(cpu)
         if (cpu.registers.f[4]) then
-            cpu.mmu:pushStack(cpu.registers.pc)
+            cpu.mmu:pushStack(cpu.registers.pc + 2)
             cpu.registers.pc = cpu.mmu:readUInt16(cpu.registers.pc)
+
+            cpu.registers.clock.m = 6
+            cpu.registers.clock.t = 24
         else
             cpu.registers.pc = cpu.registers.pc + 2
-        end
 
-        cpu.registers.clock.m = 3
-        cpu.registers.clock.t = 12
+            cpu.registers.clock.m = 3
+            cpu.registers.clock.t = 12
+        end
+    end,
+    [0xde] = function(cpu)
+        cpu.registers.a = helper_sbc(cpu, cpu.registers.a, cpu.mmu:readByte(cpu.registers.pc))
+
+        cpu.registers.pc = cpu.registers.pc + 1
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
     [0xdf] = function(cpu)
         cpu.mmu:pushStack(cpu.registers.pc)
