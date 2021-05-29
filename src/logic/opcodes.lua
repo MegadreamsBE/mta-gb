@@ -418,8 +418,8 @@ GameBoy.cbOpcodes = {
     [0x06] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_rlc(cpu, cpu:readTwoRegisters('h', 'l'), 16))
     
-        cpu.registers.clock.m = 2
-        cpu.registers.clock.t = 8
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x07] = function(cpu)
         cpu.registers.a = helper_rlc(cpu, cpu.registers.a, 8)
@@ -466,8 +466,8 @@ GameBoy.cbOpcodes = {
     [0x0e] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_rrc(cpu, cpu:readTwoRegisters('h', 'l'), 16))
     
-        cpu.registers.clock.m = 2
-        cpu.registers.clock.t = 8
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x0f] = function(cpu)
         cpu.registers.a = helper_rrc(cpu, cpu.registers.a, 8)
@@ -514,8 +514,8 @@ GameBoy.cbOpcodes = {
     [0x16] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_rl(cpu, cpu:readTwoRegisters('h', 'l'), 16))
     
-        cpu.registers.clock.m = 2
-        cpu.registers.clock.t = 8
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x17] = function(cpu)
         cpu.registers.a = helper_rl(cpu, cpu.registers.a, 8)
@@ -610,8 +610,8 @@ GameBoy.cbOpcodes = {
     [0x26] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_sla(cpu, cpu:readTwoRegisters('h', 'l'), 16))
 
-        cpu.registers.clock.m = 2
-        cpu.registers.clock.t = 8
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x27] = function(cpu)
         cpu.registers.a = helper_sla(cpu, cpu.registers.a, 8)
@@ -658,8 +658,8 @@ GameBoy.cbOpcodes = {
     [0x2e] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_sra(cpu, cpu:readTwoRegisters('h', 'l'), 16))
 
-        cpu.registers.clock.m = 2
-        cpu.registers.clock.t = 8
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
     end,
     [0x2f] = function(cpu)
         cpu.registers.a = helper_sra(cpu, cpu.registers.a, 8)
@@ -776,11 +776,35 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
+    [0x42] = function(cpu)
+        helper_test(cpu, 0, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x43] = function(cpu)
+        helper_test(cpu, 0, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x44] = function(cpu)
+        helper_test(cpu, 0, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x45] = function(cpu)
+        helper_test(cpu, 0, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x46] = function(cpu)
         helper_test(cpu, 0, cpu:readTwoRegisters('h', 'l'))
 
-        cpu.registers.clock.m = 4
-        cpu.registers.clock.t = 16
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x47] = function(cpu)
         helper_test(cpu, 0, cpu.registers.a)
@@ -790,6 +814,48 @@ GameBoy.cbOpcodes = {
     end,
     [0x48] = function(cpu)
         helper_test(cpu, 1, cpu.registers.b)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x49] = function(cpu)
+        helper_test(cpu, 1, cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x4a] = function(cpu)
+        helper_test(cpu, 1, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x4b] = function(cpu)
+        helper_test(cpu, 1, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x4c] = function(cpu)
+        helper_test(cpu, 1, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x4d] = function(cpu)
+        helper_test(cpu, 1, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x4e] = function(cpu)
+        helper_test(cpu, 1, cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
+    end,
+    [0x4f] = function(cpu)
+        helper_test(cpu, 1, cpu.registers.a)
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -833,8 +899,8 @@ GameBoy.cbOpcodes = {
     [0x56] = function(cpu)
         helper_test(cpu, 2, cpu:readTwoRegisters('h', 'l'))
 
-        cpu.registers.clock.m = 2
-        cpu.registers.clock.t = 8
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x57] = function(cpu)
         helper_test(cpu, 2, cpu.registers.a)
@@ -847,6 +913,42 @@ GameBoy.cbOpcodes = {
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
+    end,
+    [0x59] = function(cpu)
+        helper_test(cpu, 3, cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x5a] = function(cpu)
+        helper_test(cpu, 3, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x5b] = function(cpu)
+        helper_test(cpu, 3, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x5c] = function(cpu)
+        helper_test(cpu, 3, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x5d] = function(cpu)
+        helper_test(cpu, 3, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x5e] = function(cpu)
+        helper_test(cpu, 3, cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x5f] = function(cpu)
         helper_test(cpu, 3, cpu.registers.a)
@@ -866,6 +968,42 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
+    [0x62] = function(cpu)
+        helper_test(cpu, 4, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x63] = function(cpu)
+        helper_test(cpu, 4, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x64] = function(cpu)
+        helper_test(cpu, 4, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x65] = function(cpu)
+        helper_test(cpu, 4, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x66] = function(cpu)
+        helper_test(cpu, 4, cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
+    end,
+    [0x67] = function(cpu)
+        helper_test(cpu, 4, cpu.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0x68] = function(cpu)
         helper_test(cpu, 5, cpu.registers.b)
 
@@ -877,6 +1015,36 @@ GameBoy.cbOpcodes = {
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
+    end,
+    [0x6a] = function(cpu)
+        helper_test(cpu, 5, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x6b] = function(cpu)
+        helper_test(cpu, 5, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x6c] = function(cpu)
+        helper_test(cpu, 5, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x6d] = function(cpu)
+        helper_test(cpu, 5, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x6e] = function(cpu)
+        helper_test(cpu, 5, cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x6f] = function(cpu)
         helper_test(cpu, 5, cpu.registers.a)
@@ -890,6 +1058,42 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
+    [0x71] = function(cpu)
+        helper_test(cpu, 6, cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x72] = function(cpu)
+        helper_test(cpu, 6, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x73] = function(cpu)
+        helper_test(cpu, 6, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x74] = function(cpu)
+        helper_test(cpu, 6, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x75] = function(cpu)
+        helper_test(cpu, 6, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x76] = function(cpu)
+        helper_test(cpu, 6, cpu:readTwoRegisters('h', 'l'))
+
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
+    end,
     [0x77] = function(cpu)
         helper_test(cpu, 6, cpu.registers.a)
 
@@ -898,6 +1102,24 @@ GameBoy.cbOpcodes = {
     end,
     [0x78] = function(cpu)
         helper_test(cpu, 7, cpu.registers.b)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x79] = function(cpu)
+        helper_test(cpu, 7, cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x7a] = function(cpu)
+        helper_test(cpu, 7, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x7b] = function(cpu)
+        helper_test(cpu, 7, cpu.registers.e)
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -917,11 +1139,47 @@ GameBoy.cbOpcodes = {
     [0x7e] = function(cpu)
         helper_test(cpu, 7, cpu:readTwoRegisters('h', 'l'))
 
-        cpu.registers.clock.m = 4
-        cpu.registers.clock.t = 16
+        cpu.registers.clock.m = 3
+        cpu.registers.clock.t = 12
     end,
     [0x7f] = function(cpu)
         helper_test(cpu, 7, cpu.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x80] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 0, cpu.registers.b)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x81] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 0, cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x82] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 0, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x83] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 0, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x84] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 0, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x85] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 0, cpu.registers.l)
 
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
@@ -938,23 +1196,725 @@ GameBoy.cbOpcodes = {
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
+    [0x88] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 1, cpu.registers.b)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x89] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 1, cpu.registers.c)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x8a] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 1, cpu.registers.d)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x8b] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 1, cpu.registers.e)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x8c] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 1, cpu.registers.h)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x8d] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 1, cpu.registers.l)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x8e] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 1, cpu:readTwoRegisters('h', 'l')))
+
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0x8f] = function(cpu)
+        cpu.registers.a = helper_reset(cpu, 1, cpu.registers.a)
+
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x90] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 2, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x91] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 2, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x92] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 2, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x93] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 2, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x94] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 2, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x95] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 2, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x96] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 2, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0x97] = function(cpu)
+        cpu.registers.a = helper_reset(cpu, 2, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x98] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 3, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x99] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 3, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x9a] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 3, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x9b] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 3, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x9c] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 3, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x9d] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 3, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0x9e] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 3, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0x9f] = function(cpu)
+        cpu.registers.a = helper_reset(cpu, 3, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa0] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 4, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa1] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 4, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa2] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 4, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa3] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 4, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa4] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 4, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa5] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 4, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa6] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 4, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xa7] = function(cpu)
+        cpu.registers.a = helper_reset(cpu, 4, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa8] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 5, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xa9] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 5, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xaa] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 5, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xab] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 5, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xac] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 5, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xad] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 5, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xae] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 5, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xaf] = function(cpu)
+        cpu.registers.a = helper_reset(cpu, 5, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb0] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 6, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb1] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 6, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb2] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 6, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb3] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 6, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb4] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 6, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb5] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 6, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb6] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 6, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xb7] = function(cpu)
+        cpu.registers.a = helper_reset(cpu, 6, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb8] = function(cpu)
+        cpu.registers.b = helper_reset(cpu, 7, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xb9] = function(cpu)
+        cpu.registers.c = helper_reset(cpu, 7, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xba] = function(cpu)
+        cpu.registers.d = helper_reset(cpu, 7, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xbb] = function(cpu)
+        cpu.registers.e = helper_reset(cpu, 7, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xbc] = function(cpu)
+        cpu.registers.h = helper_reset(cpu, 7, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xbd] = function(cpu)
+        cpu.registers.l = helper_reset(cpu, 7, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
     [0xbe] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_reset(cpu, 7, cpu:readTwoRegisters('h', 'l')))
-
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xbf] = function(cpu)
+        cpu.registers.a = helper_reset(cpu, 7, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc0] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 0, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc1] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 0, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc2] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 0, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc3] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 0, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc4] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 0, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc5] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 0, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc6] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 0, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xc7] = function(cpu)
+        cpu.registers.a = helper_set(cpu, 0, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc8] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 1, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xc9] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 1, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xca] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 1, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xcb] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 1, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xcc] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 1, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xcd] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 1, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xce] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 1, cpu:readTwoRegisters('h', 'l')))
+    
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
     end,
     [0xcf] = function(cpu)
         cpu.registers.a = helper_set(cpu, 1, cpu.registers.a)
-
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd0] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 2, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd1] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 2, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd2] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 2, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd3] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 2, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd4] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 2, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd5] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 2, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd6] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 2, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xd7] = function(cpu)
+        cpu.registers.a = helper_set(cpu, 2, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd8] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 3, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xd9] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 3, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xda] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 3, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xdb] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 3, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xdc] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 3, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xdd] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 3, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xde] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 3, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xdf] = function(cpu)
+        cpu.registers.a = helper_set(cpu, 3, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe0] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 4, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe1] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 4, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe2] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 4, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe3] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 4, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe4] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 4, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe5] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 4, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe6] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 4, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xe7] = function(cpu)
+        cpu.registers.a = helper_set(cpu, 4, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe8] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 5, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xe9] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 5, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xea] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 5, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xeb] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 5, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xec] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 5, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xed] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 5, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xee] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 5, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xef] = function(cpu)
+        cpu.registers.a = helper_set(cpu, 5, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf0] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 6, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf1] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 6, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf2] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 6, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf3] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 6, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf4] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 6, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf5] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 6, cpu.registers.l)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf6] = function(cpu)
+        cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 6, cpu:readTwoRegisters('h', 'l')))
+    
+        cpu.registers.clock.m = 4
+        cpu.registers.clock.t = 16
+    end,
+    [0xf7] = function(cpu)
+        cpu.registers.a = helper_set(cpu, 6, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf8] = function(cpu)
+        cpu.registers.b = helper_set(cpu, 7, cpu.registers.b)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xf9] = function(cpu)
+        cpu.registers.c = helper_set(cpu, 7, cpu.registers.c)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xfa] = function(cpu)
+        cpu.registers.d = helper_set(cpu, 7, cpu.registers.d)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xfb] = function(cpu)
+        cpu.registers.e = helper_set(cpu, 7, cpu.registers.e)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xfc] = function(cpu)
+        cpu.registers.h = helper_set(cpu, 7, cpu.registers.h)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
+    end,
+    [0xfd] = function(cpu)
+        cpu.registers.l = helper_set(cpu, 7, cpu.registers.l)
+    
         cpu.registers.clock.m = 2
         cpu.registers.clock.t = 8
     end,
     [0xfe] = function(cpu)
         cpu:writeTwoRegisters('h', 'l', helper_set(cpu, 7, cpu:readTwoRegisters('h', 'l')))
-
+    
         cpu.registers.clock.m = 4
         cpu.registers.clock.t = 16
+    end,
+    [0xff] = function(cpu)
+        cpu.registers.a = helper_set(cpu, 7, cpu.registers.a)
+    
+        cpu.registers.clock.m = 2
+        cpu.registers.clock.t = 8
     end,
 }
 
