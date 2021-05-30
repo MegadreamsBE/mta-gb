@@ -410,6 +410,14 @@ function GPU:enableScreen()
     end
 
     self.screenEnabled = true
+    self.mode = 1
+
+    local lcdStatus = self.gameboy.cpu.mmu:readByte(0xFF41)
+
+    lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
+    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+
+    self.gameboy.cpu.mmu:writeByte(0xFF41, lcdStatus)
 end
 
 function GPU:disableScreen()
@@ -424,9 +432,18 @@ function GPU:disableScreen()
     self.line = 0
     self.delayCyclesLeft = 0
 
+    for i=0, 159 do
+        for a=0, 143 do
+            dxSetPixelColor(self.screenPixels, i, a, 255, 255, 255)
+        end
+    end
+
+    dxSetTexturePixels(self.screen, self.screenPixels)
+
     local lcdStatus = self.gameboy.cpu.mmu:readByte(0xFF41)
 
-    lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
+    lcdStatus = _bitAnd(lcdStatus, 0x7C)
+    lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
     lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
     self.gameboy.cpu.mmu:writeByte(0xFF41, lcdStatus)
