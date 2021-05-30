@@ -130,7 +130,7 @@ end
 function MMU:writeByte(address, value)
     if (address >= 0x0000 and address < 0x2000) then
         if (self.cartridgeType == 2 or self.cartridgeType == 3) then
-            self.mbc[2].ramon = (_bitAnd(value, 0x0F) == 0x0A)
+            self.mbc[2].ramon = ((_bitAnd(value, 0x0F) == 0x0A) and 1 or 0)
         end
     elseif (address >= 0x2000 and address < 0x4000) then
         if (self.cartridgeType >= 1 and self.cartridgeType <= 3) then
@@ -150,7 +150,7 @@ function MMU:writeByte(address, value)
                 self.ramOffset = self.mbc[2].rambank * 0x2000
             else
                 self.mbc[2].rombank = _bitAnd(self.mbc[2].rombank, 0x1F)
-                    + _bitLShift(_bitAnd(value, 0x03), 5)
+                    + (_bitLShift(_bitAnd(value, 0x03), 5) % 0x10000)
 
                 self.romOffset = self.mbc[2].rombank * 0x4000
             end
@@ -163,7 +163,7 @@ function MMU:writeByte(address, value)
         address = address - 0x8000
         self.gpu.vram[address + 1] = value
     elseif (address >= 0xA000 and address < 0xC000) then
-        self.eram[self.ramOffset + (address - 0xA000)] = value
+        self.eram[self.ramOffset + (_bitAnd(address, 0x1FFF) + 1)] = value
     elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         self.ram[address + 1] = value
@@ -193,8 +193,22 @@ function MMU:writeByte(address, value)
                     elseif (internalCase == 2) then
                         outputDebugString("SERIAL ("..string.format("%.4x", self.cpu.registers.pc):upper()..") ("..self:readByte(0xFF01).."): "..utf8.char(self:readByte(0xFF01)))
                         value = 0x00
-                    elseif (internalCase >= 4 and internalCase <= 7) then
-                        return 0
+                    elseif (internalCase == 4) then
+                        self.cpu.gameboy.timer.dividerRegister = 0
+                    elseif (internalCase >= 4 and internalCase < 7) then
+                        self.ram[address + 1] = value
+                    elseif (internalCase == 7) then
+                        self.ram[address + 1] = value
+
+                        local timer = self.cpu.gameboy.timer
+
+                        timer.clockEnabled = (_bitExtract(value, 2, 1) == 1)
+
+                        local newFrequency = _bitAnd(value, 0x03)
+
+                        if (timer.clockFrequency ~= newFrequency) then
+                            timer:resetClockFrequency(newFrequency)
+                        end
                     elseif (internalCase == 15) then
                         self.interruptFlags = value
                     else
@@ -264,14 +278,12 @@ function MMU:readByte(address)
     elseif (address >= 0x1000 and address < 0x4000) then
         return self.rom[address + 1] or 0
     elseif (address >= 0x4000 and address < 0x8000) then
-        --return self.rom[self.romOffset + (_bitAnd(address, 0x333F) + 1)] or 0
-        return self.rom[address + 1] or 0
+        return self.rom[self.romOffset + (_bitAnd(address, 0x3FFF) + 1)] or 0
     elseif (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
         return self.gpu.vram[address + 1] or 0
     elseif (address >= 0xA000 and address < 0xC000) then
-        return self.eram[(self.ramOffset + (_bitAnd(address, 0x333F) + 1))
-             - 0xA000] or 0
+        return self.eram[(self.ramOffset + (_bitAnd(address, 0x1FFF) + 1))] or 0
     elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         return self.ram[address + 1] or 0
@@ -300,8 +312,10 @@ function MMU:readByte(address)
 
                     if (internalCase == 0) then
                         return self.cpu.gameboy:readKeypad()
+                    elseif (internalCase == 4) then
+                        return self.cpu.gameboy.timer.dividerRegister
                     elseif (internalCase >= 4 and internalCase <= 7) then
-                        return 0
+                        return self.ram[address + 1] or 0
                     elseif (internalCase == 15) then
                         return self.interruptFlags
                     else

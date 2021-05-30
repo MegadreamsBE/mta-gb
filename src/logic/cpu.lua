@@ -148,7 +148,10 @@ function CPU:step()
     self.clock.m = self.clock.m + self.registers.clock.m
     self.clock.t = self.clock.t + self.registers.clock.t
 
-    self.gameboy.gpu:step()
+    local ticks = self.registers.clock.m
+
+    self.gameboy.timer:step(ticks)
+    self.gameboy.gpu:step(ticks)
 
     if (self.queuedEnableInterrupts) then
         self.queuedEnableInterrupts = false

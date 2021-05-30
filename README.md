@@ -18,15 +18,11 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 ## TODO
 (This is not a full list)
 - Finish adding all CPU instructions.
-- Finish MMU logic
 - Add sound support
-- Add timer support
 - Improve debugging tools by using a proper dxGUI.
 
 ## Known Problems
-- Dr. Mario freezes when attempting to start a game.
-- Timer supporting is missing and therefore randomization.
-- CPU test ROMs do not display anything but do output to the serial bus as expected.
+- Dr. Mario crashes
 - GPU timings are slightly off.
 - GPU doesn't trigger all necessary interrupts yet.
 - Not all CPU instructions have correct timings nor logic. Although most have been fixed by now.

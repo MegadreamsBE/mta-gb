@@ -297,7 +297,7 @@ function GPU:renderScan()
     end
 end
 
-function GPU:step()
+function GPU:step(ticks)
     local mmu = self.gameboy.cpu.mmu
     local modeclock = self.modeclock
     local mode = self.mode
@@ -318,7 +318,7 @@ function GPU:step()
         return
     end
 
-    modeclock = modeclock + self.gameboy.cpu.registers.clock.m
+    modeclock = modeclock + ticks
 
     local lastMode = self.mode
     local requireInterrupt = false
