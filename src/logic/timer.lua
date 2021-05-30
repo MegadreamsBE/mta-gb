@@ -61,6 +61,8 @@ function Timer:step(ticks)
         self.counter = self.counter - ticks
 
         if (self.counter < 0) then
+            self:resetClockFrequency(self.clockFrequency)
+
             local mmu = self.gameboy.cpu.mmu
 
             if (mmu:readByte(0xFF05) == 0xff) then
