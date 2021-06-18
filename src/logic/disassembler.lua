@@ -1,5 +1,3 @@
-Disassembler = Class()
-
 -----------------------------------
 -- * Locals
 -----------------------------------
@@ -47,18 +45,16 @@ local OPCODE_TABLE = {
     "RST 18", "LDH (n),A", "POP HL", "LDH (C),A", "XX", "XX", "PUSH HL", "AND n",
     "RST 20", "ADD SP,n", "JP (HL)", "LD (nn),A", "XX", "XX", "XX", "XOR n",
     "RST 28", "LDH A,(n)", "POP AF", "XX", "DI", "XX", "PUSH AF", "OR n", "RST 30",
-    "LDHL SP,d", "LD SP,HL", "LD A,(nn)", "EI", "XX", "XX", "CP n", "RST 38"
+    "LDHL SP,n", "LD SP,HL", "LD A,(nn)", "EI", "XX", "XX", "CP n", "RST 38"
 }
+
+disassembledData = {}
 
 -----------------------------------
 -- * Functions
 -----------------------------------
 
-function Disassembler:create()
-    self.data = {}
-end
-
-function Disassembler:getOpcodeLength(opcode)
+function getOpcodeLength(opcode)
     if ((opcode - 1) == 0xcb) then
         return 2
     end
@@ -81,15 +77,15 @@ function Disassembler:getOpcodeLength(opcode)
     return 0
 end
 
-function Disassembler:singleInstruction(mmu, address)
-    local opcode = (mmu:readByte(address) or 0) + 1
+function disassembleSingleInstruction(address)
+    local opcode = (mmuReadByte(address) or 0) + 1
     local instruction = OPCODE_TABLE[opcode]
     local pc = address
 
     if (opcode - 1 == 0xCB) then
         instruction = instruction
         address = address + 1
-        self.data[pc + 1] = instruction.. " "..(mmu:readByte(address + 1) or 0)
+        disassembledData[pc + 1] = instruction.. " "..(mmuReadByte(address + 1) or 0)
     else
         if (instruction ~= nil) then
             local byteCount = (instruction:match("nn") ~= nil) and 2 or
@@ -97,33 +93,33 @@ function Disassembler:singleInstruction(mmu, address)
 
             if (byteCount == 1) then
                 instruction = instruction:gsub("n",
-                    _string_format("%.2x", mmu:readByte(address + 1)):upper())
+                    _string_format("%.2x", mmuReadByte(address + 1)):upper())
             elseif (byteCount == 2) then
                 instruction = instruction:gsub("nn",
-                    _string_format("%.4x", mmu:readUInt16(address + 1)):upper())
+                    _string_format("%.4x", mmuReadUInt16(address + 1)):upper())
             end
 
-            self.data[pc + 1] = instruction
+            disassembledData[pc + 1] = instruction
         else
-            self.data[pc + 1] = "UNKNOWN"
+            disassembledData[pc + 1] = "UNKNOWN"
         end
     end
 end
 
-function Disassembler:disassemble(mmu)
-    self.data = {}
+function disassemble()
+    disassembledData = {}
 
     local address = 0
 
     while address < 0xffff do
-        local opcode = (mmu:readByte(address) or 0) + 1
+        local opcode = (mmuReadByte(address) or 0) + 1
         local instruction = OPCODE_TABLE[opcode]
         local pc = address
     
         if (opcode - 1 == 0xCB) then
             instruction = instruction
             address = address + 1
-            self.data[pc + 1] = instruction.. " "..(mmu:readByte(address + 1) or 0)
+            disassembledData[pc + 1] = instruction.. " "..(mmuReadByte(address + 1) or 0)
         else
             if (instruction ~= nil) then
                 local byteCount = (instruction:match("nn") ~= nil) and 2 or
@@ -131,25 +127,21 @@ function Disassembler:disassemble(mmu)
     
                 if (byteCount == 1) then
                     instruction = instruction:gsub("n",
-                        _string_format("%.2x", mmu:readByte(address + 1)):upper())
+                        _string_format("%.2x", mmuReadByte(address + 1)):upper())
                     address = address + 1
                 elseif (byteCount == 2) then
                     instruction = instruction:gsub("nn",
-                        _string_format("%.4x", mmu:readUInt16(address + 1)):upper())
+                        _string_format("%.4x", mmuReadUInt16(address + 1)):upper())
     
                     address = address + 2
                 end
     
-                self.data[pc + 1] = instruction
+                disassembledData[pc + 1] = instruction
             else
-                self.data[pc + 1] = "UNKNOWN"
+                disassembledData[pc + 1] = "UNKNOWN"
             end
         end
     
         address = address + 1
     end
-end
-
-function Disassembler:getData()
-    return self.data
 end

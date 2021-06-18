@@ -1,26 +1,58 @@
-CPU = Class()
-
 -----------------------------------
 -- * Locals
 -----------------------------------
 
-local opcodes = GameBoy.opcodes
+local _opcodes = opcodes
 
 local _bitAnd = bitAnd
 local _bitReplace = bitReplace
 local _math_floor = math.floor
 
+local _clock = {
+    m = 0,
+    t= 0
+}
+
+local _paused = false
+local _interrupts = false
+
+local _queuedEnableInterrupts = false
+local _queuedDisableInterrupts = false
+local _stepCallback = nil
+
 -----------------------------------
 -- * Functions
 -----------------------------------
 
-function CPU:create(gameboy)
-    self.clock = {
+registers = {
+    a = 0x0,
+    b = 0x0,
+    c = 0x0,
+    d = 0x0,
+    e = 0x0,
+    h = 0x0,
+    l = 0x0,
+    f = {
+        -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
+        false, false, false, false
+    },
+    pc = 0x0,
+    sp = 0xfffe,
+    clock = {
+        m = 0,
+        t = 0
+    }
+}
+
+local _registers = registers
+
+function setupCPU()
+    _clock = {
         m = 0,
         t = 0
     }
 
-    self.registers = {
+    registers = {
         a = 0x0,
         b = 0x0,
         c = 0x0,
@@ -40,28 +72,26 @@ function CPU:create(gameboy)
         }
     }
 
-    self.gameboy = gameboy
-    self.mmu = MMU(self, gameboy.gpu)
+    _registers = registers
 
-    self.paused = false
-    self.interrupts = false
+    setupMMU()
 end
 
-function CPU:loadRom(rom)
-    self.mmu:loadRom(rom)
+function cpuLoadRom(romData)
+    mmuLoadRom(romData)
 end
 
-function CPU:reset()
-    self.mmu:reset()
-    self.gameboy.gpu:reset()
+function resetCPU()
+    resetMMU()
+    resetGPU()
 
-    self.interrupts = true
-    self.queuedEnableInterrupts = false
-    self.queuedDisableInterrupts = false
+    _interrupts = true
+    _queuedEnableInterrupts = false
+    _queuedDisableInterrupts = false
 
     -- If we have a BIOS we want to ensure all registers are zeroed out.
-    if (#self.mmu.bios > 0) then
-        self.registers = {
+    if (isBiosLoaded()) then
+        registers = {
             a = 0x0,
             b = 0x0,
             c = 0x0,
@@ -81,7 +111,7 @@ function CPU:reset()
             }
         }
     else
-        self.registers = {
+        registers = {
             a = 0x01,
             b = 0x00,
             c = 0x13,
@@ -102,179 +132,201 @@ function CPU:reset()
         }
     end
 
-    if (self.stepCallback) then
-        removeEventHandler("onClientPreRender", root, self.stepCallback)
-        self.stepCallback = nil
+    _registers = registers
+
+    if (_stepCallback) then
+        removeEventHandler("onClientPreRender", root, _stepCallback)
+        _stepCallback = nil
     end
 end
 
-function CPU:pause()
-    self.paused = true
+function pauseCPU()
+    _paused = true
 end
 
-function CPU:halt(haltScreen)
+function resumeCPU()
+    _paused = false
+end
+
+function isCPUPaused()
+    return _paused
+end
+
+function haltCPU(haltScreen)
 
 end
 
-function CPU:enableInterrupts()
-    self.queuedEnableInterrupts = true
+function enableInterrupts()
+    _queuedEnableInterrupts = true
 end
 
-function CPU:disableInterrupts()
-    self.queuedDisableInterrupts = true
+function disableInterrupts()
+    _queuedDisableInterrupts = true
 end
 
-function CPU:step()
-    if (self.gameboy.debugger and not self.gameboy.debugger:step()) then
+function resetInterrupts()
+    _interrupts = false
+end
+
+function setInterrupts()
+    _interrupts = true
+end
+
+function cpuStep()
+    if (isDebuggerEnabled() and not debuggerStep()) then
         return
     end
 
-    local nextOpcode = self.mmu:readByte(self.registers.pc)
+    local nextOpcode = mmuReadByte(_registers.pc)
 
-    self.registers.clock.m = 0
-    self.registers.clock.t = 0
-    self.registers.pc = self.registers.pc + 1
+    _registers.clock.m = 0
+    _registers.clock.t = 0
+    _registers.pc = _registers.pc + 1
 
-    local opcode = opcodes[nextOpcode]
+    local opcode = _opcodes[nextOpcode]
 
     if (opcode == nil) then
-        self:pause()
-        self.registers.pc = self.registers.pc - 1
-        return Log.error("CPU", "Unknown opcode 0x%s at 0x%s", string.format("%.2x", nextOpcode), string.format("%.2x", self.registers.pc))
+        pauseCPU()
+        _registers.pc = _registers.pc - 1
+        return Log.error("CPU", "Unknown opcode 0x%s at 0x%s", string.format("%.2x", nextOpcode), string.format("%.2x", _registers.pc))
     end
 
-    opcode(self)
+    opcode()
 
-    self.clock.m = self.clock.m + self.registers.clock.m
-    self.clock.t = self.clock.t + self.registers.clock.t
+    _clock.m = _clock.m + _registers.clock.m
+    _clock.t = _clock.t + _registers.clock.t
 
-    local ticks = self.registers.clock.m
+    local ticks = _registers.clock.m
 
-    self.gameboy.timer:step(ticks)
-    self.gameboy.gpu:step(ticks)
+    timerStep(ticks)
+    gpuStep(ticks)
 
-    if (self.queuedEnableInterrupts) then
-        self.queuedEnableInterrupts = false
-        self.queuedDisableInterrupts = false
-        self.interrupts = true
+    if (_queuedEnableInterrupts) then
+        _queuedEnableInterrupts = false
+        _queuedDisableInterrupts = false
+        _interrupts = true
     end
 
-    if (self.queuedDisableInterrupts) then
-        self.queuedEnableInterrupts = false
-        self.queuedDisableInterrupts = false
-        self.interrupts = false
+    if (_queuedDisableInterrupts) then
+        _queuedEnableInterrupts = false
+        _queuedDisableInterrupts = false
+        _interrupts = false
     end
 end
 
-function CPU:readTwoRegisters(r1, r2)
-    local value = self.registers[r1]
+function readTwoRegisters(r1, r2)
+    local value = _registers[r1]
     value = value * 256
 
     if (r2 == "f") then
         value = value + (
-            ((self.registers.f[1]) and 1 or 0) * 128 +
-            ((self.registers.f[2]) and 1 or 0) * 64 +
-            ((self.registers.f[3]) and 1 or 0) * 32 +
-            ((self.registers.f[4]) and 1 or 0) * 16
+            ((_registers.f[1]) and 1 or 0) * 128 +
+            ((_registers.f[2]) and 1 or 0) * 64 +
+            ((_registers.f[3]) and 1 or 0) * 32 +
+            ((_registers.f[4]) and 1 or 0) * 16
         )
     else
-        value = value + self.registers[r2]
+        value = value + _registers[r2]
     end
 
     return value
 end
 
-function CPU:writeTwoRegisters(r1, r2, value)
-    self.registers[r1] = _math_floor(_bitAnd(0xFF00, value) / 256)
+function writeTwoRegisters(r1, r2, value)
+    _registers[r1] = _math_floor(_bitAnd(0xFF00, value) / 256)
 
     if (r2 == "f") then
-        self.registers.f[1] = (_bitAnd(value, 0x80) > 0)
-        self.registers.f[2] = (_bitAnd(value, 0x40) > 0)
-        self.registers.f[3] = (_bitAnd(value, 0x20) > 0)
-        self.registers.f[4] = (_bitAnd(value, 0x10) > 0)
+        _registers.f[1] = (_bitAnd(value, 0x80) > 0)
+        _registers.f[2] = (_bitAnd(value, 0x40) > 0)
+        _registers.f[3] = (_bitAnd(value, 0x20) > 0)
+        _registers.f[4] = (_bitAnd(value, 0x10) > 0)
     else
-        self.registers[r2] = _bitAnd(0x00FF, value)
+        _registers[r2] = _bitAnd(0x00FF, value)
     end
 end
 
-function CPU:requestInterrupt(interrupt)
-    self.mmu.interruptFlags = _bitReplace(self.mmu.interruptFlags, 1, interrupt, 1)
+function requestInterrupt(interrupt)
+    interruptFlags = _bitReplace(interruptFlags, 1, interrupt, 1)
 end
 
-function CPU:run()
-    if (self.stepCallback) then
-        removeEventHandler("onClientPreRender", root, self.stepCallback)
-        self.stepCallback = nil
+function runCPU()
+    if (_stepCallback) then
+        removeEventHandler("onClientPreRender", root, _stepCallback)
+        _stepCallback = nil
     end
 
-    self.stepCallback = function(delta)
-        if (not self.paused) then
+    _stepCallback = function(delta)
+        if (not _paused) then
             local currentCycles = 0
 
             --while(currentCycles < 1000) do
             while(currentCycles < 69905) do
-                if (self.paused) then
+                if (_paused) then
                     break
                 end
 
-                self:step()
-                currentCycles = currentCycles + self.registers.clock.t
+                cpuStep()
+                currentCycles = currentCycles + _registers.clock.t
 
-                if (self.interrupts and self.mmu.interrupts and self.mmu.interruptFlags) then
-                    local maskedFlags = _bitAnd(self.mmu.interrupts, self.mmu.interruptFlags)
+                if (_interrupts and interrupts and interruptFlags) then
+                    local maskedFlags = _bitAnd(interrupts, interruptFlags)
 
                     if (_bitAnd(maskedFlags, 0x01) ~= 0) then
-                        self.interrupts = false
-                        self.mmu.interruptFlags = _bitAnd(self.mmu.interruptFlags, 0xFE)
-                        self.mmu:pushStack(self.registers.pc)
+                        _interrupts = false
+                        interruptFlags = _bitAnd(interruptFlags, 0xFE)
+                        mmuPushStack(_registers.pc)
 
-                        self.registers.pc = 0x40
+                        _registers.pc = 0x40
 
-                        self.registers.clock.m = 3
-                        self.registers.clock.t = 12
+                        _registers.clock.m = 3
+                        _registers.clock.t = 12
                     elseif (_bitAnd(maskedFlags, 0x02) ~= 0) then
-                        self.interrupts = false
-                        self.mmu.interruptFlags = _bitAnd(self.mmu.interruptFlags, 0xFD)
-                        self.mmu:pushStack(self.registers.pc)
+                        _interrupts = false
+                        interruptFlags = _bitAnd(interruptFlags, 0xFD)
+                        mmuPushStack(_registers.pc)
 
-                        self.registers.pc = 0x48
+                        _registers.pc = 0x48
 
-                        self.registers.clock.m = 3
-                        self.registers.clock.t = 12
+                        _registers.clock.m = 3
+                        _registers.clock.t = 12
                     elseif (_bitAnd(maskedFlags, 0x04) ~= 0) then
-                        self.interrupts = false
-                        self.mmu.interruptFlags = _bitAnd(self.mmu.interruptFlags, 0xFB)
-                        self.mmu:pushStack(self.registers.pc)
+                        _interrupts = false
+                        interruptFlags = _bitAnd(interruptFlags, 0xFB)
+                        mmuPushStack(_registers.pc)
 
-                        self.registers.pc = 0x50
+                        _registers.pc = 0x50
 
-                        self.registers.clock.m = 3
-                        self.registers.clock.t = 12
+                        _registers.clock.m = 3
+                        _registers.clock.t = 12
                     elseif (_bitAnd(maskedFlags, 0x08) ~= 0) then
-                        self.interrupts = false
-                        self.mmu.interruptFlags = _bitAnd(self.mmu.interruptFlags, 0xF7)
-                        self.mmu:pushStack(self.registers.pc)
+                        _interrupts = false
+                        interruptFlags = _bitAnd(interruptFlags, 0xF7)
+                        mmuPushStack(_registers.pc)
 
-                        self.registers.pc = 0x58
+                        _registers.pc = 0x58
 
-                        self.registers.clock.m = 3
-                        self.registers.clock.t = 12
+                        _registers.clock.m = 3
+                        _registers.clock.t = 12
                     elseif (_bitAnd(maskedFlags, 0x16) ~= 0) then
-                        self.interrupts = false
-                        self.mmu.interruptFlags = _bitAnd(self.mmu.interruptFlags, 0xEF)
-                        self.mmu:pushStack(self.registers.pc)
+                        _interrupts = false
+                        interruptFlags = _bitAnd(interruptFlags, 0xEF)
+                        mmuPushStack(_registers.pc)
 
-                        self.registers.pc = 0x60
+                        _registers.pc = 0x60
 
-                        self.registers.clock.m = 3
-                        self.registers.clock.t = 12
+                        _registers.clock.m = 3
+                        _registers.clock.t = 12
                     else
-                        self.interrupts = true
+                        _interrupts = true
                     end
                 end
             end
         end
     end
 
-    addEventHandler("onClientPreRender", root, self.stepCallback)
+    addEventHandler("onClientPreRender", root, _stepCallback)
+end
+
+function getCPUClock()
+    return _clock
 end

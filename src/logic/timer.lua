@@ -1,5 +1,3 @@
-Timer = Class()
-
 -----------------------------------
 -- * Locals
 -----------------------------------
@@ -11,65 +9,68 @@ local _bitRShift = bitRShift
 local _bitOr = bitOr
 local _bitAnd = bitAnd
 
+local _clockEnabled = false
+local _counter = 1024
+local _dividerCounter = 0
+
 -----------------------------------
 -- * Functions
 -----------------------------------
 
-function Timer:create(gameboy)
-    self.gameboy = gameboy
+timerClockFrequency = 0
+timerDividerRegister = 0
 
-    self.clockEnabled = false
-    self.clockFrequency = 0
-    self.counter = 1024
+function setupTimer()
+    _clockEnabled = false
+    _counter = 1024
+    _dividerCounter = 0
 
-    self.dividerRegister = 0
-    self.dividerCounter = 0
+    timerClockFrequency = 0
+    timerDividerRegister = 0
 end
 
-function Timer:reset()
-    self.clockEnabled = false
-    self.clockFrequency = 0
-    self.counter = 1024
+function resetTimer()
+    _clockEnabled = false
+    _counter = 1024
+    _dividerCounter = 0
 
-    self.dividerRegister = 0
-    self.dividerCounter = 0
+    timerClockFrequency = 0
+    timerDividerRegister = 0
 end
 
-function Timer:resetClockFrequency(frequency)
-    self.clockFrequency = frequency
+function resetTimerClockFrequency(frequency)
+    timerClockFrequency = frequency
 
     if (frequency == 0) then
-        self.counter = 1024
+        _counter = 1024
     elseif (frequency == 1) then
-        self.counter = 16
+        _counter = 16
     elseif (frequency == 2) then
-        self.counter = 64
+        _counter = 64
     elseif (frequency == 3) then
-        self.counter = 256
+        _counter = 256
     end
 end
 
-function Timer:step(ticks)
-    self.dividerCounter = self.dividerCounter + ticks
+function timerStep(ticks)
+    _dividerCounter = _dividerCounter + ticks
 
-    if (self.dividerCounter >= 0xff) then
-        self.dividerCounter = 0
-        self.dividerRegister = (self.dividerRegister + 1) % 0x100
+    if (_dividerCounter >= 0xff) then
+        _dividerCounter = 0
+        timerDividerRegister = (timerDividerRegister + 1) % 0x100
     end
 
-    if (self.clockEnabled) then
-        self.counter = self.counter - ticks
+    if (_clockEnabled) then
+        _counter = _counter - ticks
 
-        if (self.counter < 0) then
-            self:resetClockFrequency(self.clockFrequency)
+        if (_counter < 0) then
+            resetTimerClockFrequency(timerClockFrequency)
 
-            local mmu = self.gameboy.cpu.mmu
-
-            if (mmu:readByte(0xFF05) == 0xff) then
-                mmu:writeByte(0xFF05, mmu:readByte(0xFF06))
-                self.gameboy.cpu:requestInterrupt(2)
+            if (mmuReadByte(0xFF05) == 0xff) then
+                mmuWriteByte(0xFF05, mmuReadByte(0xFF06))
+                requestInterrupt(2)
             else
-                mmu:writeByte(0xFF05, mmu:readByte(0xFF05) + 1)
+                mmuWriteByte(0xFF05, mmuReadByte(0xFF05) + 1)
             end
         end
     end

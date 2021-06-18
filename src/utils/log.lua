@@ -1,4 +1,5 @@
-Log = Class()
+Log = {}
+Log.__index = Log
 
 -----------------------------------
 -- * Functions

@@ -1,5 +1,3 @@
-Debugger = Class()
-
 -----------------------------------
 -- * Constants
 -----------------------------------
@@ -22,11 +20,17 @@ local DEBUGGER_REGISTERS = {
 -- * Locals
 -----------------------------------
 
+local _getTickCount = getTickCount
 local _bitExtract = bitExtract
 local _bitLShift = bitLShift
 local _bitOr = bitOr
 local _math_floor = math.floor
 local _string_format = string.format
+
+local _fps = 0
+local _fpsNextTick = 0
+
+local _lastRender = 0
 
 local binaryFormat = function(value, minLen)
     local binaryFormat = ""
@@ -58,277 +62,313 @@ local binaryFormat = function(value, minLen)
     return binaryFormat
 end
 
+local _debuggingBios = true
+
+local _breakpoints = {}
+local _debuggerInducedPause = false
+local _passthrough = false
+
+local _memoryPointerMemory = {}
+
+local _currentMenu = 0
+local _debugMemoryPointer = -1
+
+local _traceFile = nil
+local _nextStepTick = -1
+
+local _renderTarget = false
+local _lastPC = -1
+
 -----------------------------------
 -- * Functions
 -----------------------------------
 
-function Debugger:create()
-    self.gameboy = nil
-    self.debuggingBios = true
-    self.disassembler = Disassembler()
+function setupDebugger()
+    _debuggingBios = true
 
-    self.breakpoints = {}
-    self.debuggerInducedPause = false
-    self.passthrough = false
+    _breakpoints = {}
+    _debuggerInducedPause = false
+    _passthrough = false
 
-    self.memoryPointerMemory = {}
+    _memoryPointerMemory = {}
 
-    self.currentMenu = 0
-    self.debugMemoryPointer = -1
+    _currentMenu = 0
+    _debugMemoryPointer = -1
 
-    self.traceFile = nil
-    self.nextStepTick = -1
+    _traceFile = nil
+    _nextStepTick = -1
+
+    _renderTarget = dxCreateRenderTarget(SCREEN_WIDTH, SCREEN_HEIGHT, true)
 end
 
-function Debugger:start(gameboy)
-    self.gameboy = gameboy
-    self.disassembler:disassemble(self.gameboy.cpu.mmu)
-    self.lastPC = -1
+function startDebugger()
+    disassemble()
+    _lastPC = -1
 
     if (LOG_TRACE) then
-        if (self.traceFile) then
-            fileClose(self.traceFile)
+        if (_traceFile) then
+            fileClose(_traceFile)
         end
 
         if (fileExists("trace.txt")) then
             fileDelete("trace.txt")
         end
 
-        self.traceFile = fileCreate("trace.txt")
+        _traceFile = fileCreate("trace.txt")
     end
 
     setTimer(function()
-        self.disassembler:disassemble(self.gameboy.cpu.mmu)
+        disassemble()
     end, 1000, 0)
 
     if (RENDER) then
+        addEventHandler("onClientPreRender", root, function(delta)
+            local now = _getTickCount()
+
+            if (now >= _fpsNextTick) then
+                _fps = (1 / delta) * 1000
+                _fpsNextTick = now + 1000
+            end
+        end)
+
         addEventHandler("onClientRender", root, function()
-            self:render()
+            renderDebugger()
         end)
 
         addCommandHandler("breakpoint", function(_, address)
             address = tonumber(address, 16)
 
-            if (self.breakpoints[address]) then
-                self:removeBreakpoint(address)
+            if (breakpoints[address]) then
+                removeBreakpoint(address)
             else
-                self:breakpoint(address)
+                breakpoint(address)
             end
         end)
 
         bindKey("f3", "down", function()
-            self.nextStepTick = getTickCount() + 500
+            _nextStepTick = getTickCount() + 500
+            _lastRender = 0
         end)
 
         bindKey("f3", "up", function()
-            self:performStep()
-            self.debugMemoryPointer = -1
-            self.nextStepTick = -1
+            debuggerSingleStep()
+            _debugMemoryPointer = -1
+            _nextStepTick = -1
+            _lastRender = 0
         end)
 
         bindKey("f4", "up", function()
-            self.debuggerInducedPause = true
-            self.debugMemoryPointer = -1
-            self.gameboy.cpu:pause()
+            _debuggerInducedPause = true
+            _debugMemoryPointer = -1
+
+            pauseCPU()
+
+            _lastRender = 0
         end)
 
         bindKey("f5", "up", function()
-            self.debuggerInducedPause = false
-            self.gameboy.cpu.paused = false
-            self.debugMemoryPointer = -1
-            self.passthrough = true
+            _debuggerInducedPause = false
+
+            resumeCPU()
+
+            _debugMemoryPointer = -1
+            _passthrough = true
+            _lastRender = 0
         end)
 
         bindKey("arrow_u", "up", function()
-            if (not self.gameboy.cpu.paused) then
+            if (not isCPUPaused()) then
                 return
             end
 
-            if (self.debugMemoryPointer == -1) then
-                self.debugMemoryPointer = self.gameboy.cpu.registers.pc
+            if (_debugMemoryPointer == -1) then
+                _debugMemoryPointer = registers.pc
             end
 
-            self.debugMemoryPointer = self.debugMemoryPointer - 1
+            _debugMemoryPointer = _debugMemoryPointer - 1
 
-            if (self.debugMemoryPointer < 0) then
-                self.debugMemoryPointer = 0
+            if (_debugMemoryPointer < 0) then
+                _debugMemoryPointer = 0
             end
+
+            _lastRender = 0
         end)
 
         bindKey("arrow_d", "up", function()
-            if (not self.gameboy.cpu.paused) then
+            if (not isCPUPaused()) then
                 return
             end
 
-            if (self.debugMemoryPointer == -1) then
-                self.debugMemoryPointer = self.gameboy.cpu.registers.pc
+            if (_debugMemoryPointer == -1) then
+                _debugMemoryPointer = registers.pc
             end
 
-            self.debugMemoryPointer = self.debugMemoryPointer + 1
+            _debugMemoryPointer = _debugMemoryPointer + 1
 
-            if (self.debugMemoryPointer > self.gameboy.cpu.mmu.MEMORY_SIZE) then
-                self.debugMemoryPointer = self.gameboy.cpu.mmu.MEMORY_SIZE
+            if (_debugMemoryPointer > MMU_MEMORY_SIZE) then
+                _debugMemoryPointer = MMU_MEMORY_SIZE
             end
+
+            _lastRender = 0
         end)
 
         bindKey("arrow_l", "up", function()
-            if (self.debugMemoryPointer == -1 or not self.gameboy.cpu.paused) then
+            if (_debugMemoryPointer == -1 or not isCPUPaused()) then
                 return
             end
 
-            self.memoryPointerMemory[self.currentMenu] = self.debugMemoryPointer
-            self.currentMenu = self.currentMenu - 1
+            _memoryPointerMemory[_currentMenu] = _debugMemoryPointer
+            _currentMenu = _currentMenu - 1
 
-            if (self.currentMenu < 0) then
-                self.currentMenu = 0
+            if (_currentMenu < 0) then
+                _currentMenu = 0
             end
 
-            if (self.memoryPointerMemory[self.currentMenu] ~= nil) then
-                self.debugMemoryPointer = self.memoryPointerMemory[self.currentMenu]
+            if (_memoryPointerMemory[_currentMenu] ~= nil) then
+                _debugMemoryPointer = _memoryPointerMemory[_currentMenu]
             else
-                self.debugMemoryPointer = self.gameboy.cpu.registers.pc
+                _debugMemoryPointer = registers.pc
             end
+
+            _lastRender = 0
         end)
 
         bindKey("arrow_r", "up", function()
-            if (self.debugMemoryPointer == -1 or not self.gameboy.cpu.paused) then
+            if (_debugMemoryPointer == -1 or not isCPUPaused()) then
                 return
             end
 
-            self.memoryPointerMemory[self.currentMenu] = self.debugMemoryPointer
-            self.currentMenu = self.currentMenu + 1
+            _memoryPointerMemory[_currentMenu] = _debugMemoryPointer
+            _currentMenu = _currentMenu + 1
 
-            if (self.currentMenu > 1) then
-                self.currentMenu = 1
+            if (_currentMenu > 1) then
+                _currentMenu = 1
             end
 
-            if (self.memoryPointerMemory[self.currentMenu] ~= nil) then
-                self.debugMemoryPointer = self.memoryPointerMemory[self.currentMenu]
+            if (_memoryPointerMemory[_currentMenu] ~= nil) then
+                _debugMemoryPointer = _memoryPointerMemory[_currentMenu]
             else
-                self.debugMemoryPointer = self.gameboy.cpu.registers.pc
+                _debugMemoryPointer = registers.pc
             end
+
+            _lastRender = 0
         end)
     end
 end
 
-function Debugger:step()
-    if (self.gameboy == nil) then
-        return true
-    end
-
-    if (LOG_TRACE and self.traceFile) then
+function debuggerStep()
+    if (LOG_TRACE and _traceFile) then
         local flags = ""
 
-        flags = flags..((self.gameboy.cpu.registers.f[1]) and "Z" or "-")
-        flags = flags..((self.gameboy.cpu.registers.f[2]) and "N" or "-")
-        flags = flags..((self.gameboy.cpu.registers.f[3]) and "H" or "-")
-        flags = flags..((self.gameboy.cpu.registers.f[4]) and "C" or "-")
+        flags = flags..((registers.f[1]) and "Z" or "-")
+        flags = flags..((registers.f[2]) and "N" or "-")
+        flags = flags..((registers.f[3]) and "H" or "-")
+        flags = flags..((registers.f[4]) and "C" or "-")
 
-        self.disassembler:singleInstruction(self.gameboy.cpu.mmu, self.gameboy.cpu.registers.pc)
+        disassembleSingleInstruction(registers.pc)
 
-        local instruction = "[??]0x"..string.format("%.4x", self.gameboy.cpu.registers.pc)..": "
-        local opcode = self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc)
+        local instruction = "[??]0x"..string.format("%.4x", registers.pc)..": "
+        local opcode = mmuReadByte(registers.pc)
         local instructionBytes = ""
-        local opcodeLen = self.disassembler:getOpcodeLength(opcode + 1)
+        local opcodeLen = getOpcodeLength(opcode + 1)
 
         for i=1, opcodeLen do
-            instructionBytes = instructionBytes..string.format("%.2x", self.gameboy.cpu.mmu:readByte(self.gameboy.cpu.registers.pc + (i - 1))):lower().." "
+            instructionBytes = instructionBytes..string.format("%.2x", mmuReadByte(registers.pc + (i - 1))):lower().." "
         end
 
         instruction = instruction..string.format("%-09s", instructionBytes)
-        instruction = instruction.." "..(self.disassembler:getData()[self.gameboy.cpu.registers.pc + 1] or "unknown"):lower()
+        instruction = instruction.." "..(disassembledData[registers.pc + 1] or "unknown"):lower()
 
-        fileWrite(self.traceFile, 
-            "A:"..string.format("%.2x", self.gameboy.cpu.registers.a):upper()..
+        fileWrite(_traceFile, 
+            "A:"..string.format("%.2x", registers.a):upper()..
             " F:"..flags..
-            " BC:"..string.format("%.4x", self.gameboy.cpu:readTwoRegisters('b', 'c')):lower()..
-            " DE:"..string.format("%.4x", self.gameboy.cpu:readTwoRegisters('d', 'e')):lower()..
-            " HL:"..string.format("%.4x", self.gameboy.cpu:readTwoRegisters('h', 'l')):lower()..
-            " SP:"..string.format("%.4x", self.gameboy.cpu.registers.sp)..
-            " PC:"..string.format("%.4x", self.gameboy.cpu.registers.pc)..
-            " (cy: "..self.gameboy.cpu.clock.t..")"..
-            " ppu:"..((self.gameboy.gpu.screenEnabled) and "+" or "-")..self.gameboy.gpu.mode..
+            " BC:"..string.format("%.4x", readTwoRegisters('b', 'c')):lower()..
+            " DE:"..string.format("%.4x", readTwoRegisters('d', 'e')):lower()..
+            " HL:"..string.format("%.4x", readTwoRegisters('h', 'l')):lower()..
+            " SP:"..string.format("%.4x", registers.sp)..
+            " PC:"..string.format("%.4x", registers.pc)..
+            " (cy: "..getCPUClock().t..")"..
+            " ppu:"..((isScreenEnabled()) and "+" or "-").._getGPUMode()..
             " |"..instruction..
-            " {"..string.format("%.2x", self.gameboy.cpu.mmu:readByte(0xFF44))..", "..self.gameboy.gpu.modeclock.."}"..
+            " {"..string.format("%.2x", mmuReadByte(0xFF44))..", ".._getGPUModeClock().."}"..
             "\n")
     end
 
-    if (self.breakpoints[self.gameboy.cpu.registers.pc] and not self.debuggerInducedPause
-        and not self.passthrough) then
-        self.gameboy.cpu:pause()
-        self.debuggerInducedPause = true
+    if (_breakpoints[registers.pc] and not _debuggerInducedPause
+        and not _passthrough) then
+        pauseCPU()
+        _debuggerInducedPause = true
         return false
     end
 
-    self.passthrough = false
+    _passthrough = false
 
     return true
 end
 
-function Debugger:performStep()
-    if (self.debuggerInducedPause) then
-        self.gameboy.cpu:step()
-        self.gameboy.cpu:pause() -- Ensuring we are still paused
+function debuggerSingleStep()
+    if (_debuggerInducedPause) then
+        cpuStep()
+        pauseCPU() -- Ensuring we are still paused
     end
 end
 
-function Debugger:render()
-    if (self.gameboy == nil) then
-        return
+function renderDebugger(delta)
+    if (_nextStepTick ~= -1 and _getTickCount() > _nextStepTick) then
+        debuggerStep()
+        _nextStepTick = _getTickCount() + 50
     end
 
-    if (self.nextStepTick ~= -1 and getTickCount() > self.nextStepTick) then
-        self:performStep()
-        self.nextStepTick = getTickCount() + 50
-    end
+    if ((_getTickCount() - _lastRender) > 200 or not _renderTarget) then
+        dxSetRenderTarget(_renderTarget, true)
+        dxSetBlendMode("modulate_add")
 
-    local gpu = self.gameboy.gpu
+        dxDrawText(math.floor(_fps), SCREEN_WIDTH - (((200 * (1920 / SCREEN_WIDTH)) / 2)), 
+            (((50 * (1920 / SCREEN_WIDTH)) / 2)), 0, 0, tocolor(255, 255, 255), (((6 * (1920 / SCREEN_WIDTH)) / 2)),
+            "default-bold")
 
-    local screenStartX = (SCREEN_WIDTH / 2) - ((DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)) / 2)
-    local screenStartY = (SCREEN_HEIGHT / 2) - ((DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)) / 2)
+        local screenStartX = (SCREEN_WIDTH / 2) - ((DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)) / 2)
+        local screenStartY = (SCREEN_HEIGHT / 2) - ((DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)) / 2)
 
-    local screenWidth = DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)
-    local screenHeight = DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)
+        local screenWidth = DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)
+        local screenHeight = DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)
 
-    dxDrawRectangle(screenStartX, screenStartY, screenWidth, screenHeight
-        , tocolor(0, 0, 0, 200))
+        dxDrawRectangle(screenStartX, screenStartY, screenWidth, screenHeight
+            , tocolor(0, 0, 0, 200))
 
-    local romMemoryWindowStartX = screenStartX + (50 * (1920 / SCREEN_WIDTH))
-    local romMemoryWindowStartY = screenStartY + (50 * (1920 / SCREEN_WIDTH))
+        local romMemoryWindowStartX = screenStartX + (50 * (1920 / SCREEN_WIDTH))
+        local romMemoryWindowStartY = screenStartY + (50 * (1920 / SCREEN_WIDTH))
 
-    local romMemoryWindowWidth = 75
-    local romMemoryWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
+        local romMemoryWindowWidth = 75
+        local romMemoryWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
 
-    dxDrawRectangle(romMemoryWindowStartX, romMemoryWindowStartY, romMemoryWindowWidth, romMemoryWindowHeight,
-        tocolor(255, 196, 196, 150))
+        dxDrawRectangle(romMemoryWindowStartX, romMemoryWindowStartY, romMemoryWindowWidth, romMemoryWindowHeight,
+            tocolor(255, 196, 196, 150))
 
-    local cpu = self.gameboy.cpu
+        local yPadding = (20 * (1920 / SCREEN_WIDTH))
 
-    local yPadding = (20 * (1920 / SCREEN_WIDTH))
-
-    if (cpu) then
         local romMemoryX = romMemoryWindowStartX + (10 * (1920 / SCREEN_WIDTH))
         local romMemoryY = romMemoryWindowStartY + (yPadding / 2)
         local renderLineCount = (romMemoryWindowHeight / dxGetFontHeight(1, "default-bold"))
 
-        local romMemorySize = cpu.mmu.MEMORY_SIZE
-        local startValue = _math_floor(cpu.registers.pc - (renderLineCount * 0.5))
+        local romMemorySize = MMU_MEMORY_SIZE
+        local startValue = _math_floor(registers.pc - (renderLineCount * 0.5))
 
         if (startValue < 0) then
             startValue = 0
         end
 
-        if (self.debugMemoryPointer ~= -1 and self.currentMenu == 0) then
-            startValue = _math_floor(self.debugMemoryPointer - (renderLineCount * 0.5))
+        if (_debugMemoryPointer ~= -1 and _currentMenu == 0) then
+            startValue = _math_floor(_debugMemoryPointer - (renderLineCount * 0.5))
         end
 
         for i=startValue, romMemorySize do
-            local romMemoryValue = cpu.mmu:readByte(i)
+            local romMemoryValue = mmuReadByte(i)
             local r, g, b = 255, 255, 255
 
-            if (i == cpu.registers.pc) then
+            if (i == registers.pc) then
                 r, g, b = 11, 51, 255
-            elseif (i == self.debugMemoryPointer and self.currentMenu == 0) then
+            elseif (i == _debugMemoryPointer and _currentMenu == 0) then
                 r, g, b = 255, 51, 11
             end
 
@@ -342,49 +382,47 @@ function Debugger:render()
                 break
             end
         end
-    end
 
-    local romWindowStartX = romMemoryWindowStartX + romMemoryWindowWidth
-    local romWindowStartY = romMemoryWindowStartY
+        local romWindowStartX = romMemoryWindowStartX + romMemoryWindowWidth
+        local romWindowStartY = romMemoryWindowStartY
 
-    local romWindowWidth = ((DEBUGGER_WIDTH * 0.70) * (1920 / SCREEN_WIDTH)) - romMemoryWindowWidth
-    local romWindowHeight = romMemoryWindowHeight
+        local romWindowWidth = ((DEBUGGER_WIDTH * 0.70) * (1920 / SCREEN_WIDTH)) - romMemoryWindowWidth
+        local romWindowHeight = romMemoryWindowHeight
 
-    dxDrawRectangle(romWindowStartX, romWindowStartY
-        , romWindowWidth, romWindowHeight,
-        tocolor(255, 255, 255, 150))
+        dxDrawRectangle(romWindowStartX, romWindowStartY
+            , romWindowWidth, romWindowHeight,
+            tocolor(255, 255, 255, 150))
 
-    if (self.disassembler and cpu) then
-        local rom = self.disassembler:getData()
+        local rom = disassembledData
 
         local romX = romWindowStartX + (10 * (1920 / SCREEN_WIDTH))
         local romY = romWindowStartY + (yPadding / 2)
         local renderLineCount = (romWindowHeight / dxGetFontHeight(1, "default-bold"))
 
         local romSize = #rom
-        local startValue = _math_floor(cpu.registers.pc - (renderLineCount * 0.5))
+        local startValue = _math_floor(registers.pc - (renderLineCount * 0.5))
 
-        if (self.debugMemoryPointer ~= -1 and self.currentMenu == 1) then
-            startValue = _math_floor(self.debugMemoryPointer - (renderLineCount * 0.5))
+        if (_debugMemoryPointer ~= -1 and _currentMenu == 1) then
+            startValue = _math_floor(_debugMemoryPointer - (renderLineCount * 0.5))
         end
 
         if (startValue < 0) then
             startValue = 0
         end
 
-        for i=startValue, cpu.mmu.MEMORY_SIZE do
+        for i=startValue, MMU_MEMORY_SIZE do
             local romValue = rom[i + 1]
 
             if (romValue ~= nil) then
                 local r, g, b = 255, 255, 255
 
-                if (i == cpu.registers.pc) then
+                if (i == registers.pc) then
                     r, g, b = 11, 51, 255
-                elseif (i == self.debugMemoryPointer and self.currentMenu == 1) then
+                elseif (i == _debugMemoryPointer and _currentMenu == 1) then
                     r, g, b = 255, 51, 11
                 end
 
-                if (self.breakpoints[i]) then
+                if (_breakpoints[i]) then
                     dxDrawText("X", romX, romY,
                         romWindowStartX + romWindowWidth - (10 * (1920 / SCREEN_WIDTH)),
                         0, tocolor(255, 0, 0), 1, "default-bold")
@@ -404,34 +442,32 @@ function Debugger:render()
                 end
             end
         end
-    end
 
-    local registersWindowStartX = (romWindowStartX + romWindowWidth) + (10 * (1920 / SCREEN_WIDTH))
-    local registersWindowStartY = screenStartY + (50 * (1920 / SCREEN_WIDTH))
+        local registersWindowStartX = (romWindowStartX + romWindowWidth) + (10 * (1920 / SCREEN_WIDTH))
+        local registersWindowStartY = screenStartY + (50 * (1920 / SCREEN_WIDTH))
 
-    local registersWindowWidth = (DEBUGGER_WIDTH - (registersWindowStartX - screenStartX)) - (50 * (1920 / SCREEN_WIDTH))
-    local registersWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
+        local registersWindowWidth = (DEBUGGER_WIDTH - (registersWindowStartX - screenStartX)) - (50 * (1920 / SCREEN_WIDTH))
+        local registersWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
 
-    dxDrawRectangle(registersWindowStartX, registersWindowStartY, registersWindowWidth, registersWindowHeight,
-        tocolor(255, 255, 255, 150))
+        dxDrawRectangle(registersWindowStartX, registersWindowStartY, registersWindowWidth, registersWindowHeight,
+            tocolor(255, 255, 255, 150))
 
-    if (cpu) then
         local registersX = registersWindowStartX + (10 * (1920 / SCREEN_WIDTH))
         local registersY = registersWindowStartY + (yPadding / 2)
 
         for _, registerPair in pairs(DEBUGGER_REGISTERS) do
             if (type(registerPair) == "table") then
-                local value = cpu.registers[registerPair[1]] * 256
+                local value = registers[registerPair[1]] * 256
 
                 if (registerPair[2] == "f") then
                     value = value + (
-                        ((cpu.registers.f[1]) and 1 or 0) * 128 +
-                        ((cpu.registers.f[2]) and 1 or 0) * 64 +
-                        ((cpu.registers.f[3]) and 1 or 0) * 32 +
-                        ((cpu.registers.f[4]) and 1 or 0) * 16
+                        ((registers.f[1]) and 1 or 0) * 128 +
+                        ((registers.f[2]) and 1 or 0) * 64 +
+                        ((registers.f[3]) and 1 or 0) * 32 +
+                        ((registers.f[4]) and 1 or 0) * 16
                     )
                 else
-                    value = value + cpu.registers[registerPair[2]]
+                    value = value + registers[registerPair[2]]
                 end
 
                 dxDrawText(registerPair[1]:upper()..registerPair[2]:upper()
@@ -439,7 +475,7 @@ function Debugger:render()
                     .. " | "..binaryFormat(value, 16), registersX, registersY,
                     registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
             else
-                local value = cpu.registers[registerPair]
+                local value = registers[registerPair]
 
                 dxDrawText(registerPair:upper()
                     .." = ".._string_format("%.4x", value):upper()
@@ -450,16 +486,16 @@ function Debugger:render()
             registersY = registersY + yPadding
         end
 
-        dxDrawText("LY".." = ".._string_format("%.2x", self.gameboy.gpu.line):upper(), registersX, registersY,
+        dxDrawText("LY".." = ".._string_format("%.2x", scanLine):upper(), registersX, registersY,
             registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
 
         registersY = registersY + yPadding
         registersY = registersY + yPadding
 
-        for i=0xFF40, 0xFF52 do
+        for i=0xFF00, 0xFF12 do
         --for i=0x8010, 0x802F do
             dxDrawText("0x".._string_format("%.4x", i):upper()..": "
-                .._string_format("%.2x", cpu.mmu:readByte(i)):upper(), registersX, registersY,
+                .._string_format("%.2x", mmuReadByte(i)):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -
                 (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
 
@@ -472,142 +508,151 @@ function Debugger:render()
 
         registersY = registersY + yPadding
 
-        for _, address in pairs(cpu.mmu.stackDebug) do
+        for _, address in pairs(stackDebug) do
             dxDrawText("0x".._string_format("%.4x", address):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -
                 (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
 
             registersY = registersY + yPadding
         end
-    end
 
-    local currentX = romMemoryWindowStartX
-    local currentY = romMemoryWindowStartY + romMemoryWindowHeight
+        local currentX = romMemoryWindowStartX
+        local currentY = romMemoryWindowStartY + romMemoryWindowHeight
 
-    local size = (2 * (1920 / SCREEN_WIDTH))
-    local palette = cpu.mmu:readByte(0xFF47)
+        local size = (2 * (1920 / SCREEN_WIDTH))
+        local palette = mmuReadByte(0xFF47)
 
-    for tile=0, 384 do
-        local address = 0x8000 + (tile * 16)
+        for tile=0, 384 do
+            local address = 0x8000 + (tile * 16)
 
-        for row=1, 8 do
-            local byte1 = cpu.mmu:readByte(address)
-            local byte2 = cpu.mmu:readByte(address + 1)
+            for row=1, 8 do
+                local byte1 = mmuReadByte(address)
+                local byte2 = mmuReadByte(address + 1)
 
-            for column=1, 8 do
-                local colorBit = ((column % 8) - 7) * -1
+                for column=1, 8 do
+                    local colorBit = ((column % 8) - 7) * -1
 
-                local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
-                colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
+                    local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
+                    colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
 
-                local hi = 0
-                local lo = 0
+                    local hi = 0
+                    local lo = 0
 
-                if (colorNum == 0) then
-                    hi = 1
-                    lo = 0
-                elseif (colorNum == 1) then
-                    hi = 3
-                    lo = 2
-                elseif (colorNum == 2) then
-                    hi = 5
-                    lo = 4
-                elseif (colorNum == 3) then
-                    hi = 7
-                    lo = 6
+                    if (colorNum == 0) then
+                        hi = 1
+                        lo = 0
+                    elseif (colorNum == 1) then
+                        hi = 3
+                        lo = 2
+                    elseif (colorNum == 2) then
+                        hi = 5
+                        lo = 4
+                    elseif (colorNum == 3) then
+                        hi = 7
+                        lo = 6
+                    end
+
+                    local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
+                    color = _bitOr(color, _bitExtract(palette, lo, 1))
+
+                    local columnColor = _COLORS[color + 1]
+
+                    dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                        tocolor(columnColor[1], columnColor[2], columnColor[3]))
                 end
 
-                local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
-                color = _bitOr(color, _bitExtract(palette, lo, 1))
-
-                local columnColor = _COLORS[color + 1]
-
-                dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
-                    tocolor(columnColor[1], columnColor[2], columnColor[3]))
+                address = address + 2
             end
 
-            address = address + 2
+            currentX = currentX + (8 * size) + 2
+
+            if (currentX > romMemoryWindowStartX +
+                (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
+                currentX = romMemoryWindowStartX
+                currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+            end
         end
 
-        currentX = currentX + (8 * size) + 2
+        currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
 
-        if (currentX > romMemoryWindowStartX +
-            (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
-            currentX = romMemoryWindowStartX
-            currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
-        end
-    end
+        local currentX = romMemoryWindowStartX
+        local currentY = currentY + (10 * (1920 / SCREEN_WIDTH))
 
-    currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+        local size = 2
 
-    local currentX = romMemoryWindowStartX
-    local currentY = currentY + (10 * (1920 / SCREEN_WIDTH))
+        for oam=0, 39 do
+            local y = mmuReadByte(0xFE00 + (oam * 4))
+            local x = mmuReadByte(0xFE00 + (oam * 4) + 1)
+            local tile = mmuReadByte(0xFE00 + (oam * 4) + 2)
+            local options = mmuReadByte(0xFE00 + (oam * 4) + 3)
 
-    local size = 2
+            palette = mmuReadByte((_bitExtract(options, 4, 1) == 1) and 0xFF49 or 0xFF48)
 
-    for oam=0, 39 do
-        local y = cpu.mmu:readByte(0xFE00 + (oam * 4))
-        local x = cpu.mmu:readByte(0xFE00 + (oam * 4) + 1)
-        local tile = cpu.mmu:readByte(0xFE00 + (oam * 4) + 2)
-        local options = cpu.mmu:readByte(0xFE00 + (oam * 4) + 3)
+            local address = 0x8000 + (tile * 16)
 
-        palette = cpu.mmu:readByte((_bitExtract(options, 4, 1) == 1) and 0xFF49 or 0xFF48)
+            for row=1, 8 do
+                local byte1 = mmuReadByte(address)
+                local byte2 = mmuReadByte(address + 1)
 
-        local address = 0x8000 + (tile * 16)
+                for column=1, 8 do
+                    local colorBit = ((column % 8) - 7) * -1
 
-        for row=1, 8 do
-            local byte1 = cpu.mmu:readByte(address)
-            local byte2 = cpu.mmu:readByte(address + 1)
+                    local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
+                    colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
 
-            for column=1, 8 do
-                local colorBit = ((column % 8) - 7) * -1
+                    local hi = 0
+                    local lo = 0
 
-                local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
-                colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
+                    if (colorNum == 0) then
+                        hi = 1
+                        lo = 0
+                    elseif (colorNum == 1) then
+                        hi = 3
+                        lo = 2
+                    elseif (colorNum == 2) then
+                        hi = 5
+                        lo = 4
+                    elseif (colorNum == 3) then
+                        hi = 7
+                        lo = 6
+                    end
 
-                local hi = 0
-                local lo = 0
+                    local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
+                    color = _bitOr(color, _bitExtract(palette, lo, 1))
 
-                if (colorNum == 0) then
-                    hi = 1
-                    lo = 0
-                elseif (colorNum == 1) then
-                    hi = 3
-                    lo = 2
-                elseif (colorNum == 2) then
-                    hi = 5
-                    lo = 4
-                elseif (colorNum == 3) then
-                    hi = 7
-                    lo = 6
+                    local columnColor = _COLORS[color + 1]
+
+                    dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                        tocolor(columnColor[1], columnColor[2], columnColor[3]))
                 end
 
-                local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
-                color = _bitOr(color, _bitExtract(palette, lo, 1))
-
-                local columnColor = _COLORS[color + 1]
-
-                dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
-                    tocolor(columnColor[1], columnColor[2], columnColor[3]))
+                address = address + 2
             end
 
-            address = address + 2
+            currentX = currentX + (8 * size) + 2
+
+            if (currentX > romMemoryWindowStartX +
+                (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
+                currentX = romMemoryWindowStartX
+                currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+            end
         end
 
-        currentX = currentX + (8 * size) + 2
+        dxSetBlendMode("blend")
+        dxSetRenderTarget()
 
-        if (currentX > romMemoryWindowStartX +
-            (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
-            currentX = romMemoryWindowStartX
-            currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
-        end
+        _lastRender = _getTickCount()
     end
+
+    dxSetBlendMode("add")
+    dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, _renderTarget)
+    dxSetBlendMode("blend")
 end
 
-function Debugger:breakpoint(address)
-    self.breakpoints[address] = true
+function breakpoint(address)
+    _breakpoints[address] = true
 end
 
-function Debugger:removeBreakpoint(address)
-    self.breakpoints[address] = false
+function removeBreakpoint(address)
+    _breakpoints[address] = false
 end

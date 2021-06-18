@@ -1,11 +1,10 @@
 -- Allows to run the GPU on the server without an actual output for testing.
-Override = Class()
 
 -----------------------------------
 -- * Functions
 -----------------------------------
 
-Override.override = function()
+Override = function()
     dxCreateTexture = function(width, height)
         local pixels = {}
 

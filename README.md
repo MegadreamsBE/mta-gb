@@ -22,6 +22,8 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 - Improve debugging tools by using a proper dxGUI.
 
 ## Known Problems
+- Donkey Kong land has a variety of graphical glitches (likely due to it falsely thinking it's on SGB).
+- Pokémon Blue has a variety of graphical glitches and cannot progress past the new game sequence.
 - GPU timings are slightly off.
 - GPU doesn't trigger all necessary interrupts yet.
 - Not all CPU instructions have correct timings nor logic. Although most have been fixed by now.
@@ -30,15 +32,21 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 ## FAQ
 1. Why Multi Theft Auto?    
    I wanted to develop this for a platform that not yet has a Game Boy emulator and at the same time poses a bigger challenge for optimization due to its poor performance. MTA not having a Game Boy emulator and at the same time have plenty of performance issues fit this criteria very well. Once finished and properly optimized this emulator could be used as a way of keeping players entertained at times when they have to wait (such as after dying on a race deatchmatch map).
-   
+
 2. Will this also support Game Boy Color?    
    Yes. This will be introduced once the Game Boy emulation is stable and optimized well enough in a new branch. It will be possible to toggle which of the two you want to use to run a ROM.
    
 3. Will this support Game Boy Advance games?    
    Perhaps. This would be far into the future and only if optimization methods deem it feasable.
    
-4. Can I contribute?    
+4. How well does this emulator perform?
+   Poorly. Optimizations are being made but at the moment it only runs between 6-8 FPS on a system with a i9 9900k and RTX 2070 SUPER.
+
+5. Can I contribute?    
    Yes. Feel free to fork this project and help improve it. It's open source for a reason.
+
+## Guidelines
+Please note that there's no class system within the code base. This is intentional and it's pointless to add one. There used to be one but as the emulator already performs poorly a faster, and unfortunately less readable/convenient, way of writing code had to be chosen.
 
 ## License
 GNU General Public License v3.0

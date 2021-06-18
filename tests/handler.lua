@@ -1,19 +1,24 @@
-TestHandler = Class()
+TestHandler = {}
+TestHandler.__index = TestHandler
 
 -----------------------------------
 -- * Functions
 -----------------------------------
 
 function TestHandler:create(suiteName, testSuite, tests)
-    self.suiteName = suiteName
-    self.testSuite = testSuite
-    self.tests = tests
+    local mt = setmetatable({}, TestHandler)
 
-    self.testName = ""
-    self.testRom = nil
-    self.gameboy = nil
+    mt.suiteName = suiteName
+    mt.testSuite = testSuite
+    mt.tests = tests
 
-    self.currentTest = 0
+    mt.testName = ""
+    mt.testRom = nil
+    mt.gameboy = nil
+
+    mt.currentTest = 0
+
+    return mt
 end
 
 function TestHandler:setTests(tests)

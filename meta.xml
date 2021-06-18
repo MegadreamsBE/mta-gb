@@ -14,7 +14,6 @@
     <!--
     #########   Utils   ########
     -->
-    <script src="src/utils/class.lua" type="shared" />
     <script src="src/utils/log.lua" type="shared" />
 
     <!--

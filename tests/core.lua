@@ -4,7 +4,7 @@
 
 addEventHandler("onResourceStart", resourceRoot, function()
     if (get("tests_enabled") == "true") then
-        Override.override()
+        Override()
         --TestOpcodes():run()
     end
 end)

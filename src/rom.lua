@@ -1,34 +1,22 @@
-Rom = Class()
-
 -----------------------------------
 -- * Functions
 -----------------------------------
 
-function Rom:create(path)
-    self.position = 0
-    self.path = path
-    self.data = {}
-end
-
-function Rom:load()
-    local file = File.open(self.path, true)
+function loadRom(path)
+    local file = fileOpen(path, true)
 
     if (not file) then
-        Log.error("Rom", "Unable to open file %s", self.path)
+        Log.error("Rom", "Unable to open file %s", path)
         return false
     end
 
-    self.data = {}
+    local data = {}
 
-    while (not file:isEOF(file)) do
-         self.data[#self.data + 1] = utf8.byte(file:read(1))
+    while (not fileIsEOF(file)) do
+         data[#data + 1] = utf8.byte(file:read(1))
     end
 
-    file:close()
+    fileClose(file)
 
-    return true
-end
-
-function Rom:getData()
-    return self.data
+    return data
 end

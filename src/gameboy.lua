@@ -1,5 +1,3 @@
-GameBoy = Class()
-
 -----------------------------------
 -- * Locals
 -----------------------------------
@@ -14,135 +12,158 @@ local _bitOr = bitOr
 local ROM_PATH = "data/Tetris.gb"
 
 -----------------------------------
+-- * Locals
+-----------------------------------
+
+local _keypad = {}
+local _onClientKeyHandler = false
+local _debuggerEnabled = false
+
+local _rom = nil
+local _bios = nil
+
+-----------------------------------
 -- * Functions
 -----------------------------------
 
-function GameBoy:create()
-    self.gpu = GPU(self)
-    self.cpu = CPU(self)
-    self.keypad = {
+function setupGameBoy()
+    setupTimer()
+    setupGPU()
+    setupCPU()
+
+    _keypad = {
         keys = {0x0f, 0x0f},
         column = 0
     }
 
-    self.onClientKeyHandler = false
+    _onClientKeyHandler = false
 end
 
-function GameBoy:load(romPath)
-    self.rom = Rom(romPath)
+function gameBoyLoadRom(romPath)
+    _rom = loadRom(romPath)
 
-    if (not self.rom:load()) then
+    if (not _rom) then
         Log.error("GameBoy", "Unable to load ROM.")
     end
 end
 
-function GameBoy:loadBios(biosPath)
-    local bios = Rom(biosPath)
+function gameBoyLoadBios(biosPath)
+    _bios = loadRom(biosPath)
 
-    if (not bios:load()) then
+    if (not _bios) then
         Log.error("GameBoy", "Unable to load BIOS.")
     end
-
-    self.cpu.mmu.bios = bios:getData()
 end
 
-function GameBoy:start()
-    self.gpu:reset()
-    self.cpu:reset()
+function startGameBoy()
+    resetTimer()
+    resetGPU()
+    resetCPU()
 
-    if (self.rom ~= nil) then
-        self.cpu:loadRom(self.rom)
+    if (_rom ~= nil) then
+        cpuLoadRom(_rom)
+
+        _rom = nil
     end
 
-    self.cpu:run()
+    runCPU()
 
-    self.onClientKeyHandler = function(key, pressed)
+    _onClientKeyHandler = function(key, pressed)
         if (pressed) then
-            self:onKeyDown(key)
+            onKeyDown(key)
         else
-            self:onKeyUp(key)
+            onKeyUp(key)
         end
     end
 
-    addEventHandler("onClientKey", root, self.onClientKeyHandler)
+    addEventHandler("onClientKey", root, _onClientKeyHandler)
 end
 
-function GameBoy:pause()
-    self.cpu:pause()
+function pauseGameBoy()
+    pauseCPU()
 end
 
-function GameBoy:stop()
-    self:pause()
-    self.gpu:reset()
-    self.cpu:reset()
+function stopGameBoy()
+    pauseGameBoy()
+    resetGPU()
+    resetCPU()
 
-    removeEventHandler("onClientKey", root, self.onClientKeyHandler)
+    removeEventHandler("onClientKey", root, _onClientKeyHandler)
 end
 
-function GameBoy:attachDebugger(debugger)
-    self.debugger = debugger
-    self.debugger:start(self)
+function enableDebugger()
+    _debuggerEnabled = true
+
+    startDebugger()
 end
 
-function GameBoy:readKeypad()
-    if (self.keypad.column == 0x10) then
-        return self.keypad.keys[1]
-    elseif (self.keypad.column == 0x20) then
-        return self.keypad.keys[2]
+function isDebuggerEnabled()
+    return _debuggerEnabled
+end
+
+function readKeypad()
+    if (_keypad.column == 0x10) then
+        return _keypad.keys[1]
+    elseif (_keypad.column == 0x20) then
+        return _keypad.keys[2]
     end
 
-    return 0x0
+    return 0xFF
 end
 
-function GameBoy:writeKeypad(value)
-    self.keypad.column = _bitAnd(value, 0x30)
+function isBiosLoaded()
+    return (_bios ~= false)
 end
 
-function GameBoy:onKeyDown(key)
+function writeKeypad(value)
+    _keypad.column = _bitAnd(value, 0x30)
+end
+
+function onKeyDown(key)
     if (key == "arrow_r") then
-        self.keypad.keys[2] = _bitAnd(self.keypad.keys[2], 0xE)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[2] = _bitAnd(_keypad.keys[2], 0xE)
+        requestInterrupt(4)
     elseif (key == "arrow_l") then
-        self.keypad.keys[2] = _bitAnd(self.keypad.keys[2], 0xD)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[2] = _bitAnd(_keypad.keys[2], 0xD)
+        requestInterrupt(4)
     elseif (key == "arrow_u") then
-        self.keypad.keys[2] = _bitAnd(self.keypad.keys[2], 0xB)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[2] = _bitAnd(_keypad.keys[2], 0xB)
+        requestInterrupt(4)
     elseif (key == "arrow_d") then
-        self.keypad.keys[2] = _bitAnd(self.keypad.keys[2], 0x7)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[2] = _bitAnd(_keypad.keys[2], 0x7)
+        requestInterrupt(4)
     elseif (key == "z") then
-        self.keypad.keys[1] = _bitAnd(self.keypad.keys[1], 0xE)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[1] = _bitAnd(_keypad.keys[1], 0xE)
+        requestInterrupt(4)
     elseif (key == "x") then
-        self.keypad.keys[1] = _bitAnd(self.keypad.keys[1], 0xD)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[1] = _bitAnd(_keypad.keys[1], 0xD)
+        requestInterrupt(4)
     elseif (key == "space") then
-        self.keypad.keys[1] = _bitAnd(self.keypad.keys[1], 0xB)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[1] = _bitAnd(_keypad.keys[1], 0xB)
+        requestInterrupt(4)
     elseif (key == "enter") then
-        self.keypad.keys[1] = _bitAnd(self.keypad.keys[1], 0x7)
-        self.cpu:requestInterrupt(4)
+        _keypad.keys[1] = _bitAnd(_keypad.keys[1], 0x7)
+        requestInterrupt(4)
     end
 end
 
-function GameBoy:onKeyUp(key)
+function onKeyUp(key)
     if (key == "arrow_r") then
-        self.keypad.keys[2] = _bitOr(self.keypad.keys[2], 0x1)
+        _keypad.keys[2] = _bitOr(_keypad.keys[2], 0x1)
     elseif (key == "arrow_l") then
-        self.keypad.keys[2] = _bitOr(self.keypad.keys[2], 0x2)
+        _keypad.keys[2] = _bitOr(_keypad.keys[2], 0x2)
     elseif (key == "arrow_u") then
-        self.keypad.keys[2] = _bitOr(self.keypad.keys[2], 0x4)
+        _keypad.keys[2] = _bitOr(_keypad.keys[2], 0x4)
     elseif (key == "arrow_d") then
-        self.keypad.keys[2] = _bitOr(self.keypad.keys[2], 0x8)
+        _keypad.keys[2] = _bitOr(_keypad.keys[2], 0x8)
     elseif (key == "z") then
-        self.keypad.keys[1] = _bitOr(self.keypad.keys[1], 0x1)
+        _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x1)
     elseif (key == "x") then
-        self.keypad.keys[1] = _bitOr(self.keypad.keys[1], 0x2)
+        _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x2)
     elseif (key == "space") then
-        self.keypad.keys[1] = _bitOr(self.keypad.keys[1], 0x4)
+        _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x4)
     elseif (key == "enter") then
-        self.keypad.keys[1] = _bitOr(self.keypad.keys[1], 0x8)
+        _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x8)
     end
 end
 
@@ -151,14 +172,14 @@ end
 -----------------------------------
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
-    local gameboy = GameBoy()
-    local debugger = Debugger()
+    setupGameBoy()
+    setupDebugger()
 
-    --debugger:breakpoint(0x100)
+    --debugger:breakpoint(0x50)
 
     --gameboy:loadBios("data/bios.gb")
-    gameboy:load(ROM_PATH)
-    
-    gameboy:start()
-    gameboy:attachDebugger(debugger)
+    gameBoyLoadRom(ROM_PATH)
+
+    startGameBoy()
+    enableDebugger()
 end)
