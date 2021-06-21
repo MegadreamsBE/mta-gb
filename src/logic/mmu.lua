@@ -133,7 +133,7 @@ function mmuWriteByte(address, value)
             _mbc[2].ramon = ((_bitAnd(value, 0x0F) == 0x0A) and 1 or 0)
         end
     elseif (address >= 0x2000 and address < 0x4000) then
-        if (_cartridgeType == 2 or _cartridgeType == 3) then
+        if (_cartridgeType >= 1 and _cartridgeType <= 3) then
             value = _bitAnd(value, 0x1F)
 
             if (value == 0) then
@@ -203,15 +203,19 @@ function mmuWriteByte(address, value)
                         outputDebugString("SERIAL ("..string.format("%.4x", registers.pc):upper()..") ("..mmuReadByte(0xFF01).."): "..utf8.char(mmuReadByte(0xFF01)))
                         value = 0x00
                     elseif (internalCase == 4) then
-                        timerDividerRegister = 0
-                    elseif (internalCase >= 4 and internalCase < 7) then
+                        resetTimerDivider()
+                    elseif (internalCase > 4 and internalCase < 7) then
                         _ram[address + 1] = value
                     elseif (internalCase == 7) then
                         _ram[address + 1] = value
 
+                        local wasClockEnabled = timerClockEnabled
+
                         timerClockEnabled = (_bitExtract(value, 2, 1) == 1)
 
                         local newFrequency = _bitAnd(value, 0x03)
+                        
+                        handleTACGlitch(wasClockEnabled, timerClockEnabled, timerClockFrequency, newFrequency)
 
                         if (timerClockFrequency ~= newFrequency) then
                             resetTimerClockFrequency(newFrequency)

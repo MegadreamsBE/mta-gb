@@ -14,11 +14,15 @@ local _clock = {
 }
 
 local _paused = false
+local _pausedUntilInterrupts = false
 local _interrupts = false
 
 local _queuedEnableInterrupts = false
 local _queuedDisableInterrupts = false
+local _queueChangeActive = false
 local _stepCallback = nil
+
+local _interruptDelay = 0
 
 -----------------------------------
 -- * Functions
@@ -88,6 +92,7 @@ function resetCPU()
     _interrupts = true
     _queuedEnableInterrupts = false
     _queuedDisableInterrupts = false
+    _interruptDelay = 0
 
     -- If we have a BIOS we want to ensure all registers are zeroed out.
     if (isBiosLoaded()) then
@@ -146,6 +151,7 @@ end
 
 function resumeCPU()
     _paused = false
+    _pausedUntilInterrupts = false
 end
 
 function isCPUPaused()
@@ -153,7 +159,8 @@ function isCPUPaused()
 end
 
 function haltCPU(haltScreen)
-
+    _paused = true
+    _pausedUntilInterrupts = true
 end
 
 function enableInterrupts()
@@ -195,23 +202,6 @@ function cpuStep()
 
     _clock.m = _clock.m + _registers.clock.m
     _clock.t = _clock.t + _registers.clock.t
-
-    local ticks = _registers.clock.m
-
-    timerStep(ticks)
-    gpuStep(ticks)
-
-    if (_queuedEnableInterrupts) then
-        _queuedEnableInterrupts = false
-        _queuedDisableInterrupts = false
-        _interrupts = true
-    end
-
-    if (_queuedDisableInterrupts) then
-        _queuedEnableInterrupts = false
-        _queuedDisableInterrupts = false
-        _interrupts = false
-    end
 end
 
 function readTwoRegisters(r1, r2)
@@ -247,6 +237,7 @@ end
 
 function requestInterrupt(interrupt)
     interruptFlags = _bitReplace(interruptFlags, 1, interrupt, 1)
+    _interruptDelay = 4
 end
 
 function runCPU()
@@ -261,14 +252,39 @@ function runCPU()
 
             --while(currentCycles < 1000) do
             while(currentCycles < 69905) do
-                if (_paused) then
+                if (_paused and not _pausedUntilInterrupts) then
                     break
                 end
 
-                cpuStep()
-                currentCycles = currentCycles + _registers.clock.t
+                if (_queuedEnableInterrupts and _queueChangeActive) then
+                    _queuedEnableInterrupts = false
+                    _queuedDisableInterrupts = false
+                    _queueChangeActive = false
+                    _interrupts = true
+                end
 
-                if (_interrupts and interrupts and interruptFlags) then
+                if (_queuedDisableInterrupts and _queueChangeActive) then
+                    _queuedEnableInterrupts = false
+                    _queuedDisableInterrupts = false
+                    _queueChangeActive = false
+                    _interrupts = false
+                end
+
+                if ((_queuedEnableInterrupts or _queuedDisableInterrupts) and not _queueChangeActive) then
+                    _queueChangeActive = true
+                end
+
+                if (not _paused) then
+                    cpuStep()
+                    currentCycles = currentCycles + _registers.clock.t
+                end
+
+                local ticks = _registers.clock.m
+
+                timerStep(ticks)
+                gpuStep(ticks)
+
+                if (_interrupts and interrupts and interruptFlags and _interruptDelay <= 0) then
                     local maskedFlags = _bitAnd(interrupts, interruptFlags)
 
                     if (_bitAnd(maskedFlags, 0x01) ~= 0) then
@@ -278,8 +294,8 @@ function runCPU()
 
                         _registers.pc = 0x40
 
-                        _registers.clock.m = 3
-                        _registers.clock.t = 12
+                        _registers.clock.m = 5
+                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x02) ~= 0) then
                         _interrupts = false
                         interruptFlags = _bitAnd(interruptFlags, 0xFD)
@@ -287,8 +303,8 @@ function runCPU()
 
                         _registers.pc = 0x48
 
-                        _registers.clock.m = 3
-                        _registers.clock.t = 12
+                        _registers.clock.m = 5
+                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x04) ~= 0) then
                         _interrupts = false
                         interruptFlags = _bitAnd(interruptFlags, 0xFB)
@@ -296,8 +312,8 @@ function runCPU()
 
                         _registers.pc = 0x50
 
-                        _registers.clock.m = 3
-                        _registers.clock.t = 12
+                        _registers.clock.m = 5
+                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x08) ~= 0) then
                         _interrupts = false
                         interruptFlags = _bitAnd(interruptFlags, 0xF7)
@@ -305,8 +321,8 @@ function runCPU()
 
                         _registers.pc = 0x58
 
-                        _registers.clock.m = 3
-                        _registers.clock.t = 12
+                        _registers.clock.m = 5
+                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x16) ~= 0) then
                         _interrupts = false
                         interruptFlags = _bitAnd(interruptFlags, 0xEF)
@@ -314,11 +330,13 @@ function runCPU()
 
                         _registers.pc = 0x60
 
-                        _registers.clock.m = 3
-                        _registers.clock.t = 12
-                    else
-                        _interrupts = true
+                        _registers.clock.m = 5
+                        _registers.clock.t = 20
                     end
+
+                    _interruptDelay = 0
+                elseif (_interruptDelay > 0) then
+                    _interruptDelay = _interruptDelay - _registers.clock.t
                 end
             end
         end

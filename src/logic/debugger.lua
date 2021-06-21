@@ -3,7 +3,7 @@
 -----------------------------------
 
 local RENDER = true
-local LOG_TRACE = false
+local LOG_TRACE = true
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 
 local DEBUGGER_WIDTH, DEBUGGER_HEIGHT = 1280, 768
@@ -257,6 +257,10 @@ function startDebugger()
 end
 
 function debuggerStep()
+    if (_debuggerInducedPause) then
+        pauseCPU()
+    end
+
     if (LOG_TRACE and _traceFile) then
         local flags = ""
 
@@ -288,9 +292,9 @@ function debuggerStep()
             " SP:"..string.format("%.4x", registers.sp)..
             " PC:"..string.format("%.4x", registers.pc)..
             " (cy: "..getCPUClock().t..")"..
-            " ppu:"..((isScreenEnabled()) and "+" or "-").._getGPUMode()..
+            " ppu:"..((isScreenEnabled()) and "+" or "-")..getGPUMode()..
             " |"..instruction..
-            " {"..string.format("%.2x", mmuReadByte(0xFF44))..", ".._getGPUModeClock().."}"..
+            " {"..string.format("%.2x", mmuReadByte(0xFF44))..", "..getGPUModeClock().."}"..
             "\n")
     end
 
@@ -308,8 +312,7 @@ end
 
 function debuggerSingleStep()
     if (_debuggerInducedPause) then
-        cpuStep()
-        pauseCPU() -- Ensuring we are still paused
+        resumeCPU()
     end
 end
 
@@ -317,6 +320,7 @@ function renderDebugger(delta)
     if (_nextStepTick ~= -1 and _getTickCount() > _nextStepTick) then
         debuggerStep()
         _nextStepTick = _getTickCount() + 50
+        _lastRender = 0
     end
 
     if ((_getTickCount() - _lastRender) > 200 or not _renderTarget) then

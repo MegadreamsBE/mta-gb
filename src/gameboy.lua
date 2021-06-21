@@ -20,7 +20,7 @@ local _onClientKeyHandler = false
 local _debuggerEnabled = false
 
 local _rom = nil
-local _bios = nil
+bios = nil
 
 -----------------------------------
 -- * Functions
@@ -48,9 +48,9 @@ function gameBoyLoadRom(romPath)
 end
 
 function gameBoyLoadBios(biosPath)
-    _bios = loadRom(biosPath)
+    bios = loadRom(biosPath)
 
-    if (not _bios) then
+    if (not bios) then
         Log.error("GameBoy", "Unable to load BIOS.")
     end
 end
@@ -112,7 +112,7 @@ function readKeypad()
 end
 
 function isBiosLoaded()
-    return (_bios ~= false)
+    return (bios ~= nil and #bios > 0)
 end
 
 function writeKeypad(value)
@@ -175,9 +175,9 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     setupGameBoy()
     setupDebugger()
 
-    --debugger:breakpoint(0x50)
+    breakpoint(0x0373)
 
-    --gameboy:loadBios("data/bios.gb")
+    --gameBoyLoadBios("data/bios.gb")
     gameBoyLoadRom(ROM_PATH)
 
     startGameBoy()
