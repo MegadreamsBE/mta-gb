@@ -1,4 +1,4 @@
--- Allows to run the GPU on the server without an actual output for testing.
+-- Allows to run the GPU without an actual output for testing.
 
 -----------------------------------
 -- * Functions

@@ -4674,8 +4674,8 @@ opcodes = {
         registers.pc = 0x38
 
         registers.clock = {
-            m = 8,
-            t = 32
+            m = 4,
+            t = 16
         }
     end,
 }

@@ -3,7 +3,7 @@
 -----------------------------------
 
 local RENDER = true
-local LOG_TRACE = true
+local LOG_TRACE = false
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 
 local DEBUGGER_WIDTH, DEBUGGER_HEIGHT = 1280, 768
@@ -624,10 +624,15 @@ function renderDebugger(delta)
                     local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
                     color = _bitOr(color, _bitExtract(palette, lo, 1))
 
-                    local columnColor = _COLORS[color + 1]
+                    if (colorNum ~= 0) then
+                        local columnColor = _COLORS[color + 1]
 
-                    dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
-                        tocolor(columnColor[1], columnColor[2], columnColor[3]))
+                        dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                            tocolor(columnColor[1], columnColor[2], columnColor[3]))
+                    else
+                        dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                            tocolor(255, 255, 0))
+                    end
                 end
 
                 address = address + 2

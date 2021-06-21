@@ -276,15 +276,18 @@ function runCPU()
 
                 if (not _paused) then
                     cpuStep()
-                    currentCycles = currentCycles + _registers.clock.t
                 end
 
                 local ticks = _registers.clock.m
 
+                if (_paused) then
+                    ticks = 1
+                end
+
                 timerStep(ticks)
                 gpuStep(ticks)
 
-                if (_interrupts and interrupts and interruptFlags and _interruptDelay <= 0) then
+                if ((_interrupts and interrupts and interruptFlags and _interruptDelay <= 0) and not _pausedUntilInterrupts) then
                     local maskedFlags = _bitAnd(interrupts, interruptFlags)
 
                     if (_bitAnd(maskedFlags, 0x01) ~= 0) then
@@ -335,9 +338,14 @@ function runCPU()
                     end
 
                     _interruptDelay = 0
+                elseif (interrupts and interruptFlags and _pausedUntilInterrupts) then
+                    _pausedUntilInterrupts = false
+                    _paused = false
                 elseif (_interruptDelay > 0) then
                     _interruptDelay = _interruptDelay - _registers.clock.t
                 end
+
+                currentCycles = currentCycles + _registers.clock.t
             end
         end
     end

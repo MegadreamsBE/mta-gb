@@ -20,10 +20,13 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 - Finish adding all CPU instructions.
 - Add sound support
 - Improve debugging tools by using a proper dxGUI.
+- Improve interrupt handling
+- Improve timer support
 
 ## Known Problems
-- Donkey Kong land has a variety of graphical glitches (likely due to it falsely thinking it's on SGB).
-- Pokémon Blue has a variety of graphical glitches and cannot progress past the new game sequence.
+- Donkey Kong land shows a white screen.
+- Pokémon Blue has a glitch in the main menu and crashes when trying to run a new game.
+- Legend of Zelda - The Link's Awakening has a variety of graphical glitches and is unplayable.
 - GPU timings are slightly off.
 - GPU doesn't trigger all necessary interrupts yet.
 - Not all CPU instructions have correct timings nor logic. Although most have been fixed by now.
