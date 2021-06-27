@@ -12,9 +12,10 @@ At this stage it is not possible to dynamically decide which ROM to load. Instea
 
 ![Tetris](/images/tetris.png)
 ![The Legend of Zelda Link's Awakening](/images/zelda.png)
+![Pokémon Blue](/images/pokemon.png)
 
 ## Current Progress
-This emulator currently has most of the CPU instructions, a somewhat decent MMU, graphics support, a debugger and more. It is able to run games such as Tetris, Dr. Mario and The Legend of Zelda Links Awakening fairly well.
+This emulator currently has most of the CPU instructions, a somewhat decent MMU, graphics support, a debugger and more. It is able to run games such as Tetris, Dr. Mario, Pokémon Blue and The Legend of Zelda Links Awakening fairly well.
 
 ## TODO
 (This is not a full list)
@@ -29,10 +30,10 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 
 ## Known Problems
 - Donkey Kong land shows a white screen.
-- Pokémon Blue crashes when trying to run a new game.
 - MBC3 is not yet fully implemented and causes crashes.
 - GPU is doesn't fully have correct timings yet.
 - Slow performance
+- There's a minor scrolling bug causing minor graphical glitches in Pokémon Blue/Red's new game sequence.
 
 ## FAQ
 1. Why Multi Theft Auto?    

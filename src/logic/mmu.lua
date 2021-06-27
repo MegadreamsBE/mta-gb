@@ -149,7 +149,7 @@ function mmuWriteByte(address, value)
                 value = 1
             end
 
-            _mbc[2].rombank = _bitAnd(_mbc[2].rombank, 0x60) + value
+            _mbc[2].rombank = value
             _romOffset = _mbc[2].rombank * 0x4000
         end
     elseif (address >= 0x4000 and address < 0x6000) then
@@ -162,6 +162,11 @@ function mmuWriteByte(address, value)
                     + (_bitLShift(_bitAnd(value, 0x03), 5) % 0x10000)
 
                 _romOffset = _mbc[2].rombank * 0x4000
+            end
+        elseif (_cartridgeType >= 17 and _cartridgeType <= 19) then
+            if (value <= 0x03) then
+                _mbc[2].rambank = value
+                _ramOffset = _mbc[2].rambank * 0x2000
             end
         end
     elseif (address >= 0x6000 and address < 0x8000) then
