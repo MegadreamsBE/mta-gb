@@ -2,13 +2,13 @@
 This project aims to create a fully playable Game Boy emulator within Multi Theft Auto.
 
 ## Loading ROMs
-At this stage it is not possible to dynamically decide which ROM to load. Instead it is currently hardcoded to run the Tetris ROM but this can be adjusted in **src/core.lua**. This ROM is _not_ included in this repository.
+At this stage it is not possible to dynamically decide which ROM to load. Instead it is currently hardcoded to run the Tetris ROM but this can be adjusted in **src/gameboy.lua**. This ROM is _not_ included in this repository.
 
 ## How To Run
 1. Clone or download this repository.
 2. Copy the folder containing this repository to your Multi Theft Auto server under **mods/deatmatch/resources**.
 3. Add a **data** folder inside the resource.
-4. Add a ROM to the **data** folder and adjust **src/core.lua** and **meta.xml** if the filename is not Tetris.gb.
+4. Add a ROM to the **data** folder and adjust **src/gameboy.lua** and **meta.xml** if the filename is not Tetris.gb.
 
 ![Tetris](/images/tetris.png)
 
