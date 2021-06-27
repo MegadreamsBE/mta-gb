@@ -125,11 +125,12 @@ end
 function mmuLoadRom(rom)
     _rom = rom
     _cartridgeType = _rom[0x0147 + 1]
+    print(_cartridgeType)
 end
 
 function mmuWriteByte(address, value)
     if (address >= 0x0000 and address < 0x2000) then
-        if ((_cartridgeType == 2 or _cartridgeType == 3) or (_cartridgeType >= 17 and _cartridgeType <= 19)) then
+        if ((_cartridgeType == 2 or _cartridgeType == 3) or (_cartridgeType >= 15 and _cartridgeType <= 19)) then
             _mbc[2].ramon = ((_bitAnd(value, 0x0F) == 0x0A) and 1 or 0)
         end
     elseif (address >= 0x2000 and address < 0x4000) then
@@ -142,7 +143,7 @@ function mmuWriteByte(address, value)
 
             _mbc[2].rombank = _bitAnd(_mbc[2].rombank, 0x60) + value
             _romOffset = _mbc[2].rombank * 0x4000
-        elseif (_cartridgeType >= 17 and _cartridgeType <= 19) then
+        elseif (_cartridgeType >= 15 and _cartridgeType <= 19) then
             value = _bitAnd(value, 0x7F)
 
             if (value == 0) then
@@ -163,7 +164,7 @@ function mmuWriteByte(address, value)
 
                 _romOffset = _mbc[2].rombank * 0x4000
             end
-        elseif (_cartridgeType >= 17 and _cartridgeType <= 19) then
+        elseif (_cartridgeType >= 15 and _cartridgeType <= 19) then
             if (value <= 0x03) then
                 _mbc[2].rambank = value
                 _ramOffset = _mbc[2].rambank * 0x2000

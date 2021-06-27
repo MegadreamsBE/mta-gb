@@ -104,7 +104,7 @@ function dxDrawImage(x, y, width, height, image, rotation, rotOffsetX, rotOffset
     local draw = image[5] or image[3]
 
     love.graphics.setColor((color[1] or 255) / 255, (color[2] or 255) / 255, (color[3] or 255) / 255, (color[4] or 255) / 255)
-    love.graphics.draw(draw, x or 0, y or 0, math.rad(rotation or 0), 1, 1)
+    love.graphics.draw(draw, x or 0, y or 0, math.rad(rotation or 0), 1 / (image[1] / width), 1 / (image[2] / height))
     love.graphics.setColor(1, 1, 1, 1)
 end
 
