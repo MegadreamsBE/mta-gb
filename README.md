@@ -10,6 +10,14 @@ At this stage it is not possible to dynamically decide which ROM to load. Instea
 3. Add a **data** folder inside the resource.
 4. Add a ROM to the **data** folder and adjust **src/gameboy.lua** and **meta.xml** if the filename is not Tetris.gb.
 
+### LÖVE
+Due to poor performance on Multi Theft Auto a WIP/experimental wrapper for LÖVE is available that allows to test the emulator on LuaJIT. The following steps are needed to run it:
+1. Clone or download this repository.
+2. Add a ROM (like Tetris) to your LÖVE data folder (appdata in Windows).
+3. (Optional) If a different ROM than Tetris (Tetris.gb) is added modify **src/gameboy.lua**.
+4. Navigate to the directory containing this repository and then navigate into **wrappers/love**.
+5. Run: $ **love .**
+
 ![Tetris](/images/tetris.png)
 ![The Legend of Zelda Link's Awakening](/images/zelda.png)
 ![Pokémon Blue](/images/pokemon.png)

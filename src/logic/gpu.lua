@@ -301,21 +301,21 @@ function renderSprites()
                 local xPixel = (-tilePixel) + 7
                 local pixel = xPos + xPixel
 
-                local bgColorR, bgColorG, bgColorB, _ = dxGetPixelColor(_screenPixels, pixel, scanLine)
-                local avoidRender = false
+                if (scanLine >= 0 and scanLine <= 143 and pixel >= 0 and pixel <= 159) then
+                    local bgColorR, bgColorG, bgColorB, _ = dxGetPixelColor(_screenPixels, pixel, scanLine)
+                    local avoidRender = false
 
-                if (spritePriorityData[pixel] ~= nil) then
-                    if (spritePriorityData[pixel] <= xPos) then
-                        avoidRender = true
+                    if (spritePriorityData[pixel] ~= nil) then
+                        if (spritePriorityData[pixel] <= xPos) then
+                            avoidRender = true
+                        end
                     end
-                end
 
-                if (not avoidRender and colorNum ~= 0) then
-                    if ((_bitExtract(attributes, 7, 1) == 0) or 
-                        ((_bitExtract(attributes, 7, 1) == 1) and (bgColorR == COLORS[1][1] and bgColorG == COLORS[1][2] and bgColorB == COLORS[1][3]))) then
-                        spritePriorityData[pixel] = xPos
+                    if (not avoidRender and colorNum ~= 0) then
+                        if ((_bitExtract(attributes, 7, 1) == 0) or 
+                            ((_bitExtract(attributes, 7, 1) == 1) and (bgColorR == COLORS[1][1] and bgColorG == COLORS[1][2] and bgColorB == COLORS[1][3]))) then
+                            spritePriorityData[pixel] = xPos
 
-                        if (scanLine >= 0 and scanLine <= 143 and pixel >= 0 and pixel <= 159) then
                             dxSetPixelColor(_screenPixels, pixel, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
                         end
                     end

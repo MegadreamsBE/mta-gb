@@ -176,7 +176,7 @@ local helper_lshift = function(value, bitSize)
 end
 
 local helper_rshift = function(value, bitSize)
-    value = value / 2
+    value = _math_floor(value / 2)
     value = _bitReplace(value, 0, bitSize - 1, 1)
 
     local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
@@ -214,7 +214,7 @@ end
 local helper_rrotate = function(value, bitSize)
     local bit = ((value / (2 ^ 0)) % 2 >= 1) and 1 or 0
 
-    value = value / 2
+    value = _math_floor(value / 2)
     value = _bitReplace(value, bit, bitSize - 1, 1)
 
     local bits = _math_floor(_math_log(value) / _math_log(2)) + 1
@@ -3087,8 +3087,6 @@ opcodes = {
         }
     end,
     [0x40] = function()
-        registers.b = registers.b
-
         registers.clock = {
             m = 1,
             t = 4
