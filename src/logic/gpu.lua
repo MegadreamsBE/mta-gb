@@ -214,9 +214,9 @@ end
 
 function renderSprites()
     local is8x16 = false
-    local lcdStatus = mmuReadByte(0xFF41)
+    local lcdControl = mmuReadByte(0xFF40)
 
-    if (_bitExtract(lcdStatus, 2, 1) == 1) then
+    if (_bitExtract(lcdControl, 2, 1) == 1) then
         is8x16 = true
     end
 

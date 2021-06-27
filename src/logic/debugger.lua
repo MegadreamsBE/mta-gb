@@ -582,6 +582,13 @@ function renderDebugger(delta)
         local currentX = romMemoryWindowStartX
         local currentY = currentY + (10 * (1920 / SCREEN_WIDTH))
 
+        local lcdControl = mmuReadByte(0xFF40)
+        local is8x16 = false
+
+        if (_bitExtract(lcdControl, 2, 1) == 1) then
+            is8x16 = true
+        end
+
         local size = 2
 
         for oam=0, 39 do
@@ -594,7 +601,7 @@ function renderDebugger(delta)
 
             local address = 0x8000 + (tile * 16)
 
-            for row=1, 8 do
+            for row=1, ((is8x16) and 16 or 8) do
                 local byte1 = mmuReadByte(address)
                 local byte2 = mmuReadByte(address + 1)
 
