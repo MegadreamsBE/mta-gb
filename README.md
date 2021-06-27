@@ -25,11 +25,11 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 
 ## Known Problems
 - Donkey Kong land shows a white screen.
-- Pokémon Blue has a glitch in the main menu and crashes when trying to run a new game.
-- Legend of Zelda - The Link's Awakening has a variety of graphical glitches and is unplayable.
-- GPU timings are slightly off.
-- GPU doesn't trigger all necessary interrupts yet.
-- Not all CPU instructions have correct timings nor logic. Although most have been fixed by now.
+- Pokémon Blue crashes when trying to run a new game.
+- Legend of Zelda - The Link's Awakening has a variety of graphical glitches.
+- MBC3 is not yet fully implemented and causes crashes.
+- GPU is doesn't fully have correct timings yet.
+- Sprite priority isn't correct yet in all cases.
 - Slow performance
 
 ## FAQ

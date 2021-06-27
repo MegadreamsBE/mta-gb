@@ -98,22 +98,23 @@ function resetGPU()
 end
 
 function renderTiles()
-    local unsigned = true
     local usingWindow = false
-
-    local tileData = 0x8000
-    local backgroundMemory = 0x9C00
 
     local scrollY = mmuReadSignedByte(0xFF42)
     local scrollX = mmuReadSignedByte(0xFF43)
-    local windowY = mmuReadSignedByte(0xFF4A)
-    local windowX = mmuReadSignedByte(0xFF4B) - 7
+    local windowY = mmuReadByte(0xFF4A)
+    local windowX = mmuReadByte(0xFF4B) - 7
 
     if (_bitExtract(mmuReadByte(0xFF40), 5, 1) == 1) then
        if (windowY <= mmuReadByte(0xFF44)) then
            usingWindow = true
        end
     end
+
+    local unsigned = true
+
+    local tileData = 0x8000
+    local backgroundMemory = 0x9C00
 
     if (_bitExtract(mmuReadByte(0xFF40), 4, 1) == 1) then
         tileData = 0x8000
@@ -147,11 +148,12 @@ function renderTiles()
     local row = math.floor(yPos / 8) * 32
 
     for i=0, 159 do
-        local xPos = i + scrollX
+        local pixel = i
+        local xPos = pixel + scrollX
 
         if (usingWindow) then
-            if (i >= windowX) then
-                xPos = i - windowX
+            if (pixel >= windowX) then
+                xPos = pixel - windowX
             end
         end
 
@@ -205,7 +207,7 @@ function renderTiles()
         color = _bitOr(color, _bitExtract(palette, lo, 1))
 
         if (scanLine >= 0 and scanLine <= 143 and i >= 0 and i <= 159) then
-            dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
+            dxSetPixelColor(_screenPixels, pixel, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
         end
     end
 end
@@ -297,12 +299,10 @@ function renderSprites()
                 end
 
                 if (not avoidRender and colorNum ~= 0) then
-                    spritePriorityData[pixel] = xPos
-                end
-
-                if (not avoidRender and colorNum ~= 0) then
                     if ((_bitExtract(attributes, 7, 1) == 0) or 
                         ((_bitExtract(attributes, 7, 1) == 1) and (bgColorR == COLORS[1][1] and bgColorG == COLORS[1][2] and bgColorB == COLORS[1][3]))) then
+                        spritePriorityData[pixel] = xPos
+
                         if (scanLine >= 0 and scanLine <= 143 and pixel >= 0 and pixel <= 159) then
                             dxSetPixelColor(_screenPixels, pixel, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
                         end
