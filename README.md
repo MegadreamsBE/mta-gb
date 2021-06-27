@@ -11,9 +11,10 @@ At this stage it is not possible to dynamically decide which ROM to load. Instea
 4. Add a ROM to the **data** folder and adjust **src/gameboy.lua** and **meta.xml** if the filename is not Tetris.gb.
 
 ![Tetris](/images/tetris.png)
+![The Legend of Zelda Link's Awakening](/images/zelda.png)
 
 ## Current Progress
-This emulator currently has most of the CPU instructions, a somewhat decent MMU, graphics support, a debugger and more. It is able to run games such as Tetris and Dr. Mario up to the selection screen at this time.
+This emulator currently has most of the CPU instructions, a somewhat decent MMU, graphics support, a debugger and more. It is able to run games such as Tetris, Dr. Mario and The Legend of Zelda Links Awakening fairly well.
 
 ## TODO
 (This is not a full list)
