@@ -145,6 +145,12 @@ function renderTiles()
         yPos = scanLine - windowY
     end
 
+    if (yPos < 0) then
+        yPos = yPos + 0xff
+    elseif (yPos > 0xff) then
+        yPos = yPos - 0xff
+    end
+
     local row = math.floor(yPos / 8) * 32
 
     for i=0, 159 do
@@ -155,6 +161,12 @@ function renderTiles()
             if (pixel >= windowX) then
                 xPos = pixel - windowX
             end
+        end
+
+        if (xPos < 0) then
+            xPos = xPos + 0xff
+        elseif (xPos > 0xff) then
+            xPos = xPos - 0xff
         end
 
         local column = math.floor(xPos / 8)

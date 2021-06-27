@@ -22,14 +22,15 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 - Improve debugging tools by using a proper dxGUI.
 - Improve interrupt handling
 - Improve timer support
+- Improve GPU timings
+- Add save states
+- Add support for savegames
 
 ## Known Problems
 - Donkey Kong land shows a white screen.
 - Pokémon Blue crashes when trying to run a new game.
-- Legend of Zelda - The Link's Awakening has a variety of graphical glitches.
 - MBC3 is not yet fully implemented and causes crashes.
 - GPU is doesn't fully have correct timings yet.
-- Sprite priority isn't correct yet in all cases.
 - Slow performance
 
 ## FAQ
