@@ -348,6 +348,10 @@ function runCPU()
                 currentCycles = currentCycles + _registers.clock.t
             end
         end
+
+        if (eramUpdated and (getTickCount() - eramLastUpdated) > 1000) then
+            mmuSaveExternalRam()
+        end
     end
 
     addEventHandler("onClientPreRender", root, _stepCallback)

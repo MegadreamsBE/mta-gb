@@ -156,6 +156,10 @@ function fileExists(filePath)
     return (love.filesystem.getInfo(filePath) ~= nil)
 end
 
+function fileRead(file, count)
+    return file:read(count)
+end
+
 function fileWrite(file, data)
     return file:write(data)
 end
@@ -185,7 +189,7 @@ function bitXor(value1, value2)
 end
 
 function bitNot(value)
-    return bit.bnot(value)
+    return bit.band(bit.bnot(value), 0xff)
 end
 
 function bitReplace(value, replaceWith, field, width)
@@ -248,6 +252,5 @@ function bindKey(key, keyState, handler)
     keyBinds[key][keyState][#keyBinds[key][keyState] + 1] = handler
 end
 
-utf8.byte = function(byte)
-    return string.byte(byte)
-end
+utf8.char = string.char
+utf8.byte = string.byte

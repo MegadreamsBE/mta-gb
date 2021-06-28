@@ -47,6 +47,9 @@ interrupts = 0x0
 interruptFlags = 0x0
 stackDebug = {}
 
+eramUpdated = false
+eramLastUpdated = -1
+
 local _romOffset = 0x4000
 local _ramOffset = 0x0000
 local _cartridgeType = 0
@@ -58,7 +61,6 @@ local _ram = {}
 local _rom = nil
 
 for i=1, 0xF000 do
-    _eram[i] = 0
     _mram[i] = 0
     _zram[i] = 0
     _ram[i] = 0
@@ -125,7 +127,6 @@ end
 function mmuLoadRom(rom)
     _rom = rom
     _cartridgeType = _rom[0x0147 + 1]
-    print(_cartridgeType)
 end
 
 function mmuWriteByte(address, value)
@@ -166,7 +167,7 @@ function mmuWriteByte(address, value)
             end
         elseif (_cartridgeType >= 15 and _cartridgeType <= 19) then
             if (value <= 0x03) then
-                _mbc[2].rambank = value
+                _mbc[2].rambank = _bitAnd(value, 0x03)
                 _ramOffset = _mbc[2].rambank * 0x2000
             end
         end
@@ -178,7 +179,10 @@ function mmuWriteByte(address, value)
         address = address - 0x8000
         vram[address + 1] = value
     elseif (address >= 0xA000 and address < 0xC000) then
-        _eram[_ramOffset + (_bitAnd(address, 0x1FFF) + 1)] = value
+        if (_mbc[2].ramon) then
+            eramUpdated = true
+            _eram[_ramOffset + (address - 0xA000) + 1] = value
+        end
     elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         _ram[address + 1] = value
@@ -300,7 +304,7 @@ function mmuReadByte(address)
         address = address - 0x8000
         return vram[address + 1] or 0
     elseif (address >= 0xA000 and address < 0xC000) then
-        return _eram[(_ramOffset + (_bitAnd(address, 0x1FFF) + 1))] or 0
+        return _eram[_ramOffset + (address - 0xA000) + 1] or 0
     elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         return _ram[address + 1] or 0
@@ -390,4 +394,52 @@ function mmuReadInt16(address)
     end
 
     return value
+end
+
+function mmuSaveExternalRam()
+    local savePath = getRomPath():match("(.+)%..+$")..".sav"
+
+    if (fileExists(savePath)) then
+        fileDelete(savePath)
+    end
+
+    local saveFile = fileCreate(savePath)
+
+    if (saveFile) then
+        local ramBanks = 4
+
+        for i=1, 0x2000 * ramBanks do
+            local value = _eram[i] or 0
+
+            if (value < 0) then
+                value = -value
+            end
+
+            fileWrite(saveFile, utf8.char(value))
+        end
+
+        fileClose(saveFile)
+    end
+
+    eramUpdated = false
+    eramLastUpdated = getTickCount()
+end
+
+function mmuLoadExternalRam()
+    local savePath = getRomPath():match("(.+)%..+$")..".sav"
+
+    if (fileExists(savePath)) then
+        local saveFile = fileOpen(savePath, true)
+
+        if (saveFile) then
+            local ramBanks = 4
+
+            for i=1, 0x2000 * ramBanks do
+                local value = fileRead(saveFile, 1) or 0
+                _eram[i] = utf8.byte(value)
+            end
+
+            fileClose(saveFile)
+        end
+    end
 end

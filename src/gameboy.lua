@@ -48,7 +48,7 @@ function gameBoyLoadRom(romPath)
 end
 
 function gameBoyLoadBios(biosPath)
-    bios = loadRom(biosPath)
+    bios = loadRom(biosPath, true)
 
     if (not bios) then
         Log.error("GameBoy", "Unable to load BIOS.")
@@ -65,6 +65,8 @@ function startGameBoy()
 
         _rom = nil
     end
+
+    mmuLoadExternalRam()
 
     runCPU()
 

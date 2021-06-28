@@ -2,7 +2,13 @@
 -- * Functions
 -----------------------------------
 
-function loadRom(path)
+local romPath = false
+
+function loadRom(path, isBios)
+    if (not isBios) then
+        romPath = path
+    end
+
     local file = fileOpen(path, true)
 
     if (not file) then
@@ -19,4 +25,8 @@ function loadRom(path)
     fileClose(file)
 
     return data
+end
+
+function getRomPath()
+    return romPath
 end
