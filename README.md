@@ -34,7 +34,6 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 - Improve timer support
 - Improve GPU timings
 - Add save states
-- Add support for savegames
 
 ## Known Problems
 - Donkey Kong land shows a white screen.
