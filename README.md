@@ -27,7 +27,6 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 
 ## TODO
 (This is not a full list)
-- Finish adding all CPU instructions.
 - Add sound support
 - Improve debugging tools by using a proper dxGUI.
 - Improve interrupt handling
