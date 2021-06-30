@@ -36,8 +36,8 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 
 ## Known Problems
 - Donkey Kong land shows a white screen.
-- MBC3 is not yet fully implemented and causes crashes.
-- GPU is doesn't fully have correct timings yet.
+- MBC3 isn't yet fully implemented and causes crashes.
+- GPU doesn't fully have correct timings yet.
 - Slow performance
 - There's a minor scrolling bug causing minor graphical glitches in Pokémon Blue/Red's new game sequence.
 
