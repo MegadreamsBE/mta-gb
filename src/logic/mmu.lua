@@ -433,10 +433,12 @@ function mmuLoadExternalRam()
 
         if (saveFile) then
             local ramBanks = 4
+            local fileData = fileRead(saveFile, 0x2000 * ramBanks)
 
-            for i=1, 0x2000 * ramBanks do
-                local value = fileRead(saveFile, 1) or 0
-                _eram[i] = utf8.byte(value)
+            if (fileData) then
+                for i=1, 0x2000 * ramBanks do
+                    _eram[i] = utf8.byte(fileData:sub(i, i) or 0)
+                end
             end
 
             fileClose(saveFile)
