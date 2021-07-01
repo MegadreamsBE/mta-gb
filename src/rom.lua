@@ -19,7 +19,13 @@ function loadRom(path, isBios)
     local data = {}
 
     while (not fileIsEOF(file)) do
-         data[#data + 1] = utf8.byte(file:read(1))
+        local fileData = fileRead(file, 10800)
+
+        if (fileData) then
+            for i=1, #fileData do
+                data[#data + 1] = utf8.byte(fileData:sub(i, i))
+            end
+        end
     end
 
     fileClose(file)
