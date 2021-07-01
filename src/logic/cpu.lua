@@ -190,7 +190,7 @@ function cpuStep()
     _registers.clock.t = 0
     _registers.pc = _registers.pc + 1
 
-    local opcode = _opcodes[nextOpcode]
+    local opcode = _opcodes[nextOpcode + 1]
 
     if (opcode == nil) then
         pauseCPU()
