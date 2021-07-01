@@ -2842,16 +2842,16 @@ opcodes = {
             registers.pc = registers.pc + mmuReadSignedByte(registers.pc) + 1
 
             registers.clock = {
-            m = 3,
-            t = 12
-        }
+                m = 3,
+                t = 12
+            }
         else
             registers.pc = registers.pc + 1
 
             registers.clock = {
-            m = 2,
-            t = 8
-        }
+                m = 2,
+                t = 8
+            }
         end
     end,
     [0x29] = function()
@@ -2927,9 +2927,9 @@ opcodes = {
             registers.pc = registers.pc + mmuReadSignedByte(registers.pc) + 1
 
             registers.clock = {
-            m = 3,
-            t = 12
-        }
+                m = 3,
+                t = 12
+            }
         else
             registers.pc = registers.pc + 1
 
@@ -4179,9 +4179,9 @@ opcodes = {
             registers.pc = mmuReadUInt16(registers.pc)
 
             registers.clock = {
-            m = 6,
-            t = 24
-        }
+                m = 6,
+                t = 24
+            }
         else
             registers.pc = registers.pc + 2
 
@@ -4224,14 +4224,14 @@ opcodes = {
             registers.pc = mmuPopStack()
 
             registers.clock = {
-            m = 5,
-            t = 20
-        }
+                m = 5,
+                t = 20
+            }
         else
             registers.clock = {
-            m = 2,
-            t = 8
-        }
+                m = 2,
+                t = 8
+            }
         end
     end,
     [0xc9] = function()
@@ -4272,16 +4272,16 @@ opcodes = {
             registers.pc = mmuReadUInt16(registers.pc)
 
             registers.clock = {
-            m = 6,
-            t = 24
-        }
+                m = 6,
+                t = 24
+            }
         else
             registers.pc = registers.pc + 2
 
             registers.clock = {
-            m = 3,
-            t = 12
-        }
+                m = 3,
+                t = 12
+            }
         end
     end,
     [0xcd] = function()
@@ -4327,14 +4327,14 @@ opcodes = {
             registers.pc = mmuPopStack()
 
             registers.clock = {
-            m = 5,
-            t = 20
-        }
+                m = 5,
+                t = 20
+            }
         else
             registers.clock = {
-            m = 2,
-            t = 8
-        }
+                m = 2,
+                t = 8
+            }
         end
     end,
     [0xd2] = function()
@@ -4355,16 +4355,16 @@ opcodes = {
             registers.pc = mmuReadUInt16(registers.pc)
 
             registers.clock = {
-            m = 6,
-            t = 24
-        }
+                m = 6,
+                t = 24
+            }
         else
             registers.pc = registers.pc + 2
 
             registers.clock = {
-            m = 3,
-            t = 12
-        }
+                m = 3,
+                t = 12
+            }
         end
     end,
     [0xd5] = function()
@@ -4431,16 +4431,16 @@ opcodes = {
             registers.pc = mmuReadUInt16(registers.pc)
 
             registers.clock = {
-            m = 6,
-            t = 24
-        }
+                m = 6,
+                t = 24
+            }
         else
             registers.pc = registers.pc + 2
 
             registers.clock = {
-            m = 3,
-            t = 12
-        }
+                m = 3,
+                t = 12
+            }
         end
     end,
     [0xde] = function()
