@@ -117,7 +117,7 @@ function resetCPU()
         }
     else
         registers = {
-            a = 0x01,
+            a = (isGameBoyColor()) and 0x11 or 0x01,
             b = 0x00,
             c = 0x13,
             d = 0x00,

@@ -2,7 +2,7 @@
 This project aims to create a fully playable Game Boy emulator within Multi Theft Auto.
 
 ## Loading ROMs
-At this stage it is not possible to dynamically decide which ROM to load. Instead it is currently hardcoded to run the Tetris ROM but this can be adjusted in **src/gameboy.lua**. This ROM is _not_ included in this repository.
+At this stage it is not possible to dynamically decide which ROM to load. Instead it is currently hardcoded but this can be adjusted in **src/gameboy.lua**. There is _no_ ROM included with this repository.
 
 ## How To Run
 1. Clone or download this repository.
@@ -14,7 +14,7 @@ At this stage it is not possible to dynamically decide which ROM to load. Instea
 Due to poor performance on Multi Theft Auto a WIP/experimental wrapper for LÖVE is available that allows to test the emulator on LuaJIT. The following steps are needed to run it:
 1. Clone or download this repository.
 2. Add a ROM (like Tetris) to your LÖVE data folder (appdata in Windows).
-3. (Optional) If a different ROM than Tetris (Tetris.gb) is added modify **src/gameboy.lua**.
+3. Modify **src/gameboy.lua** to point to your ROM.
 4. Navigate to the directory containing this repository and then navigate into **wrappers/love**.
 5. Run: $ **love .**
 

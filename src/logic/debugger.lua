@@ -99,6 +99,21 @@ function setupDebugger()
     _nextStepTick = -1
 
     _renderTarget = dxCreateRenderTarget(SCREEN_WIDTH, SCREEN_HEIGHT, true)
+
+    addEventHandler("onClientPreRender", root, function(delta)
+        local now = _getTickCount()
+
+        if (now >= _fpsNextTick) then
+            _fps = (1 / delta) * 1000
+            _fpsNextTick = now + 1000
+        end
+    end)
+
+    addEventHandler("onClientRender", root, function()
+        dxDrawText(math.floor(_fps), SCREEN_WIDTH - (((200 * (1920 / SCREEN_WIDTH)) / 2)), 
+            (((50 * (1920 / SCREEN_WIDTH)) / 2)), 0, 0, tocolor(255, 255, 255), (((6 * (1920 / SCREEN_WIDTH)) / 2)),
+            "default-bold")
+    end)
 end
 
 function startDebugger()
@@ -326,10 +341,6 @@ function renderDebugger(delta)
     if ((_getTickCount() - _lastRender) > 200 or not _renderTarget) then
         dxSetRenderTarget(_renderTarget, true)
         dxSetBlendMode("modulate_add")
-
-        dxDrawText(math.floor(_fps), SCREEN_WIDTH - (((200 * (1920 / SCREEN_WIDTH)) / 2)), 
-            (((50 * (1920 / SCREEN_WIDTH)) / 2)), 0, 0, tocolor(255, 255, 255), (((6 * (1920 / SCREEN_WIDTH)) / 2)),
-            "default-bold")
 
         local screenStartX = (SCREEN_WIDTH / 2) - ((DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)) / 2)
         local screenStartY = (SCREEN_HEIGHT / 2) - ((DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)) / 2)

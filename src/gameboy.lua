@@ -9,7 +9,7 @@ local _bitOr = bitOr
 -- * Constants
 -----------------------------------
 
-local ROM_PATH = "data/Tetris.gb"
+local ROM_PATH = "data/PokemonSilver.gbc"
 
 -----------------------------------
 -- * Locals
@@ -18,6 +18,7 @@ local ROM_PATH = "data/Tetris.gb"
 local _keypad = {}
 local _onClientKeyHandler = false
 local _debuggerEnabled = false
+local _isGameBoyColor = false
 
 local _rom = nil
 bios = nil
@@ -44,6 +45,14 @@ function gameBoyLoadRom(romPath)
 
     if (not _rom) then
         Log.error("GameBoy", "Unable to load ROM.")
+    end
+
+    local cgbValue = _rom[0x0143 + 1]
+
+    if (cgbValue == 0x80 or 0xC0) then
+        setGameBoyColorMode(true)
+    else
+        setGameBoyColorMode(false)
     end
 end
 
@@ -167,6 +176,14 @@ function onKeyUp(key)
     elseif (key == "enter") then
         _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x8)
     end
+end
+
+function setGameBoyColorMode(toggle)
+    _isGameBoyColor = toggle
+end
+
+function isGameBoyColor()
+    return _isGameBoyColor
 end
 
 -----------------------------------
