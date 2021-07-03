@@ -86,8 +86,8 @@ function cpuLoadRom(romData)
 end
 
 function resetCPU()
-    resetMMU()
     resetGPU()
+    resetMMU()
 
     _interrupts = true
     _queuedEnableInterrupts = false

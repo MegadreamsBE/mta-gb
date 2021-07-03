@@ -531,6 +531,7 @@ function renderDebugger(delta)
             registersY = registersY + yPadding
         end
 
+        local isCGB = isGameBoyColor()
         local currentX = romMemoryWindowStartX
         local currentY = romMemoryWindowStartY + romMemoryWindowHeight
 

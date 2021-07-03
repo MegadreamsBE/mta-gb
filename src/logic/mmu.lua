@@ -127,11 +127,15 @@ end
 function mmuLoadRom(rom)
     _rom = rom
     _cartridgeType = _rom[0x0147 + 1]
+    print(_cartridgeType)
 end
 
-function mmuWriteByte(address, value)
+function mmuWriteByte(address, value, onlyWrite)
+    onlyWrite = onlyWrite or false
+
     if (address >= 0x0000 and address < 0x2000) then
-        if ((_cartridgeType == 2 or _cartridgeType == 3) or (_cartridgeType >= 15 and _cartridgeType <= 19)) then
+        if ((_cartridgeType == 2 or _cartridgeType == 3) or (_cartridgeType >= 15 and _cartridgeType <= 19) or 
+            (_cartridgeType >= 0x19 and _cartridgeType <= 0x1E)) then
             _mbc[2].ramon = ((_bitAnd(value, 0x0F) == 0x0A) and 1 or 0)
         end
     elseif (address >= 0x2000 and address < 0x4000) then
@@ -177,7 +181,7 @@ function mmuWriteByte(address, value)
         end
     elseif (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
-        vram[address + 1] = value
+        vram[vramBank][address + 1] = value
     elseif (address >= 0xA000 and address < 0xC000) then
         if (_mbc[2].ramon) then
             eramUpdated = true
@@ -186,6 +190,36 @@ function mmuWriteByte(address, value)
     elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         _ram[address + 1] = value
+    elseif (address == 0xFF4F and isGameBoyColor()) then
+        vramBank = (_bitAnd(value, 0x1) == 1) and 2 or 1
+    elseif (address == 0xFF68) then
+        address = address - 0x8000
+        vram[vramBank][address + 1] = value
+
+        if (not onlyWrite) then
+            updatePaletteSpec(false, value)
+        end
+    elseif (address == 0xFF69) then
+        address = address - 0x8000
+        vram[vramBank][address + 1] = value
+
+        if (not onlyWrite) then
+            setColorPalette(false, value)
+        end
+    elseif (address == 0xFF6A) then
+        address = address - 0x8000
+        vram[vramBank][address + 1] = value
+
+        if (not onlyWrite) then
+            updatePaletteSpec(true, value)
+        end
+    elseif (address == 0xFF6B) then
+        address = address - 0x8000
+        vram[vramBank][address + 1] = value
+
+        if (not onlyWrite) then
+            setColorPalette(true, value)
+        end
     elseif (address >= 0xF000) then
         local innerAddress = _bitAnd(address, 0x0F00)
 
@@ -257,7 +291,7 @@ function mmuWriteByte(address, value)
                     end
 
                     address = address - 0x8000
-                    vram[address + 1] = value
+                    vram[vramBank][address + 1] = value
                 end
             end
         end
@@ -302,12 +336,18 @@ function mmuReadByte(address)
         return _rom[_romOffset + (_bitAnd(address, 0x3FFF) + 1)] or 0
     elseif (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
-        return vram[address + 1] or 0
+        return vram[vramBank][address + 1] or 0
     elseif (address >= 0xA000 and address < 0xC000) then
         return _eram[_ramOffset + (address - 0xA000) + 1] or 0
     elseif (address >= 0xC000 and address < 0xF000) then
         address = address - 0xC000
         return _ram[address + 1] or 0
+    elseif (address == 0xFF4F and isGameBoyColor()) then
+        if (vramBank == 1) then
+            return 0xFE
+        end
+
+        return 0xFF
     elseif (address >= 0xF000) then
         local innerAddress = _bitAnd(address, 0x0F00)
 
@@ -349,7 +389,7 @@ function mmuReadByte(address)
                         return scanLine
                     end
 
-                    local value = vram[(address - 0x8000) + 1] or 0
+                    local value = vram[vramBank][(address - 0x8000) + 1] or 0
 
                     if (address == 0xFF41) then
                         value = _bitOr(value, 0x80)
@@ -415,7 +455,7 @@ function mmuSaveExternalRam()
                 value = -value
             end
 
-            fileWrite(saveFile, utf8.char(value))
+            fileWrite(saveFile, string.char(value))
         end
 
         fileClose(saveFile)
@@ -437,7 +477,7 @@ function mmuLoadExternalRam()
 
             if (fileData) then
                 for i=1, 0x2000 * ramBanks do
-                    _eram[i] = utf8.byte(fileData:sub(i, i) or 0)
+                    _eram[i] = string.byte(fileData:sub(i, i) or 0)
                 end
             end
 

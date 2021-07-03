@@ -133,7 +133,7 @@ function dxDrawRectangle(x, y, width, height, color)
 end
 
 function dxGetFontHeight(scale, font)
-    return 2
+    return scale * 7
 end
 
 function fileOpen(filePath, readOnly)
@@ -172,21 +172,10 @@ function pregMatch()
     return {}
 end
 
-function outputDebugString(text)
-    print(text)
-end
-
-function bitAnd(value1, value2)
-    return bit.band(value1, value2)
-end
-
-function bitOr(value1, value2)
-    return bit.bor(value1, value2)
-end
-
-function bitXor(value1, value2)
-    return bit.bxor(value1, value2)
-end
+outputDebugString = print
+bitAnd = bit.band
+bitOr = bit.bor
+bitXor = bit.bxor
 
 function bitNot(value)
     return bit.band(bit.bnot(value), 0xff)
@@ -212,21 +201,10 @@ function bitExtract(value, field, width)
     return bit.band(bit.rshift(value, field), bit.lshift(1, width) - 1)
 end
 
-function bitLShift(value, n)
-    return bit.lshift(value, n)
-end
-
-function bitRShift(value, n)
-    return bit.rshift(value, n)
-end
-
-function bitLRotate(value, n)
-    return bit.lrotate(value, n)
-end
-
-function bitRRotate(value, n)
-    return bit.rrotate(value, n)
-end
+bitLShift = bit.lshift
+bitRShift = bit.rshift
+bitLRotate = bit.lrotate
+bitRRotate = bit.rrotate
 
 function getTickCount()
     return love.timer.getTime() * 1000
@@ -251,6 +229,3 @@ function bindKey(key, keyState, handler)
 
     keyBinds[key][keyState][#keyBinds[key][keyState] + 1] = handler
 end
-
-utf8.char = string.char
-utf8.byte = string.byte

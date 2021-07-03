@@ -49,7 +49,7 @@ function gameBoyLoadRom(romPath)
 
     local cgbValue = _rom[0x0143 + 1]
 
-    if (cgbValue == 0x80 or 0xC0) then
+    if (cgbValue == 0x80 or cgbValue == 0xC0) then
         setGameBoyColorMode(true)
     else
         setGameBoyColorMode(false)
@@ -200,5 +200,5 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     gameBoyLoadRom(ROM_PATH)
 
     startGameBoy()
-    enableDebugger()
+    --enableDebugger()
 end)
