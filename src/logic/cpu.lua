@@ -240,6 +240,10 @@ function requestInterrupt(interrupt)
     _interruptDelay = 4
 end
 
+function hasIncomingInterrupt()
+    return (_bitAnd(_bitAnd(interruptFlags, interrupts), 0x1F) ~= 0)
+end
+
 function runCPU()
     if (_stepCallback) then
         removeEventHandler("onClientPreRender", root, _stepCallback)

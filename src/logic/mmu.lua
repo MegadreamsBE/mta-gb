@@ -19,6 +19,7 @@ local _bitTest = bitTest
 local _bitExtract = bitExtract
 local _bitReplace = bitReplace
 local _bitLShift = bitLShift
+local _bitRShift = bitRShift
 local _string_format = string.format
 local _table_insert = table.insert
 local _table_remove = table.remove
@@ -47,6 +48,12 @@ interrupts = 0x0
 interruptFlags = 0x0
 stackDebug = {}
 
+hdmaSource = 0x0
+hdmaDestination = 0x0
+hdmaBytes = 0x0
+hdmaEnabled = false
+hdma = {}
+
 eramUpdated = false
 eramLastUpdated = -1
 
@@ -57,8 +64,11 @@ local _cartridgeType = 0
 local _eram = {}
 local _mram = {}
 local _zram = {}
+local _wram = {}
 local _ram = {}
 local _rom = nil
+
+local _wramBank = 1
 
 for i=1, 0xF000 do
     _mram[i] = 0
@@ -86,6 +96,12 @@ function resetMMU()
             mode = 0
         }
     }
+
+    _wram = {
+        {}, {}, {}, {}, {}, {}, {}, {}
+    }
+
+    _wramBank = 1
 
     _romOffset = 0x4000
     _ramOffset = 0x0000
@@ -122,12 +138,16 @@ function resetMMU()
     mmuWriteByte(0xFF4A, 0x00)
     mmuWriteByte(0xFF4B, 0x00)
     mmuWriteByte(0xFFFF, 0x00)
+
+    for i=1, 5 do
+        hdma[i] = 0
+    end
 end
 
 function mmuLoadRom(rom)
     _rom = rom
     _cartridgeType = _rom[0x0147 + 1]
-    print(_cartridgeType)
+    _cartridgeType = 17
 end
 
 function mmuWriteByte(address, value, onlyWrite)
@@ -188,43 +208,142 @@ function mmuWriteByte(address, value, onlyWrite)
             _eram[_ramOffset + (address - 0xA000) + 1] = value
         end
     elseif (address >= 0xC000 and address < 0xF000) then
+        if (isGameBoyColor()) then
+            if (address >= 0xC000 and address <= 0xCFFF) then
+                address = address - 0xC000
+                _wram[1][address + 1] = value
+                return
+            elseif (address >= 0xD000 and address <= 0xDFFF) then
+                address = address - 0xC000
+                _wram[_wramBank + 1][address + 1] = value
+                return
+            end
+        end
+
         address = address - 0xC000
-        _ram[address + 1] = value
-    elseif (address == 0xFF4F and isGameBoyColor()) then
-        vramBank = (_bitAnd(value, 0x1) == 1) and 2 or 1
+        _wram[1][address + 1] = value
+    elseif (address == 0xFF4F) then
+        if (isGameBoyColor()) then
+            vramBank = (_bitAnd(value, 0x1) == 1) and 2 or 1
+        end
+
+        vram[vramBank][address + 1] = value
+    elseif (address == 0xFF51) then
+        if (isGameBoyColor()) then
+            if (value > 0x7f and value < 0xa0) then
+                value = 0
+            end
+
+            hdmaSource = _bitOr(_bitAnd(_bitLShift(value, 8), 0xFFFF), _bitAnd(hdmaSource, 0xF0))
+            hdma[1] = value;
+        else
+            vram[vramBank][address + 1] = value
+        end
+    elseif (address == 0xFF52) then
+        if (isGameBoyColor()) then
+            value = _bitAnd(value, 0xF0)
+            hdmaSource = _bitOr(_bitAnd(hdmaSource, 0xFF00), value)
+            hdma[2] = value;
+        else
+            vram[vramBank][address + 1] = value
+        end
+    elseif (address == 0xFF53) then
+        if (isGameBoyColor()) then
+            value = _bitAnd(value, 0x1F)
+            hdmaDestination = _bitOr(_bitOr(_bitAnd(_bitLShift(value, 8), 0xFFFF), _bitAnd(hdmaDestination, 0xF0)), 0x8000)
+            hdma[3] = value;
+        else
+            vram[vramBank][address + 1] = value
+        end
+    elseif (address == 0xFF54) then
+        if (isGameBoyColor()) then
+            value = _bitAnd(value, 0xF0)
+            hdmaDestination = _bitOr(_bitOr(_bitAnd(hdmaDestination, 0x1F00), value), 0x8000)
+            hdma[4] = value;
+        else
+            vram[vramBank][address + 1] = value
+        end
+    elseif (address == 0xFF55) then
+        if (isGameBoyColor()) then
+            hdmaBytes = 16 + (_bitAnd(value, 0x7F) * 16)
+
+            if (hdmaEnabled) then
+                if (_bitExtract(value, 7, 1) == 1) then
+                    hdma[5] = _bitAnd(value, 0x7F)
+                else
+                    hdma[5] = 0xFF
+                    hdmaEnabled = false
+                end
+            else
+                if (_bitExtract(value, 7, 1) == 1) then
+                    hdmaEnabled = true
+                    hdma[5] = _bitAnd(value, 0x7F)
+
+                    if (getGPUMode() == 0) then
+                        local clockCycles = mmuPerformHDMA()
+
+                        registers.clock.m = registers.clock.m + clockCycles
+                        registers.clock.t = registers.clock.t + (clockCycles * 4)
+                    end
+                else
+                    mmuPerformGDMA(value)
+                end
+            end
+        else
+            vram[vramBank][address + 1] = value
+        end
     elseif (address == 0xFF68) then
         address = address - 0x8000
         vram[vramBank][address + 1] = value
 
-        if (not onlyWrite) then
-            updatePaletteSpec(false, value)
+        if (isGameBoyColor()) then
+            if (not onlyWrite) then
+                updatePaletteSpec(false, value)
+            end
         end
     elseif (address == 0xFF69) then
         address = address - 0x8000
         vram[vramBank][address + 1] = value
 
-        if (not onlyWrite) then
-            setColorPalette(false, value)
+        if (isGameBoyColor()) then
+            if (not onlyWrite) then
+                setColorPalette(false, value)
+            end
         end
     elseif (address == 0xFF6A) then
         address = address - 0x8000
         vram[vramBank][address + 1] = value
 
-        if (not onlyWrite) then
-            updatePaletteSpec(true, value)
+        if (isGameBoyColor()) then
+            if (not onlyWrite) then
+                updatePaletteSpec(true, value)
+            end
         end
     elseif (address == 0xFF6B) then
         address = address - 0x8000
         vram[vramBank][address + 1] = value
 
-        if (not onlyWrite) then
-            setColorPalette(true, value)
+        if (isGameBoyColor()) then
+            if (not onlyWrite) then
+                setColorPalette(true, value)
+            end
         end
+    elseif (address == 0xFF70) then
+        if (isGameBoyColor()) then
+            value = _bitAnd(value, 0x07)
+            _wramBank = value
+
+            if (_wramBank == 0) then
+                _wramBank = 1
+            end
+        end
+
+        _ram[address + 1] = value
     elseif (address >= 0xF000) then
         local innerAddress = _bitAnd(address, 0x0F00)
 
         if (innerAddress >= 0x0 and innerAddress <= 0xD00) then
-            _ram[_bitAnd(address, 0x1FFF) + 1] = value
+            _ram[address + 1] = value
         elseif (innerAddress == 0xE00) then
             if (_bitAnd(address, 0xFF) < 0xA0) then
                 address = address - 0xFE00
@@ -234,7 +353,7 @@ function mmuWriteByte(address, value, onlyWrite)
             if (address == 0xFFFF) then
                 interrupts = value
             elseif (address > 0xFF7F) then
-                _zram[_bitAnd(address, 0x7F) + 1] = value
+                _zram[address + 1] = value
             else
                 local case = _bitAnd(address, 0xF0)
 
@@ -319,6 +438,86 @@ function mmuPopStack()
     return value
 end
 
+function mmuPerformHDMA()
+    local source = _bitAnd(hdmaSource, 0xFFF0)
+    local destination = _bitOr(_bitAnd(hdmaDestination, 0x1FF0), 0x8000)
+
+    for i=1, 0x10 do
+        mmuWriteByte(destination + (i - 1), mmuReadByte(source + (i - 1)))
+    end
+
+    hdmaDestination = hdmaDestination + 0x10
+
+    if (hdmaDestination > 0xFFFF) then
+        hdmaDestination = hdmaDestination - 0xFFFF
+    end
+
+    if (hdmaDestination == 0xA000) then
+        hdmaDestination = 0x8000
+    end
+
+    hdmaSource = hdmaSource + 0x10
+
+    if (hdmaSource > 0xFFFF) then
+        hdmaSource = hdmaSource - 0xFFFF
+    end
+
+    if (hdmaSource == 0x8000) then
+        hdmaSource = 0xA000
+    end
+
+    hdma[2] = _bitAnd(hdmaSource, 0xFF)
+    hdma[1] = _bitRShift(hdmaSource, 8)
+
+    hdma[4] = _bitAnd(hdmaDestination, 0xFF)
+    hdma[3] = _bitRShift(hdmaDestination, 8)
+
+    hdmaBytes = hdmaBytes - 0x10
+    hdma[5] = hdma[5] - 1
+
+    if (hdma[5] < 0) then
+        hdma[5] = hdma[5] + 0xFF
+    end
+
+    if (hdma[5] == 0xFF) then
+        hdmaEnabled = false
+    end
+
+    --@TODO: support CGB double speed
+    return 9
+end
+
+function mmuPerformGDMA(value)
+    local source = _bitAnd(hdmaSource, 0xFFF0)
+    local destination = _bitOr(_bitAnd(hdmaDestination, 0x1FF0), 0x8000)
+
+    for i=1, hdmaBytes do
+        mmuWriteByte(destination + (i - 1), mmuReadByte(source + (i - 1)))
+    end
+
+    hdmaDestination = hdmaDestination + hdmaBytes
+
+    if (hdmaDestination > 0xFFFF) then
+        hdmaDestination = hdmaDestination - 0xFFFF
+    end
+
+    hdmaSource = hdmaSource + hdmaBytes
+
+    if (hdmaSource > 0xFFFF) then
+        hdmaSource = hdmaSource - 0xFFFF
+    end
+
+    for i=1, 5 do
+        hdma[i] = 0xFF
+    end
+
+    --@TODO: add double speed support
+    local clockCycles = 1 + 8 * (_bitAnd(value, 0x7F) + 1)
+
+    registers.clock.m = registers.clock.m + clockCycles
+    registers.clock.t = registers.clock.t + (clockCycles * 4)
+end
+
 function mmuReadByte(address)
     if (address >= 0x0 and address < 0x1000) then
         if (_inBios) then
@@ -340,11 +539,53 @@ function mmuReadByte(address)
     elseif (address >= 0xA000 and address < 0xC000) then
         return _eram[_ramOffset + (address - 0xA000) + 1] or 0
     elseif (address >= 0xC000 and address < 0xF000) then
+        if (isGameBoyColor()) then
+            if (address >= 0xC000 and address <= 0xCFFF) then
+                address = address - 0xC000
+                return _wram[1][address + 1] or 0
+            elseif (address >= 0xD000 and address <= 0xDFFF) then
+                address = address - 0xC000
+                return _wram[_wramBank + 1][address + 1] or 0
+            end
+        end
+
         address = address - 0xC000
-        return _ram[address + 1] or 0
-    elseif (address == 0xFF4F and isGameBoyColor()) then
-        if (vramBank == 1) then
-            return 0xFE
+        return _wram[1][address + 1] or 0
+    elseif (address == 0xFF4F) then
+        return _bitOr(vram[vramBank][address + 1] or 0, 0xFE)
+    elseif (address == 0xFF51) then
+        if (isGameBoyColor()) then
+            return hdma[1]
+        end
+
+        return vram[vramBank][address + 1] or 0
+    elseif (address == 0xFF52) then
+        if (isGameBoyColor()) then
+            return hdma[2]
+        end
+
+        return vram[vramBank][address + 1] or 0
+    elseif (address == 0xFF53) then
+        if (isGameBoyColor()) then
+            return hdma[3]
+        end
+
+        return vram[vramBank][address + 1] or 0
+    elseif (address == 0xFF54) then
+        if (isGameBoyColor()) then
+            return hdma[4]
+        end
+
+        return vram[vramBank][address + 1] or 0
+    elseif (address == 0xFF55) then
+        if (isGameBoyColor()) then
+            return hdma[5]
+        end
+
+        return vram[vramBank][address + 1] or 0
+    elseif (address == 0xFF70) then
+        if (isGameBoyColor()) then
+            return _bitOr(_ram[address + 1] or 0, 0xF8)
         end
 
         return 0xFF
@@ -352,7 +593,7 @@ function mmuReadByte(address)
         local innerAddress = _bitAnd(address, 0x0F00)
 
         if (innerAddress >= 0x0 and innerAddress <= 0xD00) then
-            return _ram[_bitAnd(address, 0x1FFF) + 1] or 0
+            return _ram[address + 1] or 0
         elseif (innerAddress == 0xE00) then
             if (_bitAnd(address, 0x0FF) < 0xA0) then 
                 address = address - 0xFE00
@@ -364,7 +605,7 @@ function mmuReadByte(address)
             if (address == 0xFFFF) then
                 return interrupts
             elseif (address > 0xFF7F) then
-                return _zram[_bitAnd(address, 0x7F) + 1]
+                return _zram[address + 1]
             else
                 local case = _bitAnd(address, 0xF0)
 
@@ -415,10 +656,10 @@ function mmuReadSignedByte(address)
 end
 
 function mmuReadUInt16(address)
-    local value = mmuReadByte(address + 1)
+    local value = mmuReadByte(address + 1) or 0
 
     value = value * 256
-    value = value + mmuReadByte(address)
+    value = value + (mmuReadByte(address) or 0)
 
     return value
 end

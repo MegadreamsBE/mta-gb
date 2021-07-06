@@ -6,7 +6,7 @@ local RENDER = true
 local LOG_TRACE = false
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 
-local DEBUGGER_WIDTH, DEBUGGER_HEIGHT = 1280, 768
+local DEBUGGER_WIDTH, DEBUGGER_HEIGHT = 500, 768
 
 local DEBUGGER_REGISTERS = {
     {"a", "f"},
@@ -24,6 +24,7 @@ local _getTickCount = getTickCount
 local _bitExtract = bitExtract
 local _bitLShift = bitLShift
 local _bitOr = bitOr
+local _bitAnd = bitAnd
 local _math_floor = math.floor
 local _string_format = string.format
 
@@ -31,6 +32,8 @@ local _fps = 0
 local _fpsNextTick = 0
 
 local _lastRender = 0
+
+cachedDebugBackground = {{}, {}}
 
 local binaryFormat = function(value, minLen)
     local binaryFormat = ""
@@ -111,7 +114,7 @@ function setupDebugger()
 
     addEventHandler("onClientRender", root, function()
         dxDrawText(math.floor(_fps), SCREEN_WIDTH - (((200 * (1920 / SCREEN_WIDTH)) / 2)), 
-            (((50 * (1920 / SCREEN_WIDTH)) / 2)), 0, 0, tocolor(255, 255, 255), (((6 * (1920 / SCREEN_WIDTH)) / 2)),
+            (((30 * (1920 / SCREEN_WIDTH)) / 2)), 0, 0, tocolor(255, 255, 255), (((6 * (1920 / SCREEN_WIDTH)) / 2)),
             "default-bold")
     end)
 end
@@ -131,10 +134,6 @@ function startDebugger()
 
         _traceFile = fileCreate("trace.txt")
     end
-
-    setTimer(function()
-        disassemble()
-    end, 1000, 0)
 
     if (RENDER) then
         addEventHandler("onClientPreRender", root, function(delta)
@@ -338,12 +337,14 @@ function renderDebugger(delta)
         _lastRender = 0
     end
 
-    if ((_getTickCount() - _lastRender) > 200 or not _renderTarget) then
+    if ((_getTickCount() - _lastRender) > 1000 or not _renderTarget) then
+        disassemble()
+
         dxSetRenderTarget(_renderTarget, true)
         dxSetBlendMode("modulate_add")
 
-        local screenStartX = (SCREEN_WIDTH / 2) - ((DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)) / 2)
-        local screenStartY = (SCREEN_HEIGHT / 2) - ((DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)) / 2)
+        local screenStartX = 0
+        local screenStartY = (SCREEN_HEIGHT / 2) - (DEBUGGER_HEIGHT / 2)
 
         local screenWidth = DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)
         local screenHeight = DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)
@@ -351,8 +352,8 @@ function renderDebugger(delta)
         dxDrawRectangle(screenStartX, screenStartY, screenWidth, screenHeight
             , tocolor(0, 0, 0, 200))
 
-        local romMemoryWindowStartX = screenStartX + (50 * (1920 / SCREEN_WIDTH))
-        local romMemoryWindowStartY = screenStartY + (50 * (1920 / SCREEN_WIDTH))
+        local romMemoryWindowStartX = screenStartX + (1920 / SCREEN_WIDTH)
+        local romMemoryWindowStartY = screenStartY + (1920 / SCREEN_WIDTH)
 
         local romMemoryWindowWidth = 75
         local romMemoryWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
@@ -401,7 +402,7 @@ function renderDebugger(delta)
         local romWindowStartX = romMemoryWindowStartX + romMemoryWindowWidth
         local romWindowStartY = romMemoryWindowStartY
 
-        local romWindowWidth = ((DEBUGGER_WIDTH * 0.70) * (1920 / SCREEN_WIDTH)) - romMemoryWindowWidth
+        local romWindowWidth = ((DEBUGGER_WIDTH - (200 * (1920 / SCREEN_WIDTH))) * (1920 / SCREEN_WIDTH)) - romMemoryWindowWidth
         local romWindowHeight = romMemoryWindowHeight
 
         dxDrawRectangle(romWindowStartX, romWindowStartY
@@ -459,7 +460,7 @@ function renderDebugger(delta)
         end
 
         local registersWindowStartX = (romWindowStartX + romWindowWidth) + (10 * (1920 / SCREEN_WIDTH))
-        local registersWindowStartY = screenStartY + (50 * (1920 / SCREEN_WIDTH))
+        local registersWindowStartY = screenStartY + (1920 / SCREEN_WIDTH)
 
         local registersWindowWidth = (DEBUGGER_WIDTH - (registersWindowStartX - screenStartX)) - (50 * (1920 / SCREEN_WIDTH))
         local registersWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
@@ -486,15 +487,13 @@ function renderDebugger(delta)
                 end
 
                 dxDrawText(registerPair[1]:upper()..registerPair[2]:upper()
-                    .." = ".._string_format("%.4x", value):upper()
-                    .. " | "..binaryFormat(value, 16), registersX, registersY,
+                    .." = ".._string_format("%.4x", value):upper(), registersX, registersY,
                     registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
             else
                 local value = registers[registerPair]
 
                 dxDrawText(registerPair:upper()
-                    .." = ".._string_format("%.4x", value):upper()
-                    .. " | "..binaryFormat(value, 16), registersX, registersY,
+                    .." = ".._string_format("%.4x", value):upper(), registersX, registersY,
                     registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
             end
 
@@ -507,7 +506,7 @@ function renderDebugger(delta)
         registersY = registersY + yPadding
         registersY = registersY + yPadding
 
-        for i=0xFF00, 0xFF12 do
+        for i=0xCFB0, 0xCFC2 do
         --for i=0x8010, 0x802F do
             dxDrawText("0x".._string_format("%.4x", i):upper()..": "
                 .._string_format("%.2x", mmuReadByte(i)):upper(), registersX, registersY,
@@ -532,67 +531,7 @@ function renderDebugger(delta)
         end
 
         local isCGB = isGameBoyColor()
-        local currentX = romMemoryWindowStartX
-        local currentY = romMemoryWindowStartY + romMemoryWindowHeight
-
-        local size = (2 * (1920 / SCREEN_WIDTH))
-        local palette = mmuReadByte(0xFF47)
-
-        for tile=0, 384 do
-            local address = 0x8000 + (tile * 16)
-
-            for row=1, 8 do
-                local byte1 = mmuReadByte(address)
-                local byte2 = mmuReadByte(address + 1)
-
-                for column=1, 8 do
-                    local colorBit = ((column % 8) - 7) * -1
-
-                    local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
-                    colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
-
-                    local hi = 0
-                    local lo = 0
-
-                    if (colorNum == 0) then
-                        hi = 1
-                        lo = 0
-                    elseif (colorNum == 1) then
-                        hi = 3
-                        lo = 2
-                    elseif (colorNum == 2) then
-                        hi = 5
-                        lo = 4
-                    elseif (colorNum == 3) then
-                        hi = 7
-                        lo = 6
-                    end
-
-                    local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
-                    color = _bitOr(color, _bitExtract(palette, lo, 1))
-
-                    local columnColor = _COLORS[color + 1]
-
-                    dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
-                        tocolor(columnColor[1], columnColor[2], columnColor[3]))
-                end
-
-                address = address + 2
-            end
-
-            currentX = currentX + (8 * size) + 2
-
-            if (currentX > romMemoryWindowStartX +
-                (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
-                currentX = romMemoryWindowStartX
-                currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
-            end
-        end
-
-        currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
-
-        local currentX = romMemoryWindowStartX
-        local currentY = currentY + (10 * (1920 / SCREEN_WIDTH))
+        local bank = vramBank
 
         local lcdControl = mmuReadByte(0xFF40)
         local is8x16 = false
@@ -601,7 +540,94 @@ function renderDebugger(delta)
             is8x16 = true
         end
 
+        local size = (2 * (1920 / SCREEN_WIDTH))
+        local palette = mmuReadByte(0xFF47)
+
+        local tileRenderStart = SCREEN_WIDTH - (16 * (((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))))
+
+        local currentX = tileRenderStart
+        local currentY = (SCREEN_HEIGHT / 2) - ((((math.ceil((384 * (((isCGB) and 2 or 1))) / 16) + 1) * 
+            (((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH)))) + (20 * (1920 / SCREEN_WIDTH)) +
+            ((math.ceil(39 / 16) + 1) * ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH)))) / 2)
+
+        local backgroundPalettes = getBackgroundPalettes()
+
+        for renderBank=1, ((isCGB) and 2 or 1) do
+            vramBank = renderBank
+
+            for tile=0, 384 do
+                local address = 0x8000 + (tile * 16)
+
+                local cgbPalette = nil
+                
+                if (isCGB) then
+                    cgbPalette = cachedDebugBackground[renderBank][address]
+                end
+
+                for row=1, 8 do
+                    byte1 = mmuReadByte(address)
+                    byte2 = mmuReadByte(address + 1)
+
+                    for column=1, 8 do
+                        local colorBit = ((column % 8) - 7) * -1
+
+                        local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
+                        colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
+
+                        if (isCGB and cgbPalette ~= nil) then
+                            local color = backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
+                
+                            dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                                tocolor(color[1], color[2], color[3], 255))
+                        else
+                            local hi = 0
+                            local lo = 0
+
+                            if (colorNum == 0) then
+                                hi = 1
+                                lo = 0
+                            elseif (colorNum == 1) then
+                                hi = 3
+                                lo = 2
+                            elseif (colorNum == 2) then
+                                hi = 5
+                                lo = 4
+                            elseif (colorNum == 3) then
+                                hi = 7
+                                lo = 6
+                            end
+
+                            local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
+                            color = _bitOr(color, _bitExtract(palette, lo, 1))
+
+                            local columnColor = _COLORS[color + 1]
+
+                            dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                                tocolor(columnColor[1], columnColor[2], columnColor[3]))
+                        end
+                    end
+
+                    address = address + 2
+                end
+
+                currentX = currentX + (8 * size) + 2
+
+                if (((384 * (renderBank - 1)) + (tile + 1)) % 16 == 0) then
+                    currentX = tileRenderStart
+                    currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+                end
+            end
+
+            vramBank = bank
+        end
+
+        currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH)) + (20 * (1920 / SCREEN_WIDTH))
+
+        local currentX = tileRenderStart
+        local currentY = currentY + (10 * (1920 / SCREEN_WIDTH))
+
         local size = 2
+        local spritePalettes = getSpritePalettes()
 
         for oam=0, 39 do
             local y = mmuReadByte(0xFE00 + (oam * 4))
@@ -611,11 +637,33 @@ function renderDebugger(delta)
 
             palette = mmuReadByte((_bitExtract(options, 4, 1) == 1) and 0xFF49 or 0xFF48)
 
+            local cgbPalette = 0
+            local cgbBank = false
+
+            if (isCGB) then
+                vramBank = 2
+                cgbPalette = _bitAnd(options, 0x07)
+                cgbBank = (_bitExtract(options, 3, 1) == 1)
+                vramBank = bank
+            end
+
             local address = 0x8000 + (tile * 16)
 
             for row=1, ((is8x16) and 16 or 8) do
-                local byte1 = mmuReadByte(address)
-                local byte2 = mmuReadByte(address + 1)
+                local line = row
+
+                local byte1 = 0
+                local byte2 = 0
+
+                if (isCGB and cgbBank) then
+                    vramBank = 2
+                    byte1 = mmuReadByte(address)
+                    byte2 = mmuReadByte(address + 1)
+                    vramBank = bank
+                else
+                    byte1 = mmuReadByte(address)
+                    byte2 = mmuReadByte(address + 1)
+                end
 
                 for column=1, 8 do
                     local colorBit = ((column % 8) - 7) * -1
@@ -623,34 +671,36 @@ function renderDebugger(delta)
                     local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
                     colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
 
-                    local hi = 0
-                    local lo = 0
+                    if (isCGB) then
+                        local color = spritePalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
+                
+                        dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
+                            tocolor(color[1], color[2], color[3], 255))
+                    else
+                        local hi = 0
+                        local lo = 0
 
-                    if (colorNum == 0) then
-                        hi = 1
-                        lo = 0
-                    elseif (colorNum == 1) then
-                        hi = 3
-                        lo = 2
-                    elseif (colorNum == 2) then
-                        hi = 5
-                        lo = 4
-                    elseif (colorNum == 3) then
-                        hi = 7
-                        lo = 6
-                    end
+                        if (colorNum == 0) then
+                            hi = 1
+                            lo = 0
+                        elseif (colorNum == 1) then
+                            hi = 3
+                            lo = 2
+                        elseif (colorNum == 2) then
+                            hi = 5
+                            lo = 4
+                        elseif (colorNum == 3) then
+                            hi = 7
+                            lo = 6
+                        end
 
-                    local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
-                    color = _bitOr(color, _bitExtract(palette, lo, 1))
+                        local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
+                        color = _bitOr(color, _bitExtract(palette, lo, 1))
 
-                    if (colorNum ~= 0) then
                         local columnColor = _COLORS[color + 1]
 
                         dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
                             tocolor(columnColor[1], columnColor[2], columnColor[3]))
-                    else
-                        dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,
-                            tocolor(255, 255, 0))
                     end
                 end
 
@@ -659,9 +709,8 @@ function renderDebugger(delta)
 
             currentX = currentX + (8 * size) + 2
 
-            if (currentX > romMemoryWindowStartX +
-                (screenWidth - ((romMemoryWindowStartX - screenStartX) * 2))) then
-                currentX = romMemoryWindowStartX
+            if ((oam + 1) % 16 == 0) then
+                currentX = tileRenderStart
                 currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
             end
         end

@@ -40,6 +40,8 @@ local _backgroundPalettes = {}
 local _spritePalettes = {}
 local _backgroundPriority = {}
 
+debugBackground = {{}, {}}
+
 -----------------------------------
 -- * Functions
 -----------------------------------
@@ -99,11 +101,8 @@ function setupGPU()
     dxSetTexturePixels(_screen, _screenPixels)
 
     addEventHandler("onClientRender", root, function()
-        if (isDebuggerEnabled()) then
-            dxDrawImage(0, 0, 320, 288, _screen)
-        else
-            dxDrawImage((SCREEN_WIDTH / 2) - 320/2, (SCREEN_HEIGHT / 2) - 288/2, 320, 288, _screen)
-        end
+        local width, height = 320 * (1920 / SCREEN_WIDTH), 288 * (1920 / SCREEN_WIDTH)
+        dxDrawImage((SCREEN_WIDTH / 2) - (width / 2), (SCREEN_HEIGHT / 2) - (height / 2), width, height, _screen)
     end)
 end
 
@@ -241,6 +240,8 @@ function renderTiles()
             local cgbPalette = 0
             local cgbBank = false
             local cgbPriority = false
+            local cgbFlipX = false
+            local cgbFlipY = false
 
             if (isCGB) then
                 vramBank = 2
@@ -248,6 +249,8 @@ function renderTiles()
                 cgbPalette = _bitAnd(cgbAttributes, 0x07)
                 cgbBank = (_bitExtract(cgbAttributes, 3, 1) == 1)
                 cgbPriority = (_bitExtract(cgbAttributes, 7, 1) == 1)
+                cgbFlipX = (_bitExtract(cgbAttributes, 5, 1) == 1)
+                cgbFlipY = (_bitExtract(cgbAttributes, 6, 1) == 1)
                 vramBank = bank
             end
 
@@ -267,6 +270,11 @@ function renderTiles()
 
             local line = (yPos % 8) * 2
 
+            if (cgbFlipY) then
+                line = line - 8
+                line = line * -1
+            end
+
             local byte1 = 0
             local byte2 = 0
 
@@ -281,6 +289,12 @@ function renderTiles()
             end
 
             local colorBit = ((xPos % 8) - 7) * -1
+
+            if (cgbFlipX) then
+                colorBit = colorBit - 8
+                colorBit = colorBit * -1
+            end
+
             local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
             colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
 
@@ -288,6 +302,10 @@ function renderTiles()
 
             if (isCGB) then
                 local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
+
+                if (isDebuggerEnabled() and isCGB) then
+                    debugBackground[(cgbBank) and 2 or vramBank][tileLocation] = cgbPalette
+                end
 
                 dxSetPixelColor(_screenPixels, pixel, scanLine, color[1], color[2], color[3], 255)
             else
@@ -345,11 +363,10 @@ function renderSprites()
             local tile = mmuReadByte(0xFE00 + index + 2)
             local attributes = mmuReadByte(0xFE00 + index + 3)
 
-            local yFlip = (_bitExtract(attributes, 6, 1) == 1)
-            local xFlip = (_bitExtract(attributes, 5, 1) == 1)
+            local yFlip = false
+            local xFlip = false
             local line = scanLine - yPos
 
-            local cgbAttributes = 0
             local cgbPalette = 0
             local cgbBank = false
 
@@ -357,6 +374,8 @@ function renderSprites()
                 vramBank = 2
                 cgbPalette = _bitAnd(attributes, 0x07)
                 cgbBank = (_bitExtract(attributes, 3, 1) == 1)
+                yFlip = (_bitExtract(attributes, 6, 1) == 1)
+                xFlip = (_bitExtract(attributes, 5, 1) == 1)
                 vramBank = bank
             end
 
@@ -365,9 +384,7 @@ function renderSprites()
                 line = line * -1
             end
 
-            line = line * 2
-            
-            local address = (0x8000 + (tile* 16)) + line
+            local address = (0x8000 + (tile* 16)) + (line * 2)
             local byte1 = 0
             local byte2 = 0
 
@@ -392,8 +409,6 @@ function renderSprites()
                         colorBit = colorBit - 7
                         colorBit = colorBit * -1
                     end
-
-                    local colorId = _bitExtract(byte2, colorBit, 1)
 
                     local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
                     colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
@@ -545,7 +560,6 @@ function gpuStep(ticks)
         lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
 
         mmuWriteByte(0xFF41, lcdStatus)
-        return
     end
 
     _modeClock = _modeClock + ticks
@@ -557,6 +571,14 @@ function gpuStep(ticks)
         if (_modeClock >= 51) then
             _modeClock = _modeClock - 51
             scanLine = scanLine + 1
+
+            if (isGameBoyColor() and hdmaEnabled and (not isCPUPaused() or hasIncomingInterrupt())) then
+                local clockCycles = mmuPerformHDMA()
+                _modeClock = _modeClock + clockCycles
+
+                registers.clock.m = registers.clock.m + clockCycles
+                registers.clock.t = registers.clock.t + (clockCycles * 4)
+            end
 
             if (scanLine == 144) then
                 _mode = 1
@@ -589,6 +611,11 @@ function gpuStep(ticks)
                 requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
 
                 scanLine = 0
+
+                if (isDebuggerEnabled() and isGameBoyColor()) then
+                    cachedDebugBackground = {debugBackground[1], debugBackground[2]}
+                    debugBackground = {{}, {}}
+                end
             end
         end
     elseif (_mode == 2) then
@@ -687,4 +714,12 @@ end
 
 function getGPUModeClock()
     return _modeClock
+end
+
+function getBackgroundPalettes()
+    return _backgroundPalettes
+end
+
+function getSpritePalettes()
+    return _spritePalettes
 end

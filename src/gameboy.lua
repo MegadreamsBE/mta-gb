@@ -9,7 +9,7 @@ local _bitOr = bitOr
 -- * Constants
 -----------------------------------
 
-local ROM_PATH = "data/PokemonSilver.gbc"
+local ROM_PATH = "data/PokemonCrystal.gbc"
 
 -----------------------------------
 -- * Locals
@@ -193,8 +193,6 @@ end
 addEventHandler("onClientResourceStart", resourceRoot, function()
     setupGameBoy()
     setupDebugger()
-
-    breakpoint(0x0373)
 
     --gameBoyLoadBios("data/bios.gb")
     gameBoyLoadRom(ROM_PATH)
