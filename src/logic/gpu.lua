@@ -289,8 +289,10 @@ function renderTiles()
                 byte2 = mmuReadByte(tileLocation + line + 1)
                 vramBank = bank
             else
+                vramBank = 1
                 byte1 = mmuReadByte(tileLocation + line)
                 byte2 = mmuReadByte(tileLocation + line + 1)
+                vramBank = bank
             end
 
             local colorBit = ((xPos % 8) - 7) * -1
@@ -399,8 +401,10 @@ function renderSprites()
                 byte2 = mmuReadByte(address + 1)
                 vramBank = bank
             else
+                vramBank = 1
                 byte1 = mmuReadByte(address)
                 byte2 = mmuReadByte(address + 1)
+                vramBank = bank
             end
 
             for tilePixel=7,0,-1 do

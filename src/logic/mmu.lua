@@ -632,7 +632,7 @@ function mmuReadByte(address)
                         return _ram[address + 1] or 0
                     end
                 elseif (case == 0x10 or case == 0x20 or case == 0x30) then
-                    return 0
+                    return _ram[address + 1] or 0
                 elseif (case == 0x40 or case == 0x50 or case == 0x60 or case == 0x70) then
                     if (address == 0xFF44) then
                         return scanLine
