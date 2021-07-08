@@ -1,6 +1,6 @@
 <meta>
     <info author="MegaDreams" description="Game Boy emulator for Multi Theft Auto" version="0.0.1" type="misc" />
-    <min_mta_version shared="1.5.6" server="1.5.6" />
+    <min_mta_version client="1.5.6" server="1.5.6" />
 
     <settings>
         <setting name="tests_enabled" value="true" />
@@ -14,33 +14,24 @@
     <!--
     #########   Utils   ########
     -->
-    <script src="src/utils/log.lua" type="shared" />
+    <script src="src/utils/log.lua" type="client" />
 
     <!--
     #########   Core   ########
     -->
-    <script src="src/gameboy.lua" type="shared" />
-    <script src="src/rom.lua" type="shared" />
+    <script src="src/gameboy.lua" type="client" />
+    <script src="src/rom.lua" type="client" />
 
     <!--
     #########   Logic   ########
     -->
-    <script src="src/logic/opcodes.lua" type="shared" />
-    <script src="src/logic/cpu.lua" type="shared" />
-    <script src="src/logic/gpu.lua" type="shared" />
-    <script src="src/logic/timer.lua" type="shared" />
+    <script src="src/logic/opcodes.lua" type="client" />
+    <script src="src/logic/cpu.lua" type="client" />
+    <script src="src/logic/gpu.lua" type="client" />
+    <script src="src/logic/timer.lua" type="client" />
     <script src="src/logic/debugger.lua" type="client" />
     <script src="src/logic/disassembler.lua" type="client" />
-    <script src="src/logic/mmu.lua" type="shared" />
-
-    <!--
-    #########   Tests   ########
-    -->
-    <script src="tests/override.lua" type="server" />
-    <script src="tests/handler.lua" type="server" />
-    <script src="tests/core.lua" type="server" />
-
-    <script src="tests/cpu/opcodes.lua" type="server" />
+    <script src="src/logic/mmu.lua" type="client" />
 
     <oop>true</oop>
 </meta>

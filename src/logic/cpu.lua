@@ -40,6 +40,7 @@ registers = {
         -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
         false, false, false, false
     },
+    lastPC = 0x0,
     pc = 0x0,
     sp = 0xfffe,
     clock = {
@@ -185,6 +186,8 @@ function cpuStep()
     end
 
     local nextOpcode = mmuReadByte(_registers.pc)
+
+    _registers.lastPC = _registers.pc
 
     _registers.clock.m = 0
     _registers.clock.t = 0

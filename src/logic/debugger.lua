@@ -152,7 +152,7 @@ function startDebugger()
         addCommandHandler("breakpoint", function(_, address)
             address = tonumber(address, 16)
 
-            if (breakpoints[address]) then
+            if (_breakpoints[address]) then
                 removeBreakpoint(address)
             else
                 breakpoint(address)
@@ -332,7 +332,7 @@ end
 
 function renderDebugger(delta)
     if (_nextStepTick ~= -1 and _getTickCount() > _nextStepTick) then
-        debuggerStep()
+        debuggerSingleStep()
         _nextStepTick = _getTickCount() + 50
         _lastRender = 0
     end
@@ -506,8 +506,7 @@ function renderDebugger(delta)
         registersY = registersY + yPadding
         registersY = registersY + yPadding
 
-        for i=0xCFB0, 0xCFC2 do
-        --for i=0x8010, 0x802F do
+        for i=0xFF40, 0xFF52 do
             dxDrawText("0x".._string_format("%.4x", i):upper()..": "
                 .._string_format("%.2x", mmuReadByte(i)):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -
@@ -542,6 +541,10 @@ function renderDebugger(delta)
 
         local size = (2 * (1920 / SCREEN_WIDTH))
         local palette = mmuReadByte(0xFF47)
+
+        if (isCGB) then
+            palette = 0xFC
+        end
 
         local tileRenderStart = SCREEN_WIDTH - (16 * (((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))))
 

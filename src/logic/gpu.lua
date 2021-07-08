@@ -57,7 +57,7 @@ function setupGPU()
     oam = {}
     _oam = oam
 
-    for i=1, 0xF000 do
+    for i=1, 0x3000 do
         _vram[1][i] = 0
         _vram[2][i] = 0
     end
@@ -136,7 +136,7 @@ function resetGPU()
         _vram[2][i] = 0
     end
 
-    _screenEnabled = true
+    _screenEnabled = not isBiosLoaded()
     _backgroundPriority = {}
 
     for i=0, 159 do
@@ -148,12 +148,14 @@ function resetGPU()
         end
     end
 
-    local lcdStatus = mmuReadByte(0xFF41)
+    if (_screenEnabled) then
+        local lcdStatus = mmuReadByte(0xFF41)
 
-    lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
-    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+        lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
+        lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
-    mmuWriteByte(0xFF41, lcdStatus)
+        mmuWriteByte(0xFF41, lcdStatus)
+    end
 end
 
 function renderTiles()
@@ -161,12 +163,13 @@ function renderTiles()
     local isCGB = isGameBoyColor()
     local bank = vramBank
 
+    local lcdControl = mmuReadByte(0xFF40)
     local scrollY = mmuReadSignedByte(0xFF42)
     local scrollX = mmuReadSignedByte(0xFF43)
     local windowY = mmuReadByte(0xFF4A)
     local windowX = mmuReadByte(0xFF4B) - 7
 
-    if (_bitExtract(mmuReadByte(0xFF40), 5, 1) == 1) then
+    if (_bitExtract(lcdControl, 5, 1) == 1) then
        if (windowY <= mmuReadByte(0xFF44)) then
            usingWindow = true
        end
@@ -177,7 +180,7 @@ function renderTiles()
     local tileData = 0x8000
     local backgroundMemory = 0x9C00
 
-    if (_bitExtract(mmuReadByte(0xFF40), 4, 1) == 1) then
+    if (_bitExtract(lcdControl, 4, 1) == 1) then
         tileData = 0x8000
     else
         tileData = 0x8800
@@ -185,13 +188,13 @@ function renderTiles()
     end
 
     if (not usingWindow) then
-        if (_bitExtract(mmuReadByte(0xFF40), 3, 1) == 1) then
+        if (_bitExtract(lcdControl, 3, 1) == 1) then
             backgroundMemory = 0x9C00
         else
             backgroundMemory = 0x9800
         end
     else
-        if (_bitExtract(mmuReadByte(0xFF40), 6, 1) == 1) then
+        if (_bitExtract(lcdControl, 6, 1) == 1) then
             backgroundMemory = 0x9C00
         else
             backgroundMemory = 0x9800
@@ -254,11 +257,13 @@ function renderTiles()
                 vramBank = bank
             end
 
+            vramBank = 1
             if (unsigned) then
                 tileNum = mmuReadByte(tileAddress)
             else
                 tileNum = mmuReadSignedByte(tileAddress)
             end
+            vramBank = bank
 
             local tileLocation = tileData
 
@@ -547,13 +552,9 @@ function setColorPalette(isSprites, value)
 end
 
 function gpuStep(ticks)
-    if (not _screenEnabled) then
-        return
-    end
-
     local lcdStatus = mmuReadByte(0xFF41)
 
-    if (_bitExtract(mmuReadByte(0xFF40), 7) ~= 1) then
+    if (not _screenEnabled) then
         mmuWriteByte(0xFF41, 0)
 
         lcdStatus = _bitAnd(lcdStatus, 0xFC)
@@ -567,93 +568,93 @@ function gpuStep(ticks)
     local lastMode = _mode
     local requireInterrupt = false
 
-    if (_mode == 0) then
-        if (_modeClock >= 51) then
-            _modeClock = _modeClock - 51
-            scanLine = scanLine + 1
+    if (_screenEnabled) then
+        if (_mode == 0) then
+            if (_modeClock >= 51) then
+                _modeClock = _modeClock - 51
+                scanLine = scanLine + 1
 
-            if (isGameBoyColor() and hdmaEnabled and (not isCPUPaused() or hasIncomingInterrupt())) then
-                local clockCycles = mmuPerformHDMA()
-                _modeClock = _modeClock + clockCycles
+                if (isGameBoyColor() and hdmaEnabled and (not isCPUPaused() or hasIncomingInterrupt())) then
+                    local clockCycles = mmuPerformHDMA()
+                    _modeClock = _modeClock + clockCycles
 
-                registers.clock.m = registers.clock.m + clockCycles
-                registers.clock.t = registers.clock.t + (clockCycles * 4)
-            end
+                    registers.clock.m = registers.clock.m + clockCycles
+                    registers.clock.t = registers.clock.t + (clockCycles * 4)
+                end
 
-            if (scanLine == 144) then
-                _mode = 1
+                if (scanLine == 144) then
+                    _mode = 1
 
-                lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
-                lcdStatus = _bitReplace(lcdStatus, 0, 1, 1)
-                requireInterrupt = (_bitExtract(lcdStatus, 4, 1) == 1)
+                    lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
+                    lcdStatus = _bitReplace(lcdStatus, 0, 1, 1)
+                    requireInterrupt = (_bitExtract(lcdStatus, 4, 1) == 1)
 
-                dxSetTexturePixels(_screen, _screenPixels)
+                    dxSetTexturePixels(_screen, _screenPixels)
 
-                requestInterrupt(0)
-            else
-                _mode = 2
+                    requestInterrupt(0)
+                else
+                    _mode = 2
 
-                lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
-                lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
-                requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
-            end
-        end
-    elseif (_mode == 1) then
-        if (_modeClock >= 114) then
-            _modeClock = _modeClock - 114
-            scanLine = scanLine + 1
-
-            if (scanLine >= 154) then
-                _mode = 2
-
-                lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
-                lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
-                requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
-
-                scanLine = 0
-
-                if (isDebuggerEnabled() and isGameBoyColor()) then
-                    cachedDebugBackground = {debugBackground[1], debugBackground[2]}
-                    debugBackground = {{}, {}}
+                    lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
+                    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+                    requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
                 end
             end
-        end
-    elseif (_mode == 2) then
-        if (_modeClock >= 20) then
-            _modeClock = _modeClock - 20
+        elseif (_mode == 1) then
+            if (_modeClock >= 114) then
+                _modeClock = _modeClock - 114
+                scanLine = scanLine + 1
 
-            lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
-            lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
+                if (scanLine >= 154) then
+                    _mode = 2
 
-            _mode = 3
-        end
-    elseif (_mode == 3) then
-        if (_modeClock >= 43) then
-            _modeClock = _modeClock - 43
-            _mode = 0
+                    lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
+                    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+                    requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
 
-            lcdStatus = _bitReplace(lcdStatus, 0, 1, 1)
-            lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
-            requireInterrupt = (_bitExtract(lcdStatus, 3, 1) == 1)
+                    scanLine = 0
 
-            if (_screenEnabled) then
+                    if (isDebuggerEnabled() and isGameBoyColor()) then
+                        cachedDebugBackground = {debugBackground[1], debugBackground[2]}
+                        debugBackground = {{}, {}}
+                    end
+                end
+            end
+        elseif (_mode == 2) then
+            if (_modeClock >= 20) then
+                _modeClock = _modeClock - 20
+
+                lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
+                lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
+
+                _mode = 3
+            end
+        elseif (_mode == 3) then
+            if (_modeClock >= 43) then
+                _modeClock = _modeClock - 43
+                _mode = 0
+
+                lcdStatus = _bitReplace(lcdStatus, 0, 1, 1)
+                lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+                requireInterrupt = (_bitExtract(lcdStatus, 3, 1) == 1)
+
                 renderScan()
             end
         end
-    end
 
-    if (requireInterrupt and (_mode ~= lastMode)) then
-        requestInterrupt(1)
-    end
-
-    if (scanLine == mmuReadByte(0xFF45)) then
-        lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
-        
-        if (_bitExtract(lcdStatus, 6, 1) == 1) then
+        if (requireInterrupt and (_mode ~= lastMode)) then
             requestInterrupt(1)
         end
-    else
-        lcdStatus = _bitReplace(lcdStatus, 0, 2, 1)
+
+        if (scanLine == mmuReadByte(0xFF45)) then
+            lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
+            
+            if (_bitExtract(lcdStatus, 6, 1) == 1) then
+                requestInterrupt(1)
+            end
+        else
+            lcdStatus = _bitReplace(lcdStatus, 0, 2, 1)
+        end
     end
 
     mmuWriteByte(0xFF41, lcdStatus)
@@ -666,6 +667,8 @@ function enableScreen()
 
     _screenEnabled = true
     _mode = 1
+    _modeClock = 0
+    scanLine = 0
 
     local lcdStatus = mmuReadByte(0xFF41)
 

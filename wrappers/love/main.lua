@@ -9,7 +9,7 @@ local timeSinceLastFrame = 0.0
 function love.load()
     love.window.setMode(1920, 1080)
 
-    package.path = "../../?.lua;" .. package.path
+    package.path = "../../?.lua;"..package.path
 
     require "src/utils/log"
 
@@ -25,6 +25,8 @@ function love.load()
     require "src/logic/mmu"
 
     triggerEvent("onClientResourceStart")
+
+    Log.log = log
 end
 
 function love.update(dt)
