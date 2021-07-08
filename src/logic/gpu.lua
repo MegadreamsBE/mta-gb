@@ -370,8 +370,8 @@ function renderSprites()
             local tile = mmuReadByte(0xFE00 + index + 2)
             local attributes = mmuReadByte(0xFE00 + index + 3)
 
-            local yFlip = false
-            local xFlip = false
+            local yFlip = (_bitExtract(attributes, 6, 1) == 1)
+            local xFlip = (_bitExtract(attributes, 5, 1) == 1)
             local line = scanLine - yPos
 
             local cgbPalette = 0
