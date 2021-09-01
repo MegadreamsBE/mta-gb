@@ -2,6 +2,39 @@
 -- * Locals
 -----------------------------------
 
+bitAnd = bit.band
+bitOr = bit.bor
+bitXor = bit.bxor
+
+function bitNot(value)
+    return bit.band(bit.bnot(value), 0xff)
+end
+
+function bitReplace(value, replaceWith, field, width)
+    if (width == nil) then
+        width = 1
+    end
+
+    local mask = bit.lshift(1, width) - 1
+
+    replaceWith = bit.band(replaceWith, mask)
+
+    return bit.bor(bit.band(value, bit.bnot(bit.lshift(mask, field))), bit.lshift(replaceWith, field))
+end
+
+function bitExtract(value, field, width)
+    if (width == nil) then
+        width = 1
+    end
+
+    return bit.band(bit.rshift(value, field), bit.lshift(1, width) - 1)
+end
+
+bitLShift = bit.lshift
+bitRShift = bit.rshift
+bitLRotate = bit.lrotate
+bitRRotate = bit.rrotate
+
 local _bitAnd = bitAnd
 local _bitOr = bitOr
 
