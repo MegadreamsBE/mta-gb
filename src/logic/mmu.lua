@@ -60,6 +60,8 @@ eramLastUpdated = -1
 local _romOffset = 0x4000
 local _ramOffset = 0x0000
 local _cartridgeType = 0
+local _romBankCount = 0
+local _ramBankCount = 0
 
 local _eram = {}
 local _mram = {}
@@ -151,15 +153,54 @@ end
 function mmuLoadRom(rom)
     _rom = rom
     _cartridgeType = _rom[0x0147 + 1]
-    _cartridgeType = 17
+    print(_cartridgeType)
+
+    local romSize = _rom[0x0148 + 1]
+
+    if (romSize == 0x01) then
+        _romBankCount = 4
+    elseif (romSize == 0x02) then
+        _romBankCount = 8
+    elseif (romSize == 0x03) then
+        _romBankCount = 16
+    elseif (romSize == 0x04) then
+        _romBankCount = 32
+    elseif (romSize == 0x05) then
+        _romBankCount = 64
+    elseif (romSize == 0x06) then
+        _romBankCount = 128
+    elseif (romSize == 0x07) then
+        _romBankCount = 256
+    elseif (romSize == 0x08) then
+        _romBankCount = 512
+    else
+        _romBankCount = 2
+    end
+
+    local ramSize = _rom[0x0149 + 1]
+
+
+    if (ramSize == 0x01) then
+        _ramBankCount = 0
+    elseif (ramSize == 0x02) then
+        _ramBankCount = 1
+    elseif (ramSize == 0x03) then
+        _ramBankCount = 4
+    elseif (ramSize == 0x04) then
+        _ramBankCount = 16
+    elseif (ramSize == 0x05) then
+        _ramBankCount = 8
+    else
+        _ramBankCount = 0
+    end
 end
 
 function mmuWriteByte(address, value, onlyWrite)
     onlyWrite = onlyWrite or false
 
     if (address >= 0x0000 and address < 0x2000) then
-        if ((_cartridgeType == 2 or _cartridgeType == 3) or (_cartridgeType >= 15 and _cartridgeType <= 19) or 
-            (_cartridgeType >= 0x19 and _cartridgeType <= 0x1E)) then
+        if ((_cartridgeType == 2 or _cartridgeType == 3) or (_cartridgeType >= 15 and _cartridgeType <= 19)
+            or (_cartridgeType >= 25 and _cartridgeType <= 30)) then
             _mbc[2].ramon = ((_bitAnd(value, 0x0F) == 0x0A) and 1 or 0)
         end
     elseif (address >= 0x2000 and address < 0x4000) then
@@ -180,6 +221,25 @@ function mmuWriteByte(address, value, onlyWrite)
             end
 
             _mbc[2].rombank = value
+            _mbc[2].rombank = _bitAnd(_mbc[2].rombank, _romBankCount - 1)
+            _romOffset = _mbc[2].rombank * 0x4000
+        elseif (_cartridgeType >= 25 and _cartridgeType <= 30) then
+            local romBankValue = _mbc[2].rombank
+
+            if (address <= 0x2FFF) then
+                romBankValue = _bitOr(value, _bitAnd(romBankValue, 0x100))
+            else
+                local shiftValue = _bitAnd(value, 0x01)
+                
+                if (shiftValue > 0) then
+                    shiftValue = _bitLShift(shiftValue, 8)
+                end
+
+                romBankValue = _bitOr(_bitAnd(romBankValue, 0xFF), shiftValue)
+            end
+
+            _mbc[2].rombank = romBankValue
+            _mbc[2].rombank = _bitAnd(_mbc[2].rombank, _romBankCount - 1)
             _romOffset = _mbc[2].rombank * 0x4000
         end
     elseif (address >= 0x4000 and address < 0x6000) then
@@ -195,9 +255,14 @@ function mmuWriteByte(address, value, onlyWrite)
             end
         elseif (_cartridgeType >= 15 and _cartridgeType <= 19) then
             if (value <= 0x03) then
-                _mbc[2].rambank = _bitAnd(value, 0x03)
+                _mbc[2].rambank = value
+                _mbc[2].rambank = _bitAnd(_mbc[2].rambank, _ramBankCount - 1)
                 _ramOffset = _mbc[2].rambank * 0x2000
             end
+        elseif (_cartridgeType >= 25 and _cartridgeType <= 30) then
+            _mbc[2].rambank = _bitAnd(value, 0x0F)
+            _mbc[2].rambank = _bitAnd(_mbc[2].rambank, _ramBankCount - 1)
+            _ramOffset = _mbc[2].rambank * 0x2000
         end
     elseif (address >= 0x6000 and address < 0x8000) then
         if (_cartridgeType == 2 or _cartridgeType == 3) then
@@ -364,7 +429,7 @@ function mmuWriteByte(address, value, onlyWrite)
                     if (internalCase == 0) then
                         writeKeypad(value)
                     elseif (internalCase == 2) then
-                        outputDebugString("SERIAL ("..string.format("%.4x", registers.pc):upper()..") ("..mmuReadByte(0xFF01).."): "..utf8.char(mmuReadByte(0xFF01)))
+                        --outputDebugString("SERIAL ("..string.format("%.4x", registers.pc):upper()..") ("..mmuReadByte(0xFF01).."): "..utf8.char(mmuReadByte(0xFF01)))
                         value = 0x00
                     elseif (internalCase == 4) then
                         resetTimerDivider()
@@ -540,7 +605,7 @@ function mmuReadByte(address)
     elseif (address >= 0x1000 and address < 0x4000) then
         return _rom[address + 1] or 0
     elseif (address >= 0x4000 and address < 0x8000) then
-        return _rom[_romOffset + (_bitAnd(address, 0x3FFF) + 1)] or 0
+        return _rom[_romOffset + ((address - 0x4000) + 1)] or 0
     elseif (address >= 0x8000 and address < 0xA000) then
         address = address - 0x8000
         return vram[vramBank][address + 1] or 0

@@ -6,7 +6,7 @@ local tickPeriod = 1/60
 local accumulator = 0.0
 local timeSinceLastFrame = 0.0
 
-function love.load()
+function love.load(args)
     love.window.setMode(1920, 1080)
 
     package.path = "../../?.lua;"..package.path
@@ -24,7 +24,15 @@ function love.load()
     require "src/logic/disassembler"
     require "src/logic/mmu"
 
-    triggerEvent("onClientResourceStart")
+    setupGameBoy()
+    setupDebugger()
+
+    if (gameBoyLoadRom(args[1])) then
+        --gameBoyLoadBios("data/gbc_bios.bin")
+    end
+
+    startGameBoy()
+    enableDebugger()
 
     Log.log = log
 end

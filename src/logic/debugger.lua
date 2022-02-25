@@ -506,7 +506,7 @@ function renderDebugger(delta)
         registersY = registersY + yPadding
         registersY = registersY + yPadding
 
-        for i=0xFF40, 0xFF52 do
+        for i=0xFF00, 0xFF12 do
             dxDrawText("0x".._string_format("%.4x", i):upper()..": "
                 .._string_format("%.2x", mmuReadByte(i)):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -

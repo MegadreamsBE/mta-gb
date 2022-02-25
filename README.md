@@ -16,7 +16,7 @@ Due to poor performance on Multi Theft Auto a WIP/experimental wrapper for LÖVE
 2. Add a ROM (like Tetris) to your LÖVE data folder (appdata in Windows).
 3. Modify **src/gameboy.lua** to point to your ROM.
 4. Navigate to the directory containing this repository and then navigate into **wrappers/love**.
-5. Run: $ **love .**
+5. Run: $ **love . <pathToRom>**
 
 ![Tetris](/images/tetris.png)
 ![The Legend of Zelda Link's Awakening](/images/zelda.png)
@@ -29,8 +29,6 @@ This emulator currently has most of the CPU instructions, a somewhat decent MMU,
 (This is not a full list)
 - Add sound support
 - Improve debugging tools by using a proper dxGUI.
-- Improve interrupt handling
-- Improve timer support
 - Improve GPU timings
 - Add save states
 

@@ -136,7 +136,7 @@ function resetGPU()
         _vram[2][i] = 0
     end
 
-    _screenEnabled = not isBiosLoaded()
+    _screenEnabled = true
     _backgroundPriority = {}
 
     for i=0, 159 do

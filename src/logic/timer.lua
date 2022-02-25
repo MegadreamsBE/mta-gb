@@ -90,24 +90,28 @@ function handleTACGlitch(oldState, newState, oldFrequency, newFrequency)
 end
 
 function timerStep(ticks)
-    _counter = _counter + ticks
-
-    if (_counter > 0xffff) then
-        _counter = _counter - 0xffff
-    end
-
-    if (_counter > 0 and (_counter % 0xff) < ticks) then
+    if (ticks >= (4096 - (_counter % 4096))) then
         timerDividerRegister = (timerDividerRegister + 1) % 0x100
     end
 
     if (timerClockEnabled) then
-        if (_counter > 0 and (_counter % getCounterFromFrequency(timerClockFrequency)) < ticks) then
-            mmuWriteByte(0xFF05, mmuReadByte(0xFF05) + 1)
+        local frequency = getCounterFromFrequency(timerClockFrequency)
 
-            if (mmuReadByte(0xFF05) == 0xff) then
+        if (ticks >= (frequency - (_counter % frequency))) then
+            local tima = mmuReadByte(0xFF05) + 1
+
+            mmuWriteByte(0xFF05, tima)
+
+            if (tima == 0xff) then
                 mmuWriteByte(0xFF05, mmuReadByte(0xFF06))
                 requestInterrupt(2)
             end
         end
+    end
+
+    _counter = _counter + ticks
+
+    if (_counter > 0xffff) then
+        _counter = _counter - 0xffff
     end
 end

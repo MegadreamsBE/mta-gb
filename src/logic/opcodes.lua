@@ -2868,7 +2868,8 @@ opcodes = {
     end,
     -- Opcode: 0x10
     [0x11] = function()
-        haltCPU(true)
+        -- TODO
+        --haltCPU(true)
 
         registers.clock = {
             m = 1,

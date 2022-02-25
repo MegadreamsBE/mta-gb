@@ -16,6 +16,7 @@ local _clock = {
 local _paused = false
 local _pausedUntilInterrupts = false
 local _interrupts = false
+local _freezeProgramCounter = false
 
 local _queuedEnableInterrupts = false
 local _queuedDisableInterrupts = false
@@ -151,8 +152,9 @@ function pauseCPU()
 end
 
 function resumeCPU()
-    _paused = false
-    _pausedUntilInterrupts = false
+    if (not _pausedUntilInterrupts) then
+        _paused = false
+    end
 end
 
 function isCPUPaused()
@@ -281,73 +283,110 @@ function runCPU()
                     _queueChangeActive = true
                 end
 
+                local lastPC = registers.pc
+
                 if (not _paused) then
                     cpuStep()
                 end
 
-                local ticks = _registers.clock.m
+                if (_freezeProgramCounter) then
+                    registers.pc = lastPC
+                    _freezeProgramCounter = false
+                end
+
+                local ticks = _registers.clock.t
+
+                if (_paused) then
+                    ticks = 4
+                end
+
+                timerStep(ticks)
+
+                ticks = _registers.clock.m
 
                 if (_paused) then
                     ticks = 1
                 end
 
-                timerStep(ticks)
                 gpuStep(ticks)
 
-                if ((_interrupts and interrupts and interruptFlags and _interruptDelay <= 0) and not _pausedUntilInterrupts) then
+                if (((_interrupts or _pausedUntilInterrupts) and _bitAnd(interrupts, interruptFlags) ~= 0 and _interruptDelay <= 0)) then
                     local maskedFlags = _bitAnd(interrupts, interruptFlags)
 
                     if (_bitAnd(maskedFlags, 0x01) ~= 0) then
+                        if (_interrupts) then
+                            interruptFlags = _bitAnd(interruptFlags, 0xFE)
+
+                            mmuPushStack(_registers.pc)
+
+                            _registers.pc = 0x40
+
+                            _registers.clock.m = 5
+                            _registers.clock.t = 20
+                        end
+
                         _interrupts = false
-                        interruptFlags = _bitAnd(interruptFlags, 0xFE)
-                        mmuPushStack(_registers.pc)
-
-                        _registers.pc = 0x40
-
-                        _registers.clock.m = 5
-                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x02) ~= 0) then
+                        if (_interrupts) then
+                            interruptFlags = _bitAnd(interruptFlags, 0xFD)
+
+                            mmuPushStack(_registers.pc)
+
+                            _registers.pc = 0x48
+
+                            _registers.clock.m = 5
+                            _registers.clock.t = 20
+                        end
+
                         _interrupts = false
-                        interruptFlags = _bitAnd(interruptFlags, 0xFD)
-                        mmuPushStack(_registers.pc)
-
-                        _registers.pc = 0x48
-
-                        _registers.clock.m = 5
-                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x04) ~= 0) then
+                        if (_interrupts) then
+                            interruptFlags = _bitAnd(interruptFlags, 0xFB)
+
+                            mmuPushStack(_registers.pc)
+
+                            _registers.pc = 0x50
+
+                            _registers.clock.m = 5
+                            _registers.clock.t = 20
+                        end
+
                         _interrupts = false
-                        interruptFlags = _bitAnd(interruptFlags, 0xFB)
-                        mmuPushStack(_registers.pc)
-
-                        _registers.pc = 0x50
-
-                        _registers.clock.m = 5
-                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x08) ~= 0) then
+                        if (_interrupts) then
+                            interruptFlags = _bitAnd(interruptFlags, 0xF7)
+
+                            mmuPushStack(_registers.pc)
+
+                            _registers.pc = 0x58
+
+                            _registers.clock.m = 5
+                            _registers.clock.t = 20
+                        end
+
                         _interrupts = false
-                        interruptFlags = _bitAnd(interruptFlags, 0xF7)
-                        mmuPushStack(_registers.pc)
-
-                        _registers.pc = 0x58
-
-                        _registers.clock.m = 5
-                        _registers.clock.t = 20
                     elseif (_bitAnd(maskedFlags, 0x16) ~= 0) then
+                        if (_interrupts) then
+                            interruptFlags = _bitAnd(interruptFlags, 0xEF)
+
+                            mmuPushStack(_registers.pc)
+
+                            _registers.pc = 0x60
+
+                            _registers.clock.m = 5
+                            _registers.clock.t = 20
+                        end
+
                         _interrupts = false
-                        interruptFlags = _bitAnd(interruptFlags, 0xEF)
-                        mmuPushStack(_registers.pc)
-
-                        _registers.pc = 0x60
-
-                        _registers.clock.m = 5
-                        _registers.clock.t = 20
                     end
 
                     _interruptDelay = 0
-                elseif (interrupts and interruptFlags and _pausedUntilInterrupts) then
-                    _pausedUntilInterrupts = false
-                    _paused = false
+
+                    if (_pausedUntilInterrupts) then
+                        _freezeProgramCounter = not _interrupts
+                        _pausedUntilInterrupts = false
+                        _paused = false
+                    end
                 elseif (_interruptDelay > 0) then
                     _interruptDelay = _interruptDelay - _registers.clock.t
                 end
