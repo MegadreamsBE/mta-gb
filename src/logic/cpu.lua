@@ -16,7 +16,7 @@ local _clock = {
 local _paused = false
 local _pausedUntilInterrupts = false
 local _interrupts = false
-local _freezeProgramCounter = false
+local _triggerHaltBug = false
 
 local _queuedEnableInterrupts = false
 local _queuedDisableInterrupts = false
@@ -161,17 +161,37 @@ function isCPUPaused()
     return _paused
 end
 
-function haltCPU(haltScreen)
-    _paused = true
-    _pausedUntilInterrupts = true
+function haltCPU()
+    if (not _interrupts) then
+        _interruptDelay = 0
+
+        if (interruptFlags ~= 0) then
+            _paused = true
+            _pausedUntilInterrupts = true
+
+            handleInterrupts()
+            
+            _paused = false
+            _pausedUntilInterrupts = false
+            _triggerHaltBug = true
+        else
+            _paused = true
+            _pausedUntilInterrupts = true
+        end
+    else
+        _paused = true
+        _pausedUntilInterrupts = true
+    end
 end
 
 function enableInterrupts()
     _queuedEnableInterrupts = true
+    _queuedDisableInterrupts = false
 end
 
 function disableInterrupts()
     _queuedDisableInterrupts = true
+    _queuedEnableInterrupts = false
 end
 
 function resetInterrupts()
@@ -249,6 +269,88 @@ function hasIncomingInterrupt()
     return (_bitAnd(_bitAnd(interruptFlags, interrupts), 0x1F) ~= 0)
 end
 
+function handleInterrupts()
+    if (((_interrupts or _pausedUntilInterrupts) and _bitAnd(interrupts, interruptFlags) ~= 0 and _interruptDelay <= 0)) then
+        local maskedFlags = _bitAnd(interrupts, interruptFlags)
+
+        if (_bitAnd(maskedFlags, 0x01) ~= 0) then
+            if (_interrupts) then
+                interruptFlags = _bitAnd(interruptFlags, 0xFE)
+
+                mmuPushStack(_registers.pc)
+
+                _registers.pc = 0x40
+
+                _registers.clock.m = 5
+                _registers.clock.t = 20
+            end
+
+            _interrupts = false
+        elseif (_bitAnd(maskedFlags, 0x02) ~= 0) then
+            if (_interrupts) then
+                interruptFlags = _bitAnd(interruptFlags, 0xFD)
+
+                mmuPushStack(_registers.pc)
+
+                _registers.pc = 0x48
+
+                _registers.clock.m = 5
+                _registers.clock.t = 20
+            end
+
+            _interrupts = false
+        elseif (_bitAnd(maskedFlags, 0x04) ~= 0) then
+            if (_interrupts) then
+                interruptFlags = _bitAnd(interruptFlags, 0xFB)
+
+                mmuPushStack(_registers.pc)
+
+                _registers.pc = 0x50
+
+                _registers.clock.m = 5
+                _registers.clock.t = 20
+            end
+
+            _interrupts = false
+        elseif (_bitAnd(maskedFlags, 0x08) ~= 0) then
+            if (_interrupts) then
+                interruptFlags = _bitAnd(interruptFlags, 0xF7)
+
+                mmuPushStack(_registers.pc)
+
+                _registers.pc = 0x58
+
+                _registers.clock.m = 5
+                _registers.clock.t = 20
+            end
+
+            _interrupts = false
+        elseif (_bitAnd(maskedFlags, 0x16) ~= 0) then
+            if (_interrupts) then
+                interruptFlags = _bitAnd(interruptFlags, 0xEF)
+
+                mmuPushStack(_registers.pc)
+
+                _registers.pc = 0x60
+
+                _registers.clock.m = 5
+                _registers.clock.t = 20
+            end
+
+            _interrupts = false
+        end
+
+        _interruptDelay = 0
+
+        if (_pausedUntilInterrupts) then
+            _pausedUntilInterrupts = false
+            _paused = false
+        end
+    elseif (_interruptDelay > 0) then
+        _interruptDelay = _interruptDelay - _registers.clock.t
+    end
+end
+
 function runCPU()
     if (_stepCallback) then
         removeEventHandler("onClientPreRender", root, _stepCallback)
@@ -256,10 +358,9 @@ function runCPU()
     end
 
     _stepCallback = function(delta)
-        if (not _paused) then
+        if (not _paused or _pausedUntilInterrupts) then
             local currentCycles = 0
 
-            --while(currentCycles < 1000) do
             while(currentCycles < 69905) do
                 if (_paused and not _pausedUntilInterrupts) then
                     break
@@ -283,15 +384,19 @@ function runCPU()
                     _queueChangeActive = true
                 end
 
-                local lastPC = registers.pc
+                local haltBug = false
+
+                if (_triggerHaltBug and not _paused) then
+                    _triggerHaltBug = false
+                    haltBug = true
+                end
 
                 if (not _paused) then
                     cpuStep()
                 end
 
-                if (_freezeProgramCounter) then
-                    registers.pc = lastPC
-                    _freezeProgramCounter = false
+                if (haltBug) then
+                    _registers.pc = _registers.pc - 1
                 end
 
                 local ticks = _registers.clock.t
@@ -310,86 +415,7 @@ function runCPU()
 
                 gpuStep(ticks)
 
-                if (((_interrupts or _pausedUntilInterrupts) and _bitAnd(interrupts, interruptFlags) ~= 0 and _interruptDelay <= 0)) then
-                    local maskedFlags = _bitAnd(interrupts, interruptFlags)
-
-                    if (_bitAnd(maskedFlags, 0x01) ~= 0) then
-                        if (_interrupts) then
-                            interruptFlags = _bitAnd(interruptFlags, 0xFE)
-
-                            mmuPushStack(_registers.pc)
-
-                            _registers.pc = 0x40
-
-                            _registers.clock.m = 5
-                            _registers.clock.t = 20
-                        end
-
-                        _interrupts = false
-                    elseif (_bitAnd(maskedFlags, 0x02) ~= 0) then
-                        if (_interrupts) then
-                            interruptFlags = _bitAnd(interruptFlags, 0xFD)
-
-                            mmuPushStack(_registers.pc)
-
-                            _registers.pc = 0x48
-
-                            _registers.clock.m = 5
-                            _registers.clock.t = 20
-                        end
-
-                        _interrupts = false
-                    elseif (_bitAnd(maskedFlags, 0x04) ~= 0) then
-                        if (_interrupts) then
-                            interruptFlags = _bitAnd(interruptFlags, 0xFB)
-
-                            mmuPushStack(_registers.pc)
-
-                            _registers.pc = 0x50
-
-                            _registers.clock.m = 5
-                            _registers.clock.t = 20
-                        end
-
-                        _interrupts = false
-                    elseif (_bitAnd(maskedFlags, 0x08) ~= 0) then
-                        if (_interrupts) then
-                            interruptFlags = _bitAnd(interruptFlags, 0xF7)
-
-                            mmuPushStack(_registers.pc)
-
-                            _registers.pc = 0x58
-
-                            _registers.clock.m = 5
-                            _registers.clock.t = 20
-                        end
-
-                        _interrupts = false
-                    elseif (_bitAnd(maskedFlags, 0x16) ~= 0) then
-                        if (_interrupts) then
-                            interruptFlags = _bitAnd(interruptFlags, 0xEF)
-
-                            mmuPushStack(_registers.pc)
-
-                            _registers.pc = 0x60
-
-                            _registers.clock.m = 5
-                            _registers.clock.t = 20
-                        end
-
-                        _interrupts = false
-                    end
-
-                    _interruptDelay = 0
-
-                    if (_pausedUntilInterrupts) then
-                        _freezeProgramCounter = not _interrupts
-                        _pausedUntilInterrupts = false
-                        _paused = false
-                    end
-                elseif (_interruptDelay > 0) then
-                    _interruptDelay = _interruptDelay - _registers.clock.t
-                end
+                handleInterrupts()
 
                 currentCycles = currentCycles + _registers.clock.t
             end
