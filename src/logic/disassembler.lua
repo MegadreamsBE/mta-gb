@@ -127,11 +127,11 @@ function disassemble()
     
                 if (byteCount == 1) then
                     instruction = instruction:gsub("n",
-                        _string_format("%.2x", mmuReadByte(address + 1)):upper())
+                        _string_format("%.2x", mmuReadByte(address + 1) or 0):upper())
                     address = address + 1
                 elseif (byteCount == 2) then
                     instruction = instruction:gsub("nn",
-                        _string_format("%.4x", mmuReadUInt16(address + 1)):upper())
+                        _string_format("%.4x", mmuReadUInt16(address + 1) or 0):upper())
     
                     address = address + 2
                 end

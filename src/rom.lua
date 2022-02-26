@@ -23,7 +23,7 @@ function loadRom(path, isBios)
 
         if (fileData) then
             for i=1, #fileData do
-                data[#data + 1] = utf8.byte(fileData:sub(i, i))
+                data[#data + 1] = string.byte(fileData:sub(i, i))
             end
         end
     end

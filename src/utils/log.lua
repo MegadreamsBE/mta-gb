@@ -16,6 +16,10 @@ end
 function Log.log(tag, message, level, r, g ,b, ...)
     local matches = pregMatch(message, "%([sdb])")
 
+    for k, v in pairs(arg) do
+        print(tostring(k).. ": "..tostring(v))
+    end
+
     if (#matches ~= #arg) then
         error("Invalid parameter count in log message."..
             " Expected "..#matches.." but got "..#arg..".", 3)

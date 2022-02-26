@@ -9,7 +9,7 @@ local _bitOr = bitOr
 -- * Constants
 -----------------------------------
 
-local ROM_PATH = "data/Tetris.gb"
+local ROM_PATH = "data/PokemonCrystal.gbc"
 
 -----------------------------------
 -- * Locals
@@ -18,6 +18,7 @@ local ROM_PATH = "data/Tetris.gb"
 local _keypad = {}
 local _onClientKeyHandler = false
 local _debuggerEnabled = false
+local _isGameBoyColor = false
 
 local _rom = nil
 bios = nil
@@ -45,6 +46,17 @@ function gameBoyLoadRom(romPath)
     if (not _rom) then
         Log.error("GameBoy", "Unable to load ROM.")
     end
+
+    local cgbValue = _rom[0x0143 + 1]
+
+    if (cgbValue == 0x80 or cgbValue == 0xC0) then
+        setGameBoyColorMode(true)
+        return 1
+    end
+    
+    setGameBoyColorMode(false)
+
+    return 0
 end
 
 function gameBoyLoadBios(biosPath)
@@ -169,6 +181,14 @@ function onKeyUp(key)
     end
 end
 
+function setGameBoyColorMode(toggle)
+    _isGameBoyColor = toggle
+end
+
+function isGameBoyColor()
+    return _isGameBoyColor
+end
+
 -----------------------------------
 -- * Events
 -----------------------------------
@@ -177,11 +197,10 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     setupGameBoy()
     setupDebugger()
 
-    breakpoint(0x0373)
-
-    --gameBoyLoadBios("data/bios.gb")
-    gameBoyLoadRom(ROM_PATH)
+    if (gameBoyLoadRom(ROM_PATH)) then
+        --gameBoyLoadBios("data/gbc_bios.bin")
+    end
 
     startGameBoy()
-    enableDebugger()
+    --enableDebugger()
 end)
