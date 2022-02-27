@@ -10,6 +10,8 @@ scanLine = 0
 
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 
+local _math_floor = math.floor
+
 local _bitExtract = bitExtract
 local _bitReplace = bitReplace
 local _bitLShift = bitLShift
@@ -52,6 +54,8 @@ function setupGPU()
     }
 
     _vram = vram
+    mmuLinkVideoRam(vram)
+
     vramBank = 1
 
     oam = createFilledTable(0xFFFF)
@@ -112,6 +116,8 @@ function resetGPU()
     }
 
     _vram = vram
+    mmuLinkVideoRam(vram)
+
     vramBank = 1
 
     oam = createFilledTable(0xFFFF)
@@ -225,130 +231,123 @@ function renderTiles()
         yPos = yPos - 0xff
     end
 
-    local row = math.floor(yPos / 8) * 32
+    local row = _math_floor(yPos / 8) * 32
+
+    local cgbAttributes = 0
+    local cgbPalette = 0
+    local cgbBank = false
+    local cgbPriority = false
+    local cgbFlipX = false
+    local cgbFlipY = false
 
     for i=0, 159 do
-        if (scanLine >= 0 and scanLine <= 143 and i >= 0 and i <= 159) then
-            local xPos = i + scrollX
+        local xPos = i + scrollX
 
-            if (usingWindow) then
-                if (i >= windowX) then
-                    xPos = i - windowX
-                end
+        if (usingWindow) then
+            if (i >= windowX) then
+                xPos = i - windowX
+            end
+        end
+
+        if (xPos < 0) then
+            xPos = xPos + 0xff
+        elseif (xPos > 0xff) then
+            xPos = xPos - 0xff
+        end
+
+        local column = _math_floor(xPos / 8)
+        local tileNum = 0
+
+        local tileAddress = backgroundMemory + row + column
+
+        if (isCGB) then
+            cgbAttributes = _vram[2][(tileAddress - 0x8000) + 1]
+            cgbPalette = _bitAnd(cgbAttributes, 0x07)
+            cgbBank = _bitAnd(cgbAttributes, 0x08) > 1
+            cgbPriority = _bitAnd(cgbAttributes, 0x80) > 1
+            cgbFlipX = _bitAnd(cgbAttributes, 0x20) > 1
+            cgbFlipY = _bitAnd(cgbAttributes, 0x40) > 1
+        end
+
+        tileNum = _vram[1][(tileAddress - 0x8000) + 1]
+
+        if (not unsigned) then
+            if (tileNum >= 0x80) then
+                tileNum = -((0xFF - tileNum) + 1)
+            end
+        end
+
+        local tileLocation = tileData
+
+        if (unsigned) then
+            tileLocation = tileLocation + tileNum * 16
+        else
+            tileLocation = tileLocation + (tileNum + 128) * 16
+        end
+
+        local line = (yPos % 8) * 2
+
+        if (cgbFlipY) then
+            line = line - 8
+            line = line * -1
+        end
+
+        local byte1 = 0
+        local byte2 = 0
+
+        if (isCGB and cgbBank) then
+            byte1 = _vram[2][(tileLocation - 0x8000) + 1 + line]
+            byte2 = _vram[2][(tileLocation - 0x8000) + 2 + line]
+        else
+            byte1 = _vram[1][(tileLocation - 0x8000) + 1 + line]
+            byte2 = _vram[1][(tileLocation - 0x8000) + 2 + line]
+        end
+
+        local colorBit = ((xPos % 8) - 7) * -1
+
+        if (cgbFlipX) then
+            colorBit = colorBit - 8
+            colorBit = colorBit * -1
+        end
+
+        local colorNum = _bitOr(_bitExtract(byte2, colorBit, 1) * 2, _bitExtract(byte1, colorBit, 1))
+        local bgPriority = _backgroundPriority[i + 1][scanLine + 1]
+
+        bgPriority[1] = cgbPriority
+        bgPriority[2] = colorNum
+
+        if (isCGB) then
+            local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
+
+            if (isDebuggerEnabled()) then
+                debugBackground[(cgbBank) and 2 or vramBank][tileLocation] = cgbPalette
             end
 
-            if (xPos < 0) then
-                xPos = xPos + 0xff
-            elseif (xPos > 0xff) then
-                xPos = xPos - 0xff
+            dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
+        else
+            local palette = mmuReadByte(0xFF47)
+
+            local hi = 0
+            local lo = 0
+
+            if (colorNum == 0) then
+                hi = 1
+                lo = 0
+            elseif (colorNum == 1) then
+                hi = 3
+                lo = 2
+            elseif (colorNum == 2) then
+                hi = 5
+                lo = 4
+            elseif (colorNum == 3) then
+                hi = 7
+                lo = 6
             end
 
-            local column = math.floor(xPos / 8)
-            local tileNum = 0
+            local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
+            color = _bitOr(color, _bitExtract(palette, lo, 1))
 
-            local tileAddress = backgroundMemory + row + column
-
-            local cgbAttributes = 0
-            local cgbPalette = 0
-            local cgbBank = false
-            local cgbPriority = false
-            local cgbFlipX = false
-            local cgbFlipY = false
-
-            if (isCGB) then
-                vramBank = 2
-                cgbAttributes = mmuReadByte(tileAddress)
-                cgbPalette = _bitAnd(cgbAttributes, 0x07)
-                cgbBank = (_bitExtract(cgbAttributes, 3, 1) == 1)
-                cgbPriority = (_bitExtract(cgbAttributes, 7, 1) == 1)
-                cgbFlipX = (_bitExtract(cgbAttributes, 5, 1) == 1)
-                cgbFlipY = (_bitExtract(cgbAttributes, 6, 1) == 1)
-                vramBank = bank
-            end
-
-            vramBank = 1
-            if (unsigned) then
-                tileNum = mmuReadByte(tileAddress)
-            else
-                tileNum = mmuReadSignedByte(tileAddress)
-            end
-            vramBank = bank
-
-            local tileLocation = tileData
-
-            if (unsigned) then
-                tileLocation = tileLocation + tileNum * 16
-            else
-                tileLocation = tileLocation + (tileNum + 128) * 16
-            end
-
-            local line = (yPos % 8) * 2
-
-            if (cgbFlipY) then
-                line = line - 8
-                line = line * -1
-            end
-
-            local byte1 = 0
-            local byte2 = 0
-
-            if (isCGB and cgbBank) then
-                vramBank = 2
-                byte1 = mmuReadByte(tileLocation + line)
-                byte2 = mmuReadByte(tileLocation + line + 1)
-                vramBank = bank
-            else
-                vramBank = 1
-                byte1 = mmuReadByte(tileLocation + line)
-                byte2 = mmuReadByte(tileLocation + line + 1)
-                vramBank = bank
-            end
-
-            local colorBit = ((xPos % 8) - 7) * -1
-
-            if (cgbFlipX) then
-                colorBit = colorBit - 8
-                colorBit = colorBit * -1
-            end
-
-            local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
-            colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
-
-            _backgroundPriority[i + 1][scanLine + 1] = {cgbPriority, colorNum}
-
-            if (isCGB) then
-                local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
-
-                if (isDebuggerEnabled()) then
-                    debugBackground[(cgbBank) and 2 or vramBank][tileLocation] = cgbPalette
-                end
-
-                dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
-            else
-                local palette = mmuReadByte(0xFF47)
-
-                local hi = 0
-                local lo = 0
-
-                if (colorNum == 0) then
-                    hi = 1
-                    lo = 0
-                elseif (colorNum == 1) then
-                    hi = 3
-                    lo = 2
-                elseif (colorNum == 2) then
-                    hi = 5
-                    lo = 4
-                elseif (colorNum == 3) then
-                    hi = 7
-                    lo = 6
-                end
-
-                local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
-                color = _bitOr(color, _bitExtract(palette, lo, 1))
-
-                dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
-            end
+            dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
         end
     end
 end
@@ -387,15 +386,13 @@ function renderSprites()
             local cgbBank = false
 
             if (isCGB) then
-                vramBank = 2
                 cgbPalette = _bitAnd(attributes, 0x07)
-                cgbBank = (_bitExtract(attributes, 3, 1) == 1)
-                yFlip = (_bitExtract(attributes, 6, 1) == 1)
-                xFlip = (_bitExtract(attributes, 5, 1) == 1)
-                vramBank = bank
+                cgbBank = _bitAnd(attributes, 0x08) > 1
+                xFlip = _bitAnd(attributes, 0x20) > 1
+                yFlip = _bitAnd(attributes, 0x40) > 1
             else
-                yFlip = (_bitExtract(attributes, 6, 1) == 1)
-                xFlip = (_bitExtract(attributes, 5, 1) == 1)
+                xFlip = _bitAnd(attributes, 0x20) > 1
+                yFlip = _bitAnd(attributes, 0x40) > 1
             end
 
             if (yFlip) then
@@ -419,7 +416,7 @@ function renderSprites()
                 vramBank = bank
             end
 
-            for tilePixel=7,0,-1 do
+            for tilePixel=7, 0, -1 do
                 local xPixel = (-tilePixel) + 7
                 local pixel = xPos + xPixel
 
@@ -431,7 +428,7 @@ function renderSprites()
                         colorBit = colorBit * -1
                     end
 
-                    local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
+                    local colorNum = bitExtract(byte2, colorBit, 1) * 2
                     colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
 
                     if (isCGB) then
@@ -556,7 +553,9 @@ function setColorPalette(isSprites, value)
     local greenBit = _bitExtract(paletteColor, 5, 5) * 8
     local blueBit = _bitExtract(paletteColor, 10, 5) * 8
 
-    paletteColorFinal = {redBit, greenBit, blueBit}
+    paletteColorFinal[1] = redBit
+    paletteColorFinal[2] = greenBit
+    paletteColorFinal[3] = blueBit
 
     if (isSprites) then
         _spritePalettes[palette + 1][index + 1][1] = paletteColor
