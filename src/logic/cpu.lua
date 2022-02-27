@@ -202,33 +202,6 @@ function setInterrupts()
     _interrupts = true
 end
 
-function cpuStep()
-    if (isDebuggerEnabled() and not debuggerStep()) then
-        return
-    end
-
-    local nextOpcode = mmuReadByte(_registers.pc)
-
-    _registers.lastPC = _registers.pc
-
-    _registers.clock.m = 0
-    _registers.clock.t = 0
-    _registers.pc = _registers.pc + 1
-
-    local opcode = _opcodes[nextOpcode + 1]
-
-    if (opcode == nil) then
-        pauseCPU()
-        _registers.pc = _registers.pc - 1
-        return Log.error("CPU", "Unknown opcode 0x%s at 0x%s", string.format("%.2x", nextOpcode), string.format("%.2x", _registers.pc))
-    end
-
-    opcode()
-
-    _clock.m = _clock.m + _registers.clock.m
-    _clock.t = _clock.t + _registers.clock.t
-end
-
 function readTwoRegisters(r1, r2)
     local value = _registers[r1]
     value = value * 256
@@ -392,7 +365,28 @@ function runCPU()
                 end
 
                 if (not _paused) then
-                    cpuStep()
+                    if ((not isDebuggerEnabled() or debuggerStep())) then
+                        local nextOpcode = mmuReadByte(_registers.pc)
+                    
+                        _registers.lastPC = _registers.pc
+                    
+                        _registers.clock.m = 0
+                        _registers.clock.t = 0
+                        _registers.pc = _registers.pc + 1
+                    
+                        local opcode = _opcodes[nextOpcode + 1]
+                    
+                        if (opcode == nil) then
+                            pauseCPU()
+                            _registers.pc = _registers.pc - 1
+                            return Log.error("CPU", "Unknown opcode 0x%s at 0x%s", string.format("%.2x", nextOpcode), string.format("%.2x", _registers.pc))
+                        end
+                    
+                        opcode()
+                    
+                        _clock.m = _clock.m + _registers.clock.m
+                        _clock.t = _clock.t + _registers.clock.t
+                    end
                 end
 
                 if (haltBug) then

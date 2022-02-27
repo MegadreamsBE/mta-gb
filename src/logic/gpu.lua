@@ -219,12 +219,11 @@ function renderTiles()
 
     for i=0, 159 do
         if (scanLine >= 0 and scanLine <= 143 and i >= 0 and i <= 159) then
-            local pixel = i
-            local xPos = pixel + scrollX
+            local xPos = i + scrollX
 
             if (usingWindow) then
-                if (pixel >= windowX) then
-                    xPos = pixel - windowX
+                if (i >= windowX) then
+                    xPos = i - windowX
                 end
             end
 
@@ -305,7 +304,7 @@ function renderTiles()
             local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
             colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
 
-            _backgroundPriority[pixel + 1][scanLine + 1] = {cgbPriority, colorNum}
+            _backgroundPriority[i + 1][scanLine + 1] = {cgbPriority, colorNum}
 
             if (isCGB) then
                 local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
@@ -314,7 +313,7 @@ function renderTiles()
                     debugBackground[(cgbBank) and 2 or vramBank][tileLocation] = cgbPalette
                 end
 
-                dxSetPixelColor(_screenPixels, pixel, scanLine, color[1], color[2], color[3], 255)
+                dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
             else
                 local palette = mmuReadByte(0xFF47)
 
@@ -338,7 +337,7 @@ function renderTiles()
                 local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
                 color = _bitOr(color, _bitExtract(palette, lo, 1))
 
-                dxSetPixelColor(_screenPixels, pixel, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
+                dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
             end
         end
     end

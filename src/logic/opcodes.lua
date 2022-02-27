@@ -378,7 +378,7 @@ local ldn_nn = function(reg1, reg2, value16)
     writeTwoRegisters(reg1, reg2, value16)
 end
 
-cbOpcodes = {
+local cbOpcodes = {
     -- Opcode: 0x00
     [0x01] = function()
         registers.b = helper_rlc(registers.b, 8)

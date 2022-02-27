@@ -429,7 +429,7 @@ function mmuWriteByte(address, value, onlyWrite)
                     if (internalCase == 0) then
                         writeKeypad(value)
                     elseif (internalCase == 2) then
-                        --outputDebugString("SERIAL ("..string.format("%.4x", registers.pc):upper()..") ("..mmuReadByte(0xFF01).."): "..utf8.char(mmuReadByte(0xFF01)))
+                        --print(utf8.char(mmuReadByte(0xFF01)))
                         value = 0x00
                     elseif (internalCase == 4) then
                         resetTimerDivider()
