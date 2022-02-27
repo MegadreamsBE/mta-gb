@@ -12,6 +12,7 @@ function love.load(args)
     package.path = "../../?.lua;"..package.path
 
     require "src/utils/log"
+    require "src/utils/utils"
 
     require "src/gameboy"
     require "src/rom"

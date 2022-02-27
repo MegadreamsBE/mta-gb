@@ -31,16 +31,16 @@ local _oam = oam
 
 local _mode = 0
 local _modeClock = 0
-local _tileSet = {}
+local _tileSet = createFilledTable(512)
 local _screen = false
 local _screenPixels = false
 local _screenEnabled = true
 
-local _backgroundPalettes = {}
-local _spritePalettes = {}
-local _backgroundPriority = {}
+local _backgroundPalettes = createFilledTable(8)
+local _spritePalettes = createFilledTable(8)
+local _backgroundPriority = createFilledTable(160)
 
-debugBackground = {{}, {}}
+debugBackground = {createFilledTable(0xFFFF), createFilledTable(0xFFFF)}
 
 -----------------------------------
 -- * Functions
@@ -48,13 +48,13 @@ debugBackground = {{}, {}}
 
 function setupGPU()
     vram = {
-        {}, {}
+        createFilledTable(0xFFFF), createFilledTable(0xFFFF)
     }
 
     _vram = vram
     vramBank = 1
 
-    oam = {}
+    oam = createFilledTable(0xFFFF)
     _oam = oam
 
     for i=1, 0x3000 do
@@ -67,15 +67,15 @@ function setupGPU()
 
     scanLine = 0
 
-    _tileSet = {}
+    _tileSet = createFilledTable(0xFFFF)
     _screen = dxCreateTexture(160, 144)
     _screenPixels = dxGetTexturePixels(_screen)
 
     _screenEnabled = true
-    _backgroundPriority = {}
+    _backgroundPriority = createFilledTable(160)
 
     for i=0, 159 do
-        _backgroundPriority[i + 1] = {}
+        _backgroundPriority[i + 1] = createFilledTable(144)
 
         for a=0, 143 do
             dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
@@ -84,8 +84,8 @@ function setupGPU()
     end
 
     for i=1, 8 do
-        _backgroundPalettes[i] = {}
-        _spritePalettes[i] = {}
+        _backgroundPalettes[i] = createFilledTable(4)
+        _spritePalettes[i] = createFilledTable(4)
 
         for j=1, 4 do
             _backgroundPalettes[i][j] = {
@@ -107,44 +107,54 @@ function setupGPU()
 end
 
 function resetGPU()
-    _tileset = {}
-
-    for i=1, 512 do
-        _tileset[i] = {}
-
-        for a=1, 8 do
-            _tileset[i][a] = {0, 0, 0, 0, 0, 0, 0, 0}
-        end
-    end
-
-    _mode = 1
-    _modeClock = 0
-    scanLine = 0
-
     vram = {
-        {}, {}
+        createFilledTable(0xFFFF), createFilledTable(0xFFFF)
     }
 
     _vram = vram
     vramBank = 1
 
-    oam = {}
+    oam = createFilledTable(0xFFFF)
     _oam = oam
 
-    for i=1, 0xF000 do
+    for i=1, 0x3000 do
         _vram[1][i] = 0
         _vram[2][i] = 0
     end
 
+    _mode = 0
+    _modeClock = 0
+
+    scanLine = 0
+
+    _tileSet = createFilledTable(0xFFFF)
+    _screen = dxCreateTexture(160, 144)
+    _screenPixels = dxGetTexturePixels(_screen)
+
     _screenEnabled = true
-    _backgroundPriority = {}
+    _backgroundPriority = createFilledTable(160)
 
     for i=0, 159 do
-        _backgroundPriority[i + 1] = {}
+        _backgroundPriority[i + 1] = createFilledTable(144)
 
         for a=0, 143 do
             dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
-            _backgroundPriority[i + 1][a + 1] = false
+            _backgroundPriority[i + 1][a + 1] = {false, 0}
+        end
+    end
+
+    for i=1, 8 do
+        _backgroundPalettes[i] = createFilledTable(4)
+        _spritePalettes[i] = createFilledTable(4)
+
+        for j=1, 4 do
+            _backgroundPalettes[i][j] = {
+                0x0, {255, 255, 255}
+            }
+
+            _spritePalettes[i][j] = {
+                0x0, {255, 255, 255}
+            }
         end
     end
 
@@ -309,7 +319,7 @@ function renderTiles()
             if (isCGB) then
                 local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
 
-                if (isDebuggerEnabled() and isCGB) then
+                if (isDebuggerEnabled()) then
                     debugBackground[(cgbBank) and 2 or vramBank][tileLocation] = cgbPalette
                 end
 

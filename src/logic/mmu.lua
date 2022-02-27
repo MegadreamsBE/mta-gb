@@ -90,7 +90,7 @@ end
 
 function resetMMU()
     _mbc = {
-        {},
+        createFilledTable(0xFFFF),
         {
             rombank = 0,
             rambank = 0,
@@ -100,7 +100,14 @@ function resetMMU()
     }
 
     _wram = {
-        {}, {}, {}, {}, {}, {}, {}, {}
+        createFilledTable(0xFFFF), 
+        createFilledTable(0xFFFF), 
+        createFilledTable(0xFFFF), 
+        createFilledTable(0xFFFF), 
+        createFilledTable(0xFFFF), 
+        createFilledTable(0xFFFF), 
+        createFilledTable(0xFFFF), 
+        createFilledTable(0xFFFF)
     }
 
     _wramBank = 1
@@ -153,8 +160,7 @@ end
 function mmuLoadRom(rom)
     _rom = rom
     _cartridgeType = _rom[0x0147 + 1]
-    print(_cartridgeType)
-
+    
     local romSize = _rom[0x0148 + 1]
 
     if (romSize == 0x01) then

@@ -15,6 +15,7 @@
     #########   Utils   ########
     -->
     <script src="src/utils/log.lua" type="client" />
+    <script src="src/utils/utils.lua" type="client" />
 
     <!--
     #########   Core   ########

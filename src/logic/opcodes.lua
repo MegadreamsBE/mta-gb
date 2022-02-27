@@ -380,2675 +380,2093 @@ end
 
 local cbOpcodes = {
     -- Opcode: 0x00
-    [0x01] = function()
+    function()
         registers.b = helper_rlc(registers.b, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x01
-    [0x02] = function()
+    function()
         registers.c = helper_rlc(registers.c, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x02
-    [0x03] = function()
+    function()
         registers.d = helper_rlc(registers.d, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x03
-    [0x04] = function()
+    function()
         registers.e = helper_rlc(registers.e, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x04
-    [0x05] = function()
+    function()
         registers.h = helper_rlc(registers.h, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x05
-    [0x06] = function()
+    function()
         registers.l = helper_rlc(registers.l, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x06
-    [0x07] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_rlc(mmuReadByte(address), 8))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x07
-    [0x08] = function()
+    function()
         registers.a = helper_rlc(registers.a, 8)
     
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x08
-    [0x09] = function()
+    function()
         registers.b = helper_rrc(registers.b, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x09
-    [0x0a] = function()
+    function()
         registers.c = helper_rrc(registers.c, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0a
-    [0x0b] = function()
+    function()
         registers.d = helper_rrc(registers.d, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0b
-    [0x0c] = function()
+    function()
         registers.e = helper_rrc(registers.e, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0c
-    [0x0d] = function()
+    function()
         registers.h = helper_rrc(registers.h, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0d
-    [0x0e] = function()
+    function()
         registers.l = helper_rrc(registers.l, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0e
-    [0x0f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_rrc(mmuReadByte(address), 8))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x0f
-    [0x10] = function()
+    function()
         registers.a = helper_rrc(registers.a, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x10
-    [0x11] = function()
+    function()
         registers.b = helper_rl(registers.b, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x11
-    [0x12] = function()
+    function()
         registers.c = helper_rl(registers.c, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x12
-    [0x13] = function()
+    function()
         registers.d = helper_rl(registers.d, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x13
-    [0x14] = function()
+    function()
         registers.e = helper_rl(registers.e, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x14
-    [0x15] = function()
+    function()
         registers.h = helper_rl(registers.h, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x15
-    [0x16] = function()
+    function()
         registers.l = helper_rl(registers.l, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x16
-    [0x17] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_rl(mmuReadByte(address), 8))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x17
-    [0x18] = function()
+    function()
         registers.a = helper_rl(registers.a, 8)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x18
-    [0x19] = function()
+    function()
         registers.b = helper_rr(registers.b, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x19
-    [0x1a] = function()
+    function()
         registers.c = helper_rr(registers.c, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1a
-    [0x1b] = function()
+    function()
         registers.d = helper_rr(registers.d, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1b
-    [0x1c] = function()
+    function()
         registers.e = helper_rr(registers.e, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1c
-    [0x1d] = function()
+    function()
         registers.h = helper_rr(registers.h, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1d
-    [0x1e] = function()
+    function()
         registers.l = helper_rr(registers.l, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1e
-    [0x1f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_rr(mmuReadByte(address), 8))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x1f
-    [0x20] = function()
+    function()
         registers.a = helper_rr(registers.a, 8)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x20
-    [0x21] = function()
+    function()
         registers.b = helper_sla(registers.b, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x21
-    [0x22] = function()
+    function()
         registers.c = helper_sla(registers.c, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x22
-    [0x23] = function()
+    function()
         registers.d = helper_sla(registers.d, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x23
-    [0x24] = function()
+    function()
         registers.e = helper_sla(registers.e, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x24
-    [0x25] = function()
+    function()
         registers.h = helper_sla(registers.h, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x25
-    [0x26] = function()
+    function()
         registers.l = helper_sla(registers.l, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x26
-    [0x27] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_sla(mmuReadByte(address), 8))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x27
-    [0x28] = function()
+    function()
         registers.a = helper_sla(registers.a, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x28
-    [0x29] = function()
+    function()
         registers.b = helper_sra(registers.b, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x29
-    [0x2a] = function()
+    function()
         registers.c = helper_sra(registers.c, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2a
-    [0x2b] = function()
+    function()
         registers.d = helper_sra(registers.d, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2b
-    [0x2c] = function()
+    function()
         registers.e = helper_sra(registers.e, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2c
-    [0x2d] = function()
+    function()
         registers.h = helper_sra(registers.h, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2d
-    [0x2e] = function()
+    function()
         registers.l = helper_sra(registers.l, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2e
-    [0x2f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_sra(mmuReadByte(address), 8))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x2f
-    [0x30] = function()
+    function()
         registers.a = helper_sra(registers.a, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x30
-    [0x31] = function()
+    function()
         registers.b = helper_swap(registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x31
-    [0x32] = function()
+    function()
         registers.c = helper_swap(registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x32
-    [0x33] = function()
+    function()
         registers.d = helper_swap(registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x33
-    [0x34] = function()
+    function()
         registers.e = helper_swap(registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x34
-    [0x35] = function()
+    function()
         registers.h = helper_swap(registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x35
-    [0x36] = function()
+    function()
         registers.l = helper_swap(registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x36
-    [0x37] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_swap(mmuReadByte(address), 8))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x37
-    [0x38] = function()
+    function()
         registers.a = helper_swap(registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x38
-    [0x39] = function()
+    function()
         registers.b = helper_srl(registers.b, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x39
-    [0x3a] = function()
+    function()
         registers.c = helper_srl(registers.c, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3a
-    [0x3b] = function()
+    function()
         registers.d = helper_srl(registers.d, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3b
-    [0x3c] = function()
+    function()
         registers.e = helper_srl(registers.e, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3c
-    [0x3d] = function()
+    function()
         registers.h = helper_srl(registers.h, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3d
-    [0x3e] = function()
+    function()
         registers.l = helper_srl(registers.l, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3e
-    [0x3f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_srl(mmuReadByte(address), 8))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x3f
-    [0x40] = function()
+    function()
         registers.a = helper_srl(registers.a, 8)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x40
-    [0x41] = function()
+    function()
         helper_test(0, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x41
-    [0x42] = function()
+    function()
         helper_test(0, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x42
-    [0x43] = function()
+    function()
         helper_test(0, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x43
-    [0x44] = function()
+    function()
         helper_test(0, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x44
-    [0x45] = function()
+    function()
         helper_test(0, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x45
-    [0x46] = function()
+    function()
         helper_test(0, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x46
-    [0x47] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(0, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x47
-    [0x48] = function()
+    function()
         helper_test(0, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x48
-    [0x49] = function()
+    function()
         helper_test(1, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x49
-    [0x4a] = function()
+    function()
         helper_test(1, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x4a
-    [0x4b] = function()
+    function()
         helper_test(1, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x4b
-    [0x4c] = function()
+    function()
         helper_test(1, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x4c
-    [0x4d] = function()
+    function()
         helper_test(1, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x4d
-    [0x4e] = function()
+    function()
         helper_test(1, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x4e
-    [0x4f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(1, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x4f
-    [0x50] = function()
+    function()
         helper_test(1, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x50
-    [0x51] = function()
+    function()
         helper_test(2, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x51
-    [0x52] = function()
+    function()
         helper_test(2, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x52
-    [0x53] = function()
+    function()
         helper_test(2, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x53
-    [0x54] = function()
+    function()
         helper_test(2, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x54
-    [0x55] = function()
+    function()
         helper_test(2, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x55
-    [0x56] = function()
+    function()
         helper_test(2, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x56
-    [0x57] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(2, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x57
-    [0x58] = function()
+    function()
         helper_test(2, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x58
-    [0x59] = function()
+    function()
         helper_test(3, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x59
-    [0x5a] = function()
+    function()
         helper_test(3, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x5a
-    [0x5b] = function()
+    function()
         helper_test(3, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x5b
-    [0x5c] = function()
+    function()
         helper_test(3, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x5c
-    [0x5d] = function()
+    function()
         helper_test(3, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x5d
-    [0x5e] = function()
+    function()
         helper_test(3, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x5e
-    [0x5f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(3, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x5f
-    [0x60] = function()
+    function()
         helper_test(3, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x60
-    [0x61] = function()
+    function()
         helper_test(4, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x61
-    [0x62] = function()
+    function()
         helper_test(4, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x62
-    [0x63] = function()
+    function()
         helper_test(4, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x63
-    [0x64] = function()
+    function()
         helper_test(4, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x64
-    [0x65] = function()
+    function()
         helper_test(4, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x65
-    [0x66] = function()
+    function()
         helper_test(4, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x66
-    [0x67] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(4, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x67
-    [0x68] = function()
+    function()
         helper_test(4, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x68
-    [0x69] = function()
+    function()
         helper_test(5, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x69
-    [0x6a] = function()
+    function()
         helper_test(5, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x6a
-    [0x6b] = function()
+    function()
         helper_test(5, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x6b
-    [0x6c] = function()
+    function()
         helper_test(5, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x6c
-    [0x6d] = function()
+    function()
         helper_test(5, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x6d
-    [0x6e] = function()
+    function()
         helper_test(5, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x6e
-    [0x6f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(5, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x6f
-    [0x70] = function()
+    function()
         helper_test(5, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x70
-    [0x71] = function()
+    function()
         helper_test(6, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x71
-    [0x72] = function()
+    function()
         helper_test(6, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x72
-    [0x73] = function()
+    function()
         helper_test(6, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x73
-    [0x74] = function()
+    function()
         helper_test(6, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x74
-    [0x75] = function()
+    function()
         helper_test(6, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x75
-    [0x76] = function()
+    function()
         helper_test(6, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x76
-    [0x77] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(6, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x77
-    [0x78] = function()
+    function()
         helper_test(6, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x78
-    [0x79] = function()
+    function()
         helper_test(7, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x79
-    [0x7a] = function()
+    function()
         helper_test(7, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x7a
-    [0x7b] = function()
+    function()
         helper_test(7, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x7b
-    [0x7c] = function()
+    function()
         helper_test(7, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x7c
-    [0x7d] = function()
+    function()
         helper_test(7, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x7d
-    [0x7e] = function()
+    function()
         helper_test(7, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x7e
-    [0x7f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         helper_test(7, mmuReadByte(address))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x7f
-    [0x80] = function()
+    function()
         helper_test(7, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x80
-    [0x81] = function()
+    function()
         registers.b = helper_reset(0, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x81
-    [0x82] = function()
+    function()
         registers.c = helper_reset(0, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x82
-    [0x83] = function()
+    function()
         registers.d = helper_reset(0, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x83
-    [0x84] = function()
+    function()
         registers.e = helper_reset(0, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x84
-    [0x85] = function()
+    function()
         registers.h = helper_reset(0, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x85
-    [0x86] = function()
+    function()
         registers.l = helper_reset(0, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x86
-    [0x87] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(0, mmuReadByte(address)))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x87
-    [0x88] = function()
+    function()
         registers.a = helper_reset(0, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x88
-    [0x89] = function()
+    function()
         registers.b = helper_reset(1, registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x89
-    [0x8a] = function()
+    function()
         registers.c = helper_reset(1, registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x8a
-    [0x8b] = function()
+    function()
         registers.d = helper_reset(1, registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x8b
-    [0x8c] = function()
+    function()
         registers.e = helper_reset(1, registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x8c
-    [0x8d] = function()
+    function()
         registers.h = helper_reset(1, registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x8d
-    [0x8e] = function()
+    function()
         registers.l = helper_reset(1, registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x8e
-    [0x8f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(1, mmuReadByte(address)))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x8f
-    [0x90] = function()
+    function()
         registers.a = helper_reset(1, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x90
-    [0x91] = function()
+    function()
         registers.b = helper_reset(2, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x91
-    [0x92] = function()
+    function()
         registers.c = helper_reset(2, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x92
-    [0x93] = function()
+    function()
         registers.d = helper_reset(2, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x93
-    [0x94] = function()
+    function()
         registers.e = helper_reset(2, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x94
-    [0x95] = function()
+    function()
         registers.h = helper_reset(2, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x95
-    [0x96] = function()
+    function()
         registers.l = helper_reset(2, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x96
-    [0x97] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(2, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x97
-    [0x98] = function()
+    function()
         registers.a = helper_reset(2, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x98
-    [0x99] = function()
+    function()
         registers.b = helper_reset(3, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x99
-    [0x9a] = function()
+    function()
         registers.c = helper_reset(3, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x9a
-    [0x9b] = function()
+    function()
         registers.d = helper_reset(3, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x9b
-    [0x9c] = function()
+    function()
         registers.e = helper_reset(3, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x9c
-    [0x9d] = function()
+    function()
         registers.h = helper_reset(3, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x9d
-    [0x9e] = function()
+    function()
         registers.l = helper_reset(3, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x9e
-    [0x9f] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(3, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0x9f
-    [0xa0] = function()
+    function()
         registers.a = helper_reset(3, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa0
-    [0xa1] = function()
+    function()
         registers.b = helper_reset(4, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa1
-    [0xa2] = function()
+    function()
         registers.c = helper_reset(4, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa2
-    [0xa3] = function()
+    function()
         registers.d = helper_reset(4, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa3
-    [0xa4] = function()
+    function()
         registers.e = helper_reset(4, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa4
-    [0xa5] = function()
+    function()
         registers.h = helper_reset(4, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa5
-    [0xa6] = function()
+    function()
         registers.l = helper_reset(4, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa6
-    [0xa7] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(4, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xa7
-    [0xa8] = function()
+    function()
         registers.a = helper_reset(4, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa8
-    [0xa9] = function()
+    function()
         registers.b = helper_reset(5, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa9
-    [0xaa] = function()
+    function()
         registers.c = helper_reset(5, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xaa
-    [0xab] = function()
+    function()
         registers.d = helper_reset(5, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xab
-    [0xac] = function()
+    function()
         registers.e = helper_reset(5, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xac
-    [0xad] = function()
+    function()
         registers.h = helper_reset(5, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xad
-    [0xae] = function()
+    function()
         registers.l = helper_reset(5, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xae
-    [0xaf] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(5, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xaf
-    [0xb0] = function()
+    function()
         registers.a = helper_reset(5, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb0
-    [0xb1] = function()
+    function()
         registers.b = helper_reset(6, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb1
-    [0xb2] = function()
+    function()
         registers.c = helper_reset(6, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb2
-    [0xb3] = function()
+    function()
         registers.d = helper_reset(6, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb3
-    [0xb4] = function()
+    function()
         registers.e = helper_reset(6, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb4
-    [0xb5] = function()
+    function()
         registers.h = helper_reset(6, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb5
-    [0xb6] = function()
+    function()
         registers.l = helper_reset(6, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb6
-    [0xb7] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(6, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xb7
-    [0xb8] = function()
+    function()
         registers.a = helper_reset(6, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb8
-    [0xb9] = function()
+    function()
         registers.b = helper_reset(7, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb9
-    [0xba] = function()
+    function()
         registers.c = helper_reset(7, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xba
-    [0xbb] = function()
+    function()
         registers.d = helper_reset(7, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xbb
-    [0xbc] = function()
+    function()
         registers.e = helper_reset(7, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xbc
-    [0xbd] = function()
+    function()
         registers.h = helper_reset(7, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xbd
-    [0xbe] = function()
+    function()
         registers.l = helper_reset(7, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xbe
-    [0xbf] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_reset(7, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xbf
-    [0xc0] = function()
+    function()
         registers.a = helper_reset(7, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc0
-    [0xc1] = function()
+    function()
         registers.b = helper_set(0, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc1
-    [0xc2] = function()
+    function()
         registers.c = helper_set(0, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc2
-    [0xc3] = function()
+    function()
         registers.d = helper_set(0, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc3
-    [0xc4] = function()
+    function()
         registers.e = helper_set(0, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc4
-    [0xc5] = function()
+    function()
         registers.h = helper_set(0, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc5
-    [0xc6] = function()
+    function()
         registers.l = helper_set(0, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc6
-    [0xc7] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(0, mmuReadByte(address)))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xc7
-    [0xc8] = function()
+    function()
         registers.a = helper_set(0, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc8
-    [0xc9] = function()
+    function()
         registers.b = helper_set(1, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc9
-    [0xca] = function()
+    function()
         registers.c = helper_set(1, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xca
-    [0xcb] = function()
+    function()
         registers.d = helper_set(1, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xcb
-    [0xcc] = function()
+    function()
         registers.e = helper_set(1, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xcc
-    [0xcd] = function()
+    function()
         registers.h = helper_set(1, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xcd
-    [0xce] = function()
+    function()
         registers.l = helper_set(1, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xce
-    [0xcf] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(1, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xcf
-    [0xd0] = function()
+    function()
         registers.a = helper_set(1, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd0
-    [0xd1] = function()
+    function()
         registers.b = helper_set(2, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd1
-    [0xd2] = function()
+    function()
         registers.c = helper_set(2, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd2
-    [0xd3] = function()
+    function()
         registers.d = helper_set(2, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd3
-    [0xd4] = function()
+    function()
         registers.e = helper_set(2, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd4
-    [0xd5] = function()
+    function()
         registers.h = helper_set(2, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd5
-    [0xd6] = function()
+    function()
         registers.l = helper_set(2, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd6
-    [0xd7] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(2, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xd7
-    [0xd8] = function()
+    function()
         registers.a = helper_set(2, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd8
-    [0xd9] = function()
+    function()
         registers.b = helper_set(3, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd9
-    [0xda] = function()
+    function()
         registers.c = helper_set(3, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xda
-    [0xdb] = function()
+    function()
         registers.d = helper_set(3, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xdb
-    [0xdc] = function()
+    function()
         registers.e = helper_set(3, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xdc
-    [0xdd] = function()
+    function()
         registers.h = helper_set(3, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xdd
-    [0xde] = function()
+    function()
         registers.l = helper_set(3, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xde
-    [0xdf] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(3, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xdf
-    [0xe0] = function()
+    function()
         registers.a = helper_set(3, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe0
-    [0xe1] = function()
+    function()
         registers.b = helper_set(4, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe1
-    [0xe2] = function()
+    function()
         registers.c = helper_set(4, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe2
-    [0xe3] = function()
+    function()
         registers.d = helper_set(4, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe3
-    [0xe4] = function()
+    function()
         registers.e = helper_set(4, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe4
-    [0xe5] = function()
+    function()
         registers.h = helper_set(4, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe5
-    [0xe6] = function()
+    function()
         registers.l = helper_set(4, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe6
-    [0xe7] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(4, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xe7
-    [0xe8] = function()
+    function()
         registers.a = helper_set(4, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe8
-    [0xe9] = function()
+    function()
         registers.b = helper_set(5, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe9
-    [0xea] = function()
+    function()
         registers.c = helper_set(5, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xea
-    [0xeb] = function()
+    function()
         registers.d = helper_set(5, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xeb
-    [0xec] = function()
+    function()
         registers.e = helper_set(5, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xec
-    [0xed] = function()
+    function()
         registers.h = helper_set(5, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xed
-    [0xee] = function()
+    function()
         registers.l = helper_set(5, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xee
-    [0xef] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(5, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xef
-    [0xf0] = function()
+    function()
         registers.a = helper_set(5, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf0
-    [0xf1] = function()
+    function()
         registers.b = helper_set(6, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf1
-    [0xf2] = function()
+    function()
         registers.c = helper_set(6, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf2
-    [0xf3] = function()
+    function()
         registers.d = helper_set(6, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf3
-    [0xf4] = function()
+    function()
         registers.e = helper_set(6, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf4
-    [0xf5] = function()
+    function()
         registers.h = helper_set(6, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf5
-    [0xf6] = function()
+    function()
         registers.l = helper_set(6, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf6
-    [0xf7] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(6, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xf7
-    [0xf8] = function()
+    function()
         registers.a = helper_set(6, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf8
-    [0xf9] = function()
+    function()
         registers.b = helper_set(7, registers.b)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf9
-    [0xfa] = function()
+    function()
         registers.c = helper_set(7, registers.c)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xfa
-    [0xfb] = function()
+    function()
         registers.d = helper_set(7, registers.d)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xfb
-    [0xfc] = function()
+    function()
         registers.e = helper_set(7, registers.e)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xfc
-    [0xfd] = function()
+    function()
         registers.h = helper_set(7, registers.h)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xfd
-    [0xfe] = function()
+    function()
         registers.l = helper_set(7, registers.l)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xfe
-    [0xff] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_set(7, mmuReadByte(address)))
     
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xff
-    [0x100] = function()
+    function()
         registers.a = helper_set(7, registers.a)
     
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
 }
 
 opcodes = {
     -- Opcode: 0x00
-    [0x01] = function()
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+    function()
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x01
-    [0x02] = function()
+    function()
         writeTwoRegisters('b', 'c', mmuReadUInt16(registers.pc))
 
         registers.pc = registers.pc + 2
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x02
-    [0x03] = function()
+    function()
         mmuWriteByte(readTwoRegisters('b', 'c'), registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x03
-    [0x04] = function()
+    function()
         writeTwoRegisters('b', 'c', helper_inc16(readTwoRegisters('b', 'c')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x04
-    [0x05] = function()
+    function()
         registers.b = helper_inc(registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x05
-    [0x06] = function()
+    function()
         registers.b = helper_dec(registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x06
-    [0x07] = function()
+    function()
         registers.b = mmuReadByte(registers.pc)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x07
-    [0x08] = function()
+    function()
         registers.a = helper_rlc(registers.a, 8)
         registers.f[1] = false
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x08
-    [0x09] = function()
+    function()
         mmuWriteShort(mmuReadUInt16(registers.pc), registers.sp)
 
         registers.pc = registers.pc + 2
-        registers.clock = {
-            m = 5,
-            t = 20
-        }
+        registers.clock.m = 5
+        registers.clock.t = 20
     end,
     -- Opcode: 0x09
-    [0x0a] = function()
+    function()
         writeTwoRegisters('h', 'l', helper_add16(readTwoRegisters('h', 'l'), readTwoRegisters('b', 'c')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0a
-    [0x0b] = function()
+    function()
         registers.a = mmuReadByte(readTwoRegisters('b', 'c'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0b
-    [0x0c] = function()
+    function()
         writeTwoRegisters('b', 'c', helper_dec16(readTwoRegisters('b', 'c')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0c
-    [0x0d] = function()
+    function()
         registers.c = helper_inc(registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x0d
-    [0x0e] = function()
+    function()
         registers.c = helper_dec(registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x0e
-    [0x0f] = function()
+    function()
         registers.c = mmuReadByte(registers.pc)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x0f
-    [0x10] = function()
+    function()
         registers.a = helper_rrc(registers.a, 8)
         registers.f[1] = false
     
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x10
-    [0x11] = function()
+    function()
         -- TODO
         --haltCPU()
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x11
-    [0x12] = function()
+    function()
         writeTwoRegisters('d', 'e', mmuReadUInt16(registers.pc))
 
         registers.pc = registers.pc + 2
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x12
-    [0x13] = function()
+    function()
         mmuWriteByte(readTwoRegisters('d', 'e'), registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x13
-    [0x14] = function()
+    function()
         writeTwoRegisters('d', 'e', helper_inc16(readTwoRegisters('d', 'e')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x14
-    [0x15] = function()
+    function()
         registers.d = helper_inc(registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x15
-    [0x16] = function()
+    function()
         registers.d = helper_dec(registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x16
-    [0x17] = function()
+    function()
         registers.d = mmuReadByte(registers.pc)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x17
-    [0x18] = function()
+    function()
         registers.a = helper_rl(registers.a, 8)
         registers.f[1] = false
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x18
-    [0x19] = function()
+    function()
         local addition = mmuReadSignedByte(registers.pc)
 
         registers.pc = registers.pc + addition + 1
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x19
-    [0x1a] = function()
+    function()
         writeTwoRegisters('h', 'l', helper_add16(readTwoRegisters('h', 'l'), readTwoRegisters('d', 'e')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1a
-    [0x1b] = function()
+    function()
         registers.a = mmuReadByte(readTwoRegisters('d', 'e'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1b
-    [0x1c] = function()
+    function()
         writeTwoRegisters('d', 'e', helper_dec16(readTwoRegisters('d', 'e')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1c
-    [0x1d] = function()
+    function()
         registers.e = helper_inc(registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x1d
-    [0x1e] = function()
+    function()
         registers.e = helper_dec(registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x1e
-    [0x1f] = function()
+    function()
         registers.e = mmuReadByte(registers.pc)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x1f
-    [0x20] = function()
+    function()
         registers.a = helper_rr(registers.a, 8)
     
         registers.f[1] = false -- FLAG_ZERO
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x20
-    [0x21] = function()
+    function()
         if (not registers.f[1]) then
             registers.pc = registers.pc + mmuReadSignedByte(registers.pc) + 1
 
-            registers.clock = {
-            m = 3,
-            t = 12
-        }
+            registers.clock.m = 3
+            registers.clock.t = 12
         else
             registers.pc = registers.pc + 1
 
-            registers.clock = {
-            m = 2,
-            t = 8
-        }
+            registers.clock.m = 2
+            registers.clock.t = 8
         end
     end,
     -- Opcode: 0x21
-    [0x22] = function()
+    function()
         writeTwoRegisters('h', 'l', mmuReadUInt16(registers.pc))
 
         registers.pc = registers.pc + 2
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x22
-    [0x23] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, registers.a)
 
@@ -3058,50 +2476,40 @@ opcodes = {
             writeTwoRegisters('h', 'l', address + 1)
         end
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x23
-    [0x24] = function()
+    function()
         writeTwoRegisters('h', 'l', helper_inc16(readTwoRegisters('h', 'l')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x24
-    [0x25] = function()
+    function()
         registers.h = helper_inc(registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x25
-    [0x26] = function()
+    function()
         registers.h = helper_dec(registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x26
-    [0x27] = function()
+    function()
         registers.h = mmuReadByte(registers.pc)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x27
-    [0x28] = function()
+    function()
         local registerA = registers.a
 
         if (not registers.f[2]) then -- FLAG_SUBSTRACT
@@ -3129,41 +2537,33 @@ opcodes = {
         registers.f[3] = false -- FLAG_HALFCARRY
         registers.a = registerA
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x28
-    [0x29] = function()
+    function()
         if (registers.f[1]) then
             registers.pc = registers.pc + mmuReadSignedByte(registers.pc) + 1
 
-            registers.clock = {
-                m = 3,
-                t = 12
-            }
+            registers.clock.m = 3
+            registers.clock.t = 12
         else
             registers.pc = registers.pc + 1
 
-            registers.clock = {
-                m = 2,
-                t = 8
-            }
+            registers.clock.m = 2
+            registers.clock.t = 8
         end
     end,
     -- Opcode: 0x29
-    [0x2a] = function()
+    function()
         local value = readTwoRegisters('h', 'l')
         writeTwoRegisters('h', 'l', helper_add16(value, value))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2a
-    [0x2b] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         registers.a = mmuReadByte(address)
 
@@ -3173,90 +2573,72 @@ opcodes = {
             writeTwoRegisters('h', 'l', address + 1)
         end
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2b
-    [0x2c] = function()
+    function()
         writeTwoRegisters('h', 'l', helper_dec16(readTwoRegisters('h', 'l')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2c
-    [0x2d] = function()
+    function()
         registers.l = helper_inc(registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x2d
-    [0x2e] = function()
+    function()
         registers.l = helper_dec(registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x2e
-    [0x2f] = function()
+    function()
         registers.l = mmuReadByte(registers.pc)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x2f
-    [0x30] = function()
+    function()
         registers.a = helper_not(registers.a)
 
         registers.f[2] = true -- FLAG_SUBSTRACT
         registers.f[3] = true -- FLAG_HALFCARRY
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x30
-    [0x31] = function()
+    function()
         if (not registers.f[4]) then
             registers.pc = registers.pc + mmuReadSignedByte(registers.pc) + 1
 
-            registers.clock = {
-                m = 3,
-                t = 12
-            }
+            registers.clock.m = 3
+            registers.clock.t = 12
         else
             registers.pc = registers.pc + 1
 
-            registers.clock = {
-            m = 2,
-            t = 8
-        }
+            registers.clock.m = 2
+            registers.clock.t = 8
         end
     end,
     -- Opcode: 0x31
-    [0x32] = function()
+    function()
         registers.sp = mmuReadUInt16(registers.pc)
 
         registers.pc = registers.pc + 2
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x32
-    [0x33] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, registers.a)
 
@@ -3266,85 +2648,69 @@ opcodes = {
             writeTwoRegisters('h', 'l', address - 1)
         end
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x33
-    [0x34] = function()
+    function()
         registers.sp = helper_inc16(registers.sp)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x34
-    [0x35] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_inc(mmuReadByte(address)))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x35
-    [0x36] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         mmuWriteByte(address, helper_dec(mmuReadByte(address)))
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x36
-    [0x37] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0x37
-    [0x38] = function()
+    function()
         registers.f[2] = false -- FLAG_SUBSTRACT
         registers.f[3] = false -- FLAG_HALFCARRY
         registers.f[4] = true
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x38
-    [0x39] = function()
+    function()
         if (registers.f[4]) then
             registers.pc = registers.pc + mmuReadSignedByte(registers.pc) + 1
         else
             registers.pc = registers.pc + 1
         end
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x39
-    [0x3a] = function()
+    function()
         writeTwoRegisters('h', 'l', helper_add16(readTwoRegisters('h', 'l'), registers.sp))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3a
-    [0x3b] = function()
+    function()
         local address = readTwoRegisters('h', 'l')
         registers.a = mmuReadByte(address)
 
@@ -3354,1368 +2720,1074 @@ opcodes = {
             writeTwoRegisters('h', 'l', address - 1)
         end
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3b
-    [0x3c] = function()
+    function()
         registers.sp = helper_dec16(registers.sp)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3c
-    [0x3d] = function()
+    function()
         registers.a = helper_inc(registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x3d
-    [0x3e] = function()
+    function()
         registers.a = helper_dec(registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x3e
-    [0x3f] = function()
+    function()
         registers.a = mmuReadByte(registers.pc)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x3f
-    [0x40] = function()
+    function()
         registers.f[2] = false -- FLAG_SUBSTRACT
         registers.f[3] = false -- FLAG_HALFCARRY
         registers.f[4] = not registers.f[4] -- FLAG_CARRY
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x40
-    [0x41] = function()
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+    function()
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x41
-    [0x42] = function()
+    function()
         registers.b = registers.c
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x42
-    [0x43] = function()
+    function()
         registers.b = registers.d
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x43
-    [0x44] = function()
+    function()
         registers.b = registers.e
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x44
-    [0x45] = function()
+    function()
         registers.b = registers.h
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x45
-    [0x46] = function()
+    function()
         registers.b = registers.l
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x46
-    [0x47] = function()
+    function()
         registers.b = mmuReadByte(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x47
-    [0x48] = function()
+    function()
         registers.b = registers.a
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x48
-    [0x49] = function()
+    function()
         registers.c = registers.b
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x49
-    [0x4a] = function()
+    function()
         registers.c = registers.c
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x4a
-    [0x4b] = function()
+    function()
         registers.c = registers.d
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x4b
-    [0x4c] = function()
+    function()
         registers.c = registers.e
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x4c
-    [0x4d] = function()
+    function()
         registers.c = registers.h
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x4d
-    [0x4e] = function()
+    function()
         registers.c = registers.l
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x4e
-    [0x4f] = function()
+    function()
         registers.c = mmuReadByte(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x4f
-    [0x50] = function()
+    function()
         registers.c = registers.a
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x50
-    [0x51] = function()
+    function()
         registers.d = registers.b
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x51
-    [0x52] = function()
+    function()
         registers.d = registers.c
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x52
-    [0x53] = function()
+    function()
         registers.d = registers.d
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x53
-    [0x54] = function()
+    function()
         registers.d = registers.e
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x54
-    [0x55] = function()
+    function()
         registers.d = registers.h
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x55
-    [0x56] = function()
+    function()
         registers.d = registers.l
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x56
-    [0x57] = function()
+    function()
         registers.d = mmuReadByte(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x57
-    [0x58] = function()
+    function()
         registers.d = registers.a
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x58
-    [0x59] = function()
+    function()
         registers.e = registers.b
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x59
-    [0x5a] = function()
+    function()
         registers.e = registers.c
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x5a
-    [0x5b] = function()
+    function()
         registers.e = registers.d
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x5b
-    [0x5c] = function()
+    function()
         registers.e = registers.e
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x5c
-    [0x5d] = function()
+    function()
         registers.e = registers.h
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x5d
-    [0x5e] = function()
+    function()
         registers.e = registers.l
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x5e
-    [0x5f] = function()
+    function()
         registers.e = mmuReadByte(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x5f
-    [0x60] = function()
+    function()
         registers.e = registers.a
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x60
-    [0x61] = function()
+    function()
         registers.h = registers.b
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x61
-    [0x62] = function()
+    function()
         registers.h = registers.c
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x62
-    [0x63] = function()
+    function()
         registers.h = registers.d
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x63
-    [0x64] = function()
+    function()
         registers.h = registers.e
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x64
-    [0x65] = function()
+    function()
         registers.h = registers.h
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x65
-    [0x66] = function()
+    function()
         registers.h = registers.l
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x66
-    [0x67] = function()
+    function()
         registers.h = mmuReadByte(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x67
-    [0x68] = function()
+    function()
         registers.h = registers.a
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x68
-    [0x69] = function()
+    function()
         registers.l = registers.b
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x69
-    [0x6a] = function()
+    function()
         registers.l = registers.c
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x6a
-    [0x6b] = function()
+    function()
         registers.l = registers.d
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x6b
-    [0x6c] = function()
+    function()
         registers.l = registers.e
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x6c
-    [0x6d] = function()
+    function()
         registers.l = registers.h
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x6d
-    [0x6e] = function()
+    function()
         registers.l = registers.l
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x6e
-    [0x6f] = function()
+    function()
         registers.l = mmuReadByte(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x6f
-    [0x70] = function()
+    function()
         registers.l = registers.a
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x70
-    [0x71] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), registers.b)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x71
-    [0x72] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x72
-    [0x73] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), registers.d)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x73
-    [0x74] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), registers.e)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x74
-    [0x75] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), registers.h)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x75
-    [0x76] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), registers.l)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x76
-    [0x77] = function()
+    function()
         haltCPU()
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x77
-    [0x78] = function()
+    function()
         mmuWriteByte(readTwoRegisters('h', 'l'), registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x78
-    [0x79] = function()
+    function()
         registers.a = registers.b
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x79
-    [0x7a] = function()
+    function()
         registers.a = registers.c
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x7a
-    [0x7b] = function()
+    function()
         registers.a = registers.d
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x7b
-    [0x7c] = function()
+    function()
         registers.a = registers.e
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x7c
-    [0x7d] = function()
+    function()
         registers.a = registers.h
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x7d
-    [0x7e] = function()
+    function()
         registers.a = registers.l
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x7e
-    [0x7f] = function()
+    function()
         registers.a = mmuReadByte(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x7f
-    [0x80] = function()
+    function()
         registers.a = registers.a
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x80
-    [0x81] = function()
+    function()
         registers.a = helper_add(registers.a, registers.b)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x81
-    [0x82] = function()
+    function()
         registers.a = helper_add(registers.a, registers.c)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x82
-    [0x83] = function()
+    function()
         registers.a = helper_add(registers.a, registers.d)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x83
-    [0x84] = function()
+    function()
         registers.a = helper_add(registers.a, registers.e)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x84
-    [0x85] = function()
+    function()
         registers.a = helper_add(registers.a, registers.h)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x85
-    [0x86] = function()
+    function()
         registers.a = helper_add(registers.a, registers.l)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x86
-    [0x87] = function()
+    function()
         registers.a = helper_add(registers.a,
             mmuReadByte(readTwoRegisters('h', 'l')))
 
         registers.f[2] = false
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x87
-    [0x88] = function()
+    function()
         registers.a = helper_add(registers.a, registers.a)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x88
-    [0x89] = function()
+    function()
         registers.a = helper_adc(registers.a, registers.b)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x89
-    [0x8a] = function()
+    function()
         registers.a = helper_adc(registers.a, registers.c)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x8a
-    [0x8b] = function()
+    function()
         registers.a = helper_adc(registers.a, registers.d)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x8b
-    [0x8c] = function()
+    function()
         registers.a = helper_adc(registers.a, registers.e)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x8c
-    [0x8d] = function()
+    function()
         registers.a = helper_adc(registers.a, registers.h)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x8d
-    [0x8e] = function()
+    function()
         registers.a = helper_adc(registers.a, registers.l)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x8e
-    [0x8f] = function()
+    function()
         registers.a = helper_adc(registers.a,
             mmuReadByte(readTwoRegisters('h', 'l')))
 
         registers.f[2] = false
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x8f
-    [0x90] = function()
+    function()
         registers.a = helper_adc(registers.a, registers.a)
 
         registers.f[2] = false
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x90
-    [0x91] = function()
+    function()
         registers.a = helper_sub(registers.a, registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x91
-    [0x92] = function()
+    function()
         registers.a = helper_sub(registers.a, registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x92
-    [0x93] = function()
+    function()
         registers.a = helper_sub(registers.a, registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x93
-    [0x94] = function()
+    function()
         registers.a = helper_sub(registers.a, registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x94
-    [0x95] = function()
+    function()
         registers.a = helper_sub(registers.a, registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x95
-    [0x96] = function()
+    function()
         registers.a = helper_sub(registers.a, registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x96
-    [0x97] = function()
+    function()
         registers.a = helper_sub(registers.a,
             mmuReadByte(readTwoRegisters('h', 'l')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x97
-    [0x98] = function()
+    function()
         registers.a = helper_sub(registers.a, registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x98
-    [0x99] = function()
+    function()
         registers.a = helper_sbc(registers.a, registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x99
-    [0x9a] = function()
+    function()
         registers.a = helper_sbc(registers.a, registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x9a
-    [0x9b] = function()
+    function()
         registers.a = helper_sbc(registers.a, registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x9b
-    [0x9c] = function()
+    function()
         registers.a = helper_sbc(registers.a, registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x9c
-    [0x9d] = function()
+    function()
         registers.a = helper_sbc(registers.a, registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x9d
-    [0x9e] = function()
+    function()
         registers.a = helper_sbc(registers.a, registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0x9e
-    [0x9f] = function()
+    function()
         registers.a = helper_sbc(registers.a, mmuReadByte(readTwoRegisters('h', 'l')))
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0x9f
-    [0xa0] = function()
+    function()
         registers.a = helper_sbc(registers.a, registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa0
-    [0xa1] = function()
+    function()
         registers.a = helper_and(registers.a, registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa1
-    [0xa2] = function()
+    function()
         registers.a = helper_and(registers.a, registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa2
-    [0xa3] = function()
+    function()
         registers.a = helper_and(registers.a, registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa3
-    [0xa4] = function()
+    function()
         registers.a = helper_and(registers.a, registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa4
-    [0xa5] = function()
+    function()
         registers.a = helper_and(registers.a, registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa5
-    [0xa6] = function()
+    function()
         registers.a = helper_and(registers.a, registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa6
-    [0xa7] = function()
+    function()
         registers.a = helper_and(registers.a, mmuReadByte(
             readTwoRegisters('h', 'l'))
         )
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xa7
-    [0xa8] = function()
+    function()
         registers.a = helper_and(registers.a, registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa8
-    [0xa9] = function()
+    function()
         registers.a = helper_xor(registers.a, registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xa9
-    [0xaa] = function()
+    function()
         registers.a = helper_xor(registers.a, registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xaa
-    [0xab] = function()
+    function()
         registers.a = helper_xor(registers.a, registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xab
-    [0xac] = function()
+    function()
         registers.a = helper_xor(registers.a, registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xac
-    [0xad] = function()
+    function()
         registers.a = helper_xor(registers.a, registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xad
-    [0xae] = function()
+    function()
         registers.a = helper_xor(registers.a, registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xae
-    [0xaf] = function()
+    function()
         registers.a = helper_xor(registers.a, mmuReadByte(
             readTwoRegisters('h', 'l'))
         )
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xaf
-    [0xb0] = function()
+    function()
         registers.a = helper_xor(registers.a, registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb0
-    [0xb1] = function()
+    function()
         registers.a = helper_or(registers.a, registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb1
-    [0xb2] = function()
+    function()
         registers.a = helper_or(registers.a, registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb2
-    [0xb3] = function()
+    function()
         registers.a = helper_or(registers.a, registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb3
-    [0xb4] = function()
+    function()
         registers.a = helper_or(registers.a, registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb4
-    [0xb5] = function()
+    function()
         registers.a = helper_or(registers.a, registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb5
-    [0xb6] = function()
+    function()
         registers.a = helper_or(registers.a, registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb6
-    [0xb7] = function()
+    function()
         registers.a = helper_or(registers.a, mmuReadByte(
             readTwoRegisters('h', 'l'))
         )
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xb7
-    [0xb8] = function()
+    function()
         registers.a = helper_or(registers.a, registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb8
-    [0xb9] = function()
+    function()
         helper_cp(registers.a, registers.b)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xb9
-    [0xba] = function()
+    function()
         helper_cp(registers.a, registers.c)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xba
-    [0xbb] = function()
+    function()
         helper_cp(registers.a, registers.d)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xbb
-    [0xbc] = function()
+    function()
         helper_cp(registers.a, registers.e)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xbc
-    [0xbd] = function()
+    function()
         helper_cp(registers.a, registers.h)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xbd
-    [0xbe] = function()
+    function()
         helper_cp(registers.a, registers.l)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xbe
-    [0xbf] = function()
+    function()
         helper_cp(registers.a, mmuReadByte(
             readTwoRegisters('h', 'l'))
         )
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xbf
-    [0xc0] = function()
+    function()
         helper_cp(registers.a, registers.a)
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xc0
-    [0xc1] = function()
+    function()
         if (not registers.f[1]) then
             registers.pc = mmuPopStack()
         end
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc1
-    [0xc2] = function()
+    function()
         writeTwoRegisters('b', 'c', mmuPopStack())
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xc2
-    [0xc3] = function()
+    function()
         if (not registers.f[1]) then
             registers.pc = mmuReadUInt16(registers.pc)
         else
             registers.pc = registers.pc + 2
         end
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xc3
-    [0xc4] = function()
+    function()
         registers.pc = mmuReadUInt16(registers.pc)
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xc4
-    [0xc5] = function()
+    function()
         if (not registers.f[1]) then
             mmuPushStack(registers.pc + 2)
             registers.pc = mmuReadUInt16(registers.pc)
 
-            registers.clock = {
-                m = 6,
-                t = 24
-            }
+            registers.clock.m = 6
+            registers.clock.t = 24
         else
             registers.pc = registers.pc + 2
 
-            registers.clock = {
-            m = 3,
-            t = 12
-        }
+            registers.clock.m = 3
+            registers.clock.t = 12
         end
     end,
     -- Opcode: 0xc5
-    [0xc6] = function()
+    function()
         mmuPushStack(readTwoRegisters('b', 'c'))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xc6
-    [0xc7] = function()
+    function()
         registers.a = helper_add(registers.a,
             mmuReadByte(registers.pc))
 
         registers.f[2] = false
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xc7
-    [0xc8] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x0
 
-        registers.clock = {
-            m = 8,
-            t = 32
-        }
+        registers.clock.m = 8
+        registers.clock.t = 32
     end,
     -- Opcode: 0xc8
-    [0xc9] = function()
+    function()
         if (registers.f[1]) then
             registers.pc = mmuPopStack()
 
-            registers.clock = {
-                m = 5,
-                t = 20
-            }
+            registers.clock.m = 5
+            registers.clock.t = 20
         else
-            registers.clock = {
-                m = 2,
-                t = 8
-            }
+            registers.clock.m = 2
+            registers.clock.t = 8
         end
     end,
     -- Opcode: 0xc9
-    [0xca] = function()
+    function()
         registers.pc = mmuPopStack()
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xca
-    [0xcb] = function()
+    function()
         if (registers.f[1]) then
             registers.pc = mmuReadUInt16(registers.pc)
         else
             registers.pc = registers.pc + 2
         end
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xcb
-    [0xcc] = function()
+    function()
         local opcode1 = mmuReadByte(registers.pc)
         registers.pc = registers.pc + 1
 
@@ -4728,470 +3800,380 @@ opcodes = {
         cbOpcodes[opcode1 + 1]()
     end,
     -- Opcode: 0xcc
-    [0xcd] = function()
+    function()
         if (registers.f[1]) then
             mmuPushStack(registers.pc + 2)
             registers.pc = mmuReadUInt16(registers.pc)
 
-            registers.clock = {
-                m = 6,
-                t = 24
-            }
+            registers.clock.m = 6
+            registers.clock.t = 24
         else
             registers.pc = registers.pc + 2
 
-            registers.clock = {
-                m = 3,
-                t = 12
-            }
+            registers.clock.m = 3
+            registers.clock.t = 12
         end
     end,
     -- Opcode: 0xcd
-    [0xce] = function()
+    function()
         local value = mmuReadUInt16(registers.pc)
 
         mmuPushStack(registers.pc + 2)
         registers.pc = value
 
-        registers.clock = {
-            m = 6,
-            t = 24
-        }
+        registers.clock.m = 6
+        registers.clock.t = 24
     end,
     -- Opcode: 0xce
-    [0xcf] = function()
+    function()
         registers.a = helper_adc(registers.a,
             mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xcf
-    [0xd0] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x08
 
-        registers.clock = {
-            m = 8,
-            t = 32
-        }
+        registers.clock.m = 8
+        registers.clock.t = 32
     end,
     -- Opcode: 0xd0
-    [0xd1] = function()
+    function()
         if (not registers.f[4]) then
             registers.pc = mmuPopStack()
 
-            registers.clock = {
-                m = 5,
-                t = 20
-            }
+            registers.clock.m = 5
+            registers.clock.t = 20
         else
-            registers.clock = {
-                m = 2,
-                t = 8
-            }
+            registers.clock.m = 2
+            registers.clock.t = 8
         end
     end,
     -- Opcode: 0xd1
-    [0xd2] = function()
+    function()
         writeTwoRegisters('d', 'e', mmuPopStack())
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xd2
-    [0xd3] = function()
+    function()
         if (not registers.f[4]) then
             registers.pc = mmuReadUInt16(registers.pc)
         else
             registers.pc = registers.pc + 2
         end
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xd3
-    [0xd4] = function() end,
+    function() end,
     -- Opcode: 0xd4
-    [0xd5] = function()
+    function()
         if (not registers.f[4]) then
             mmuPushStack(registers.pc + 2)
             registers.pc = mmuReadUInt16(registers.pc)
 
-            registers.clock = {
-                m = 6,
-                t = 24
-            }
+            registers.clock.m = 6
+            registers.clock.t = 24
         else
             registers.pc = registers.pc + 2
 
-            registers.clock = {
-                m = 3,
-                t = 12
-            }
+            registers.clock.m = 3
+            registers.clock.t = 12
         end
     end,
     -- Opcode: 0xd5
-    [0xd6] = function()
+    function()
         mmuPushStack(readTwoRegisters('d', 'e'))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xd6
-    [0xd7] = function()
+    function()
         registers.a = helper_sub(registers.a, mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd7
-    [0xd8] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x10
 
-        registers.clock = {
-            m = 8,
-            t = 32
-        }
+        registers.clock.m = 8
+        registers.clock.t = 32
     end,
     -- Opcode: 0xd8
-    [0xd9] = function()
+    function()
         if (registers.f[4]) then
             registers.pc = mmuPopStack()
         end
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xd9
-    [0xda] = function()
+    function()
         registers.pc = mmuPopStack()
         setInterrupts()
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xda
-    [0xdb] = function()
+    function()
         if (registers.f[4]) then
             registers.pc = mmuReadUInt16(registers.pc)
         else
             registers.pc = registers.pc + 2
         end
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xdb
-    [0xdc] = function() end,
+    function() end,
     -- Opcode: 0xdc
-    [0xdd] = function()
+    function()
         if (registers.f[4]) then
             mmuPushStack(registers.pc + 2)
             registers.pc = mmuReadUInt16(registers.pc)
 
-            registers.clock = {
-                m = 6,
-                t = 24
-            }
+            registers.clock.m = 6
+            registers.clock.t = 24
         else
             registers.pc = registers.pc + 2
 
-            registers.clock = {
-                m = 3,
-                t = 12
-            }
+            registers.clock.m = 3
+            registers.clock.t = 12
         end
     end,
     -- Opcode: 0xdd
-    [0xde] = function() end,
+    function() end,
     -- Opcode: 0xde
-    [0xdf] = function()
+    function()
         registers.a = helper_sbc(registers.a, mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xdf
-    [0xe0] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x18
 
-        registers.clock = {
-            m = 8,
-            t = 32
-        }
+        registers.clock.m = 8
+        registers.clock.t = 32
     end,
     -- Opcode: 0xe0
-    [0xe1] = function()
+    function()
         mmuWriteByte(0xFF00 + mmuReadByte(registers.pc), registers.a)
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xe1
-    [0xe2] = function()
+    function()
         writeTwoRegisters('h', 'l', mmuPopStack())
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xe2
-    [0xe3] = function()
+    function()
         mmuWriteByte(0xFF00 + registers.c, registers.a)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe3
-    [0xe4] = function() end,
+    function() end,
     -- Opcode: 0xe4
-    [0xe5] = function() end,
+    function() end,
     -- Opcode: 0xe5
-    [0xe6] = function()
+    function()
         mmuPushStack(readTwoRegisters('h', 'l'))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xe6
-    [0xe7] = function()
+    function()
         registers.a = helper_and(registers.a, mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xe7
-    [0xe8] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x20
 
-        registers.clock = {
-            m = 8,
-            t = 32
-        }
+        registers.clock.m = 8
+        registers.clock.t = 32
     end,
     -- Opcode: 0xe8
-    [0xe9] = function()
+    function()
         registers.sp = helper_add_sp(registers.sp,
             mmuReadSignedByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xe9
-    [0xea] = function()
+    function()
         registers.pc = readTwoRegisters('h', 'l')
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xea
-    [0xeb] = function()
+    function()
         mmuWriteByte(mmuReadUInt16(registers.pc), registers.a)
 
         registers.pc = registers.pc + 2
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xeb
-    [0xec] = function() end,
+    function() end,
     -- Opcode: 0xec
-    [0xed] = function() end,
+    function() end,
     -- Opcode: 0xed
-    [0xee] = function() end,
+    function() end,
     -- Opcode: 0xee
-    [0xef] = function()
+    function()
         registers.a = helper_xor(registers.a, mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xef
-    [0xf0] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x28
 
-        registers.clock = {
-            m = 8,
-            t = 32
-        }
+        registers.clock.m = 8
+        registers.clock.t = 32
     end,
     -- Opcode: 0xf0
-    [0xf1] = function()
+    function()
         registers.a = mmuReadByte(0xFF00 + mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xf1
-    [0xf2] = function()
+    function()
         writeTwoRegisters('a', 'f', mmuPopStack())
 
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xf2
-    [0xf3] = function()
+    function()
         registers.a = mmuReadByte(0xFF00 + registers.c)
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf3
-    [0xf4] = function()
+    function()
         disableInterrupts()
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xf4
-    [0xf5] = function() end,
+    function() end,
     -- Opcode: 0xf5
-    [0xf6] = function()
+    function()
         mmuPushStack(readTwoRegisters('a', 'f'))
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xf6
-    [0xf7] = function()
+    function()
         registers.a = helper_or(registers.a, mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xf7
-    [0xf8] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x30
 
-        registers.clock = {
-            m = 8,
-            t = 32
-        }
+        registers.clock.m = 8
+        registers.clock.t = 32
     end,
     -- Opcode: 0xf8
-    [0xf9] = function()
+    function()
         local address = registers.sp
         local value = mmuReadSignedByte(registers.pc)
 
         writeTwoRegisters('h', 'l', helper_add_sp(address, value))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 3,
-            t = 12
-        }
+        registers.clock.m = 3
+        registers.clock.t = 12
     end,
     -- Opcode: 0xf9
-    [0xfa] = function()
+    function()
         registers.sp = readTwoRegisters('h', 'l')
 
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xfa
-    [0xfb] = function()
+    function()
         registers.a = mmuReadByte(mmuReadUInt16(registers.pc))
 
         registers.pc = registers.pc + 2
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
     -- Opcode: 0xfb
-    [0xfc] = function()
+    function()
         enableInterrupts()
 
-        registers.clock = {
-            m = 1,
-            t = 4
-        }
+        registers.clock.m = 1
+        registers.clock.t = 4
     end,
     -- Opcode: 0xfc
-    [0xfd] = function() end,
+    function() end,
     -- Opcode: 0xfd
-    [0xfe] = function() end,
+    function() end,
     -- Opcode: 0xfe
-    [0xff] = function()
+    function()
         helper_cp(registers.a, mmuReadByte(registers.pc))
 
         registers.pc = registers.pc + 1
-        registers.clock = {
-            m = 2,
-            t = 8
-        }
+        registers.clock.m = 2
+        registers.clock.t = 8
     end,
     -- Opcode: 0xff
-    [0x100] = function()
+    function()
         mmuPushStack(registers.pc)
         registers.pc = 0x38
 
-        registers.clock = {
-            m = 4,
-            t = 16
-        }
+        registers.clock.m = 4
+        registers.clock.t = 16
     end,
 }
