@@ -33,6 +33,10 @@ function loadRom(path, isBios)
     return data
 end
 
+function setRomPath(path)
+    romPath = path
+end
+
 function getRomPath()
     return romPath
 end

@@ -1,4 +1,5 @@
 utf8 = require("utf8")
+inspect = require "inspect"
 
 local events = {}
 local keyBinds = {}
@@ -166,6 +167,10 @@ end
 
 function fileDelete(filePath)
     return love.filesystem.remove(filePath)
+end
+
+function fileGetSize(file)
+    return file:getSize()
 end
 
 function pregMatch(message, pattern)

@@ -29,7 +29,11 @@ function love.load(args)
     setupDebugger()
 
     if (gameBoyLoadRom(args[1])) then
-        --gameBoyLoadBios("data/gbc_bios.bin")
+        if (isGameBoyColor()) then
+            --gameBoyLoadBios("data/gbc_bios.bin")
+        else
+            --gameBoyLoadBios("data/bios.gb")
+        end
     end
 
     startGameBoy()

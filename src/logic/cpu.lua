@@ -10,7 +10,7 @@ local _math_floor = math.floor
 
 local _clock = {
     m = 0,
-    t= 0
+    t = 0
 }
 
 local _paused = false
@@ -118,25 +118,47 @@ function resetCPU()
             }
         }
     else
-        registers = {
-            a = (isGameBoyColor()) and 0x11 or 0x01,
-            b = 0x00,
-            c = 0x13,
-            d = 0x00,
-            e = 0xd8,
-            h = 0x01,
-            l = 0x4d,
-            f = {
-                -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
-                true, false, true, true
-            },
-            pc = 0x100,
-            sp = 0xfffe,
-            clock = {
-                m = 0,
-                t = 0
+        if (isGameBoyColor()) then
+            registers = {
+                a = 0x11,
+                b = 0x00,
+                c = 0x00,
+                d = 0xff,
+                e = 0x56,
+                h = 0x00,
+                l = 0x0d,
+                f = {
+                    -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
+                    true, false, false, false
+                },
+                pc = 0x100,
+                sp = 0xfffe,
+                clock = {
+                    m = 0,
+                    t = 0
+                }
             }
-        }
+        else
+            registers = {
+                a = 0x01,
+                b = 0x00,
+                c = 0x13,
+                d = 0x00,
+                e = 0xd8,
+                h = 0x01,
+                l = 0x4d,
+                f = {
+                    -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
+                    true, false, true, true
+                },
+                pc = 0x100,
+                sp = 0xfffe,
+                clock = {
+                    m = 0,
+                    t = 0
+                }
+            }
+        end
     end
 
     _registers = registers
@@ -404,7 +426,7 @@ function runCPU()
                 ticks = _registers.clock.m
 
                 if (_paused) then
-                    ticks = 1
+                    gpuStep(1)
                 end
 
                 gpuStep(ticks)
@@ -425,4 +447,35 @@ end
 
 function getCPUClock()
     return _clock
+end
+
+function saveCPUState()
+    return {
+        clock = _clock,
+        paused = _paused,
+        pausedUntilInterrupts = _pausedUntilInterrupts,
+        interrupts = _interrupts,
+        triggerHaltBug = _triggerHaltBug,
+        queuedEnableInterrupts = _queuedEnableInterrupts,
+        queuedDisableInterrupts = _queuedDisableInterrupts,
+        queueChangeActive = _queueChangeActive,
+        interruptDelay = _interruptDelay,
+        registers = _registers
+    }
+end
+
+function loadCPUState(state)
+    _clock = state.clock
+    _paused = state.paused
+    _pausedUntilInterrupts = state.pausedUntilInterrupts
+    _interrupts = state.interrupts
+    _triggerHaltBug = state.triggerHaltBug
+    _queuedEnableInterrupts = state.queuedEnableInterrupts
+    _queuedDisableInterrupts = state.queuedDisableInterrupts
+    _queueChangeActive = state.queueChangeActive
+    _interruptDelay = state.interruptDelay
+    registers = state.registers
+
+    _registers = registers
+    clock = _clock
 end

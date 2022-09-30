@@ -37,6 +37,10 @@ function resetTimer()
  
     timerClockFrequency = 3
     timerDividerRegister = 0
+
+    if (not isBiosLoaded()) then
+        timerDividerRegister = 0x20
+    end
 end
 
 function getCounterFromFrequency(frequency)
@@ -114,4 +118,22 @@ function timerStep(ticks)
     if (_counter > 0xffff) then
         _counter = _counter - 0xffff
     end
+end
+
+function saveTimerState()
+    return {
+        counter = _counter,
+        timerClockEnabled = timerClockEnabled,
+        timerClockFrequency = timerClockFrequency,
+        timerDelayTicks = timerDelayTicks,
+        timerDividerRegister = timerDividerRegister,
+    }
+end
+
+function loadTimerState(state)
+    _counter = state.counter
+    timerClockEnabled = state.timerClockEnabled
+    timerClockFrequency = state.timerClockFrequency
+    timerDelayTicks = state.timerDelayTicks
+    timerDividerRegister = state.timerDividerRegister
 end

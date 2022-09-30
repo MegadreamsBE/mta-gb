@@ -19,6 +19,7 @@ local _keypad = {}
 local _onClientKeyHandler = false
 local _debuggerEnabled = false
 local _isGameBoyColor = false
+local _isShiftDown = false
 
 local _rom = nil
 bios = nil
@@ -158,6 +159,8 @@ function onKeyDown(key)
     elseif (key == "enter") then
         _keypad.keys[1] = _bitAnd(_keypad.keys[1], 0x7)
         requestInterrupt(4)
+    elseif (key == "lshift" or key == "rshift") then
+        _isShiftDown = true
     end
 end
 
@@ -178,6 +181,32 @@ function onKeyUp(key)
         _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x4)
     elseif (key == "enter") then
         _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x8)
+    elseif (key == "lshift" or key == "rshift") then
+        _isShiftDown = false
+    elseif (key == "f1") then
+        if (_isShiftDown) then
+            loadState(1)
+        else
+            saveState(1)
+        end
+    elseif (key == "f2") then
+        if (_isShiftDown) then
+            loadState(2)
+        else
+            saveState(2)
+        end
+    elseif (key == "f3") then
+        if (_isShiftDown) then
+            loadState(3)
+        else
+            saveState(3)
+        end
+    elseif (key == "f4") then
+        if (_isShiftDown) then
+            loadState(4)
+        else
+            saveState(4)
+        end
     end
 end
 
@@ -189,6 +218,59 @@ function isGameBoyColor()
     return _isGameBoyColor
 end
 
+function saveState(slot)
+    local state = {
+        cpu = saveCPUState(),
+        gpu = saveGPUState(),
+        timer = saveTimerState(),
+        mmu = saveMMUState(),
+        romPath = getRomPath(),
+    }
+
+    local file = fileCreate("data/state_" .. slot .. ".dat")
+
+    if (file) then
+        fileWrite(file, serialize(state))
+        fileClose(file)
+    end
+end
+
+function loadState(slot)
+    local file = fileOpen("data/state_" .. slot .. ".dat", true)
+
+    if (file) then
+        local data = fileRead(file, fileGetSize(file))
+        local state = unserialize(data)
+        fileClose(file)
+
+        if (state) then
+            loadCPUState(state.cpu)
+            loadMMUState(state.mmu)
+            loadGPUState(state.gpu)
+            loadTimerState(state.timer)
+            setRomPath(state.romPath)
+        end
+    end
+end
+
+function serialize(tbl)
+    local data = inspect(tbl)
+
+    data = data:gsub("<[0-9]*>", "")
+
+    return data
+end
+
+function unserialize(str)
+    local func = loadstring("return " .. str)
+
+    if (func) then
+        return func()
+    end
+
+    return nil
+end
+
 -----------------------------------
 -- * Events
 -----------------------------------
@@ -198,7 +280,11 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     setupDebugger()
 
     if (gameBoyLoadRom(ROM_PATH)) then
-        --gameBoyLoadBios("data/gbc_bios.bin")
+        if (isGameBoyColor()) then
+            --gameBoyLoadBios("data/gbc_bios.bin")
+        else
+            --gameBoyLoadBios("data/bios.gb")
+        end
     end
 
     startGameBoy()

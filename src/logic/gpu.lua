@@ -1,6 +1,5 @@
 vramBank = 1
 vram = {}
-oam = {}
 
 scanLine = 0
 
@@ -29,7 +28,6 @@ local COLORS = {
 _COLORS = COLORS
 
 local _vram = vram
-local _oam = oam
 
 local _mode = 0
 local _modeClock = 0
@@ -57,9 +55,6 @@ function setupGPU()
     mmuLinkVideoRam(vram)
 
     vramBank = 1
-
-    oam = createFilledTable(0xFFFF)
-    _oam = oam
 
     for i=1, 0x3000 do
         _vram[1][i] = 0
@@ -120,9 +115,6 @@ function resetGPU()
 
     vramBank = 1
 
-    oam = createFilledTable(0xFFFF)
-    _oam = oam
-
     for i=1, 0x3000 do
         _vram[1][i] = 0
         _vram[2][i] = 0
@@ -132,6 +124,10 @@ function resetGPU()
     _modeClock = 0
 
     scanLine = 0
+
+    if (not isBiosLoaded()) then
+        scanLine = 0x90
+    end
 
     _tileSet = createFilledTable(0xFFFF)
     _screen = dxCreateTexture(160, 144)
@@ -178,6 +174,7 @@ function renderTiles()
     local usingWindow = false
     local isCGB = isGameBoyColor()
     local bank = vramBank
+    local debuggerEnabled = isDebuggerEnabled()
 
     local lcdControl = mmuReadByte(0xFF40)
     local scrollY = mmuReadSignedByte(0xFF42)
@@ -231,11 +228,12 @@ function renderTiles()
         yPos = yPos - 0xff
     end
 
+    local line = (yPos % 8) * 2
     local row = _math_floor(yPos / 8) * 32
 
     local cgbAttributes = 0
     local cgbPalette = 0
-    local cgbBank = false
+    local cgbBank = 1
     local cgbPriority = false
     local cgbFlipX = false
     local cgbFlipY = false
@@ -263,51 +261,39 @@ function renderTiles()
         if (isCGB) then
             cgbAttributes = _vram[2][(tileAddress - 0x8000) + 1]
             cgbPalette = _bitAnd(cgbAttributes, 0x07)
-            cgbBank = _bitAnd(cgbAttributes, 0x08) > 1
+            cgbBank = (_bitAnd(cgbAttributes, 0x08) > 1) and 2 or 1
             cgbPriority = _bitAnd(cgbAttributes, 0x80) > 1
             cgbFlipX = _bitAnd(cgbAttributes, 0x20) > 1
             cgbFlipY = _bitAnd(cgbAttributes, 0x40) > 1
         end
 
         tileNum = _vram[1][(tileAddress - 0x8000) + 1]
-
-        if (not unsigned) then
-            if (tileNum >= 0x80) then
-                tileNum = -((0xFF - tileNum) + 1)
-            end
+        
+        if (not unsigned and tileNum >= 0x80) then
+            tileNum = -((0xFF - tileNum) + 1)
         end
 
-        local tileLocation = tileData
+        local tileLocation = 0
 
         if (unsigned) then
-            tileLocation = tileLocation + tileNum * 16
+            tileLocation = tileData + tileNum * 16
         else
-            tileLocation = tileLocation + (tileNum + 128) * 16
+            tileLocation = tileData + (tileNum + 128) * 16
         end
 
-        local line = (yPos % 8) * 2
+        local lineWithFlip = line
 
         if (cgbFlipY) then
-            line = line - 8
-            line = line * -1
+            lineWithFlip = (lineWithFlip - 8) * -1
         end
 
-        local byte1 = 0
-        local byte2 = 0
-
-        if (isCGB and cgbBank) then
-            byte1 = _vram[2][(tileLocation - 0x8000) + 1 + line]
-            byte2 = _vram[2][(tileLocation - 0x8000) + 2 + line]
-        else
-            byte1 = _vram[1][(tileLocation - 0x8000) + 1 + line]
-            byte2 = _vram[1][(tileLocation - 0x8000) + 2 + line]
-        end
+        local byte1 = _vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip]
+        local byte2 = _vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip]
 
         local colorBit = ((xPos % 8) - 7) * -1
 
         if (cgbFlipX) then
-            colorBit = colorBit - 8
-            colorBit = colorBit * -1
+            colorBit = (colorBit - 8) * -1
         end
 
         local colorNum = _bitOr(_bitExtract(byte2, colorBit, 1) * 2, _bitExtract(byte1, colorBit, 1))
@@ -319,7 +305,7 @@ function renderTiles()
         if (isCGB) then
             local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
 
-            if (isDebuggerEnabled()) then
+            if (debuggerEnabled) then
                 debugBackground[(cgbBank) and 2 or vramBank][tileLocation] = cgbPalette
             end
 
@@ -549,13 +535,9 @@ function setColorPalette(isSprites, value)
         paletteColor = _bitOr(_bitAnd(paletteColor, 0xFF00), value)
     end
 
-    local redBit = _bitExtract(paletteColor, 0, 5) * 8
-    local greenBit = _bitExtract(paletteColor, 5, 5) * 8
-    local blueBit = _bitExtract(paletteColor, 10, 5) * 8
-
-    paletteColorFinal[1] = redBit
-    paletteColorFinal[2] = greenBit
-    paletteColorFinal[3] = blueBit
+    paletteColorFinal[1] = _bitExtract(paletteColor, 0, 5) * 8
+    paletteColorFinal[2] = _bitExtract(paletteColor, 5, 5) * 8
+    paletteColorFinal[3] = _bitExtract(paletteColor, 10, 5) * 8
 
     if (isSprites) then
         _spritePalettes[palette + 1][index + 1][1] = paletteColor
@@ -572,8 +554,7 @@ function gpuStep(ticks)
     if (not _screenEnabled) then
         mmuWriteByte(0xFF41, 0)
 
-        lcdStatus = _bitAnd(lcdStatus, 0xFC)
-        lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
+        lcdStatus = _bitReplace(_bitAnd(lcdStatus, 0xFC), 1, 0, 1)
 
         mmuWriteByte(0xFF41, lcdStatus)
     end
@@ -740,4 +721,42 @@ end
 
 function getSpritePalettes()
     return _spritePalettes
+end
+
+function saveGPUState()
+    return {
+        vramBank = vramBank,
+        vram = _vram,
+        scanLine = scanLine,
+        colors = COLORS,
+        mode = _mode,
+        modeClock = _modeClock,
+        tileSet = _tileSet,
+        screenEnabled = _screenEnabled,
+        backgroundPalettes = _backgroundPalettes,
+        spritePalettes = _spritePalettes,
+        backgroundPriority = _backgroundPriority
+    }
+end
+
+function loadGPUState(state)
+    vramBank = state.vramBank
+    vram = state.vram
+    scanLine = state.scanLine
+    COLORS = state.colors
+    _mode = state.mode
+    _modeClock = state.modeClock
+    _tileSet = state.tileSet
+    _screenEnabled = state.screenEnabled
+    _backgroundPalettes = state.backgroundPalettes
+    _spritePalettes = state.spritePalettes
+    _backgroundPriority = state.backgroundPriority
+
+    _screen = dxCreateTexture(160, 144)
+    _screenPixels = dxGetTexturePixels(_screen)
+
+    _COLORS = COLORS
+    _vram = vram
+
+    mmuLinkVideoRam(vram)
 end

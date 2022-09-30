@@ -71,6 +71,9 @@ local _zram = {}
 local _wram = {}
 local _ram = {}
 local _rom = nil
+local _oam = {}
+
+oam = _oam
 
 local _wramBank = 1
 
@@ -145,6 +148,7 @@ function resetMMU()
         mmuWriteByte(0xFF40, 0x91)
         mmuWriteByte(0xFF42, 0x00)
         mmuWriteByte(0xFF43, 0x00)
+        mmuWriteByte(0xFF44, 0x90)
         mmuWriteByte(0xFF45, 0x00)
         mmuWriteByte(0xFF47, 0xFC)
         mmuWriteByte(0xFF48, 0xFF)
@@ -157,6 +161,9 @@ function resetMMU()
     for i=1, 5 do
         _hdma[i] = 0
     end
+
+    _oam = createFilledTable(0xFFFF)
+    oam = _oam
 
     mmuLinkVideoRam(vram or {})
 end
@@ -409,8 +416,7 @@ function mmuWriteByte(address, value, onlyWrite)
         end
     elseif (address == 0xFF70) then
         if (isGameBoyColor()) then
-            value = _bitAnd(value, 0x07)
-            _wramBank = value
+            _wramBank = _bitAnd(value, 0x07)
 
             if (_wramBank == 0) then
                 _wramBank = 1
@@ -419,16 +425,11 @@ function mmuWriteByte(address, value, onlyWrite)
 
         _ram[address + 1] = value
     elseif (address >= 0xF000) then
-        local innerAddress = _bitAnd(address, 0x0F00)
-
-        if (innerAddress >= 0x0 and innerAddress <= 0xD00) then
+        if (address >= 0xF000 and address <= 0xFDFF) then
             _ram[address + 1] = value
-        elseif (innerAddress == 0xE00) then
-            if (_bitAnd(address, 0xFF) < 0xA0) then
-                address = address - 0xFE00
-                oam[address + 1] = value
-            end
-        elseif (innerAddress == 0xF00) then
+        elseif (address >= 0xFE00 and address <= 0xFEFF) then
+            _oam[address + 1] = value
+        elseif (address >= 0xFF00 and address <= 0xFFFF) then
             if (address == 0xFFFF) then
                 interrupts = value
             elseif (address > 0xFF7F) then
@@ -675,18 +676,11 @@ function mmuReadByte(address)
 
         return 0xFF
     elseif (address >= 0xF000) then
-        local innerAddress = _bitAnd(address, 0x0F00)
-
-        if (innerAddress >= 0x0 and innerAddress <= 0xD00) then
+        if (address >= 0xF000 and address <= 0xFDFF) then
             return _ram[address + 1] or 0
-        elseif (innerAddress == 0xE00) then
-            if (_bitAnd(address, 0x0FF) < 0xA0) then 
-                address = address - 0xFE00
-                return oam[address + 1] or 0
-            end
-            
-            return 0
-        elseif (innerAddress == 0xF00) then
+        elseif (address >= 0xFE00 and address <= 0xFEFF) then
+            return _oam[address + 1] or 0
+        elseif (address >= 0xFF00 and address <= 0xFFFF) then
             if (address == 0xFFFF) then
                 return interrupts
             elseif (address > 0xFF7F) then
@@ -743,8 +737,7 @@ end
 function mmuReadUInt16(address)
     local value = mmuReadByte(address + 1) or 0
 
-    value = value * 256
-    value = value + (mmuReadByte(address) or 0)
+    value = (value * 256) + (mmuReadByte(address) or 0)
 
     return value
 end
@@ -752,8 +745,7 @@ end
 function mmuReadInt16(address)
     local value = mmuReadByte(address + 1)
 
-    value = value * 256
-    value = value + mmuReadByte(address)
+    value = (value * 256) + mmuReadByte(address)
 
     if (value >= 0x8000) then
         value = -((0xFFFF - value) + 1)
@@ -814,4 +806,66 @@ end
 
 function mmuIsInBios()
     return _inBios
+end
+
+function saveMMUState()
+    return {
+        mbc = _mbc,
+        bios = bios,
+        interrupts = interrupts,
+        interruptFlags = interruptFlags,
+        stackDebug = stackDebug,
+        hdma = _hdma,
+        hdmaSource = _hdmaSource,
+        hdmaDestination = _hdmaDestination,
+        hdmaBytes = _hdmaBytes,
+        hdmaEnabled = hdmaEnabled,
+        eramUpdated = eramUpdated,
+        eramLastUpdated = eramLastUpdated,
+        romOffset = _romOffset,
+        ramOffset = _ramOffset,
+        cartridgeType = _cartridgeType,
+        romBankCount = _romBankCount,
+        ramBankCount = _ramBankCount,
+        eram = _eram,
+        mram = _mram,
+        zram = _zram,
+        wram = _wram,
+        ram = _ram,
+        rom = _rom,
+        oam = _oam,
+        wramBank = _wramBank,
+        inBios = _inBios
+    }
+end
+
+function loadMMUState(state)
+    _mbc = state.mbc
+    bios = state.bios
+    interrupts = state.interrupts
+    interruptFlags = state.interruptFlags
+    stackDebug = state.stackDebug
+    _hdma = state.hdma
+    _hdmaSource = state.hdmaSource
+    _hdmaDestination = state.hdmaDestination
+    hdmaBytes = state.hdmaBytes
+    hdmaEnabled = state.hdmaEnabled
+    eramUpdated = state.eramUpdated
+    eramLastUpdated = state.eramLastUpdated
+    _romOffset = state.romOffset
+    _ramOffset = state.ramOffset
+    _cartridgeType = state.cartridgeType
+    _romBankCount = state.romBankCount
+    _ramBankCount = state.ramBankCount
+    _eram = state.eram
+    _mram = state.mram
+    _zram = state.zram
+    _wram = state.wram
+    _ram = state.ram
+    _rom = state.rom
+    _wramBank = state.wramBank
+    _inBios = state.inBios
+    _oam = state.oam
+
+    oam = _oam
 end
