@@ -517,20 +517,14 @@ local writeByteSwitch = switch()
 local writeByteSwitchLen = #writeByteSwitch
     
 function mmuWriteByte(address, value, onlyWrite)
-    onlyWrite = onlyWrite or false
-
-    if (writeByteSwitchLen >= address) then
-        return writeByteSwitch[address](address, value, onlyWrite)
-    end
-
-    return _memoryViolation(address, registers[9])
+    return writeByteSwitch[address](address, value, onlyWrite or false)
 end
 
 function mmuWriteShort(address, value)
-    mmuWriteByte(address, _bitAnd(0x00FF, value))
+    writeByteSwitch[address](address, _bitAnd(0x00FF, value))
 
     value = _bitAnd(0xFF00, value) / 256
-    mmuWriteByte(address + 1, value - (value % 1))
+    writeByteSwitch[address + 1](address + 1, value - (value % 1))
 end
 
 function mmuPushStack(value)
@@ -783,15 +777,11 @@ local readByteSwitch = switch()
 local readByteSwitchLen = #readByteSwitch
 
 function mmuReadByte(address)
-    if (readByteSwitchLen >= address) then
-        return readByteSwitch[address](address)
-    end
- 
-    return _memoryViolation(address, registers[9])
+    return readByteSwitch[address](address)
 end
 
 function mmuReadSignedByte(address)
-    local value = mmuReadByte(address)
+    local value = readByteSwitch[address](address)
 
     if (value >= 0x80) then
         value = -((0xFF - value) + 1)
@@ -801,9 +791,9 @@ function mmuReadSignedByte(address)
 end
 
 function mmuReadUInt16(address)
-    local value = mmuReadByte(address + 1) or 0
+    local value = readByteSwitch[address + 1](address + 1) or 0
 
-    value = (value * 256) + (mmuReadByte(address) or 0)
+    value = (value * 256) + (readByteSwitch[address](address) or 0)
 
     return value
 end
@@ -811,7 +801,7 @@ end
 function mmuReadInt16(address)
     local value = mmuReadByte(address + 1)
 
-    value = (value * 256) + mmuReadByte(address)
+    value = (value * 256) + readByteSwitch[address](address)
 
     if (value >= 0x8000) then
         value = -((0xFFFF - value) + 1)

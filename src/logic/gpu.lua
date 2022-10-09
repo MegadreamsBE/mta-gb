@@ -52,6 +52,8 @@ local _mmuWriteByte = false
 cacheAttributes = createFilledTable(0xFFFF, {})
 local _cacheAttributes = cacheAttributes
 
+local _frameSkips = 0
+
 -----------------------------------
 -- * Functions
 -----------------------------------
@@ -340,7 +342,7 @@ function renderTiles()
             if (debuggerEnabled) then
                 debugBackground[(cgbBank) and 2 or bank][tileLocation] = cgbPalette
             end
-
+            
             _dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
         else
             local color = _bitOr(_bitLShift(_bitExtract(palette, (colorNum * 2) + 1, 1), 1), _bitExtract(palette, (colorNum * 2), 1))
@@ -584,7 +586,12 @@ function gpuStep(ticks)
                     lcdStatus = _bitReplace(_bitReplace(lcdStatus, 1, 0, 1), 0, 1, 1)
                     requireInterrupt = (_bitExtract(lcdStatus, 4, 1) == 1)
 
-                    _dxSetTexturePixels(_screen, _screenPixels)
+                    _frameSkips = _frameSkips + 1
+
+                    if (_frameSkips >= 2) then
+                        _dxSetTexturePixels(_screen, _screenPixels)
+                        _frameSkips = 0
+                    end
 
                     requestInterrupt(0)
                 else
@@ -627,7 +634,9 @@ function gpuStep(ticks)
                 lcdStatus = _bitReplace(_bitReplace(lcdStatus, 0, 1, 1), 0, 0, 1)
                 requireInterrupt = (_bitExtract(lcdStatus, 3, 1) == 1)
 
-                renderScan()
+                if (_frameSkips == 0) then
+                    renderScan()
+                end
             end
         end
 
