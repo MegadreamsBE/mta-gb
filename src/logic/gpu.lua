@@ -9,7 +9,8 @@ scanLine = 0
 
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 
-local _math_floor = math.floor
+local _dxGetPixelColor = dxGetPixelColor
+local _dxSetPixelColor = dxSetPixelColor
 
 local _bitExtract = bitExtract
 local _bitReplace = bitReplace
@@ -17,6 +18,8 @@ local _bitLShift = bitLShift
 local _bitRShift = bitRShift
 local _bitOr = bitOr
 local _bitAnd = bitAnd
+
+local _dxSetTexturePixels = dxSetTexturePixels
 
 local COLORS = {
     {255, 255, 255},
@@ -41,6 +44,13 @@ local _spritePalettes = createFilledTable(8)
 local _backgroundPriority = createFilledTable(160)
 
 debugBackground = {createFilledTable(0xFFFF), createFilledTable(0xFFFF)}
+
+local _mmuReadByte = false
+local _mmuReadSignedByte = false
+local _mmuWriteByte = false
+
+cacheAttributes = createFilledTable(0xFFFF, {})
+local _cacheAttributes = cacheAttributes
 
 -----------------------------------
 -- * Functions
@@ -77,7 +87,7 @@ function setupGPU()
         _backgroundPriority[i + 1] = createFilledTable(144)
 
         for a=0, 143 do
-            dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
+            _dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
             _backgroundPriority[i + 1][a + 1] = {false, 0}
         end
     end
@@ -97,7 +107,7 @@ function setupGPU()
         end
     end
 
-    dxSetTexturePixels(_screen, _screenPixels)
+    _dxSetTexturePixels(_screen, _screenPixels)
 
     addEventHandler("onClientRender", root, function()
         local width, height = 320 * (1920 / SCREEN_WIDTH), 288 * (1920 / SCREEN_WIDTH)
@@ -140,7 +150,7 @@ function resetGPU()
         _backgroundPriority[i + 1] = createFilledTable(144)
 
         for a=0, 143 do
-            dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
+            _dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
             _backgroundPriority[i + 1][a + 1] = {false, 0}
         end
     end
@@ -161,13 +171,18 @@ function resetGPU()
     end
 
     if (_screenEnabled) then
-        local lcdStatus = mmuReadByte(0xFF41)
+        local lcdStatus = _mmuReadByte(0xFF41)
 
         lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
         lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
-        mmuWriteByte(0xFF41, lcdStatus)
+        _mmuWriteByte(0xFF41, lcdStatus)
     end
+
+    cacheAttributes = createFilledTable(0xFFFF, {})
+    _cacheAttributes = cacheAttributes
+
+    mmuLinkCache(cacheAttributes)
 end
 
 function renderTiles()
@@ -176,14 +191,14 @@ function renderTiles()
     local bank = vramBank
     local debuggerEnabled = isDebuggerEnabled()
 
-    local lcdControl = mmuReadByte(0xFF40)
-    local scrollY = mmuReadSignedByte(0xFF42)
-    local scrollX = mmuReadSignedByte(0xFF43)
-    local windowY = mmuReadByte(0xFF4A)
-    local windowX = mmuReadByte(0xFF4B) - 7
+    local lcdControl = _mmuReadByte(0xFF40)
+    local scrollY = _mmuReadSignedByte(0xFF42)
+    local scrollX = _mmuReadSignedByte(0xFF43)
+    local windowY = _mmuReadByte(0xFF4A)
+    local windowX = _mmuReadByte(0xFF4B) - 7
 
     if (_bitExtract(lcdControl, 5, 1) == 1) then
-       if (windowY <= mmuReadByte(0xFF44)) then
+       if (windowY <= _mmuReadByte(0xFF44)) then
            usingWindow = true
        end
     end
@@ -201,15 +216,11 @@ function renderTiles()
     end
 
     if (not usingWindow) then
-        if (_bitExtract(lcdControl, 3, 1) == 1) then
-            backgroundMemory = 0x9C00
-        else
+        if (_bitExtract(lcdControl, 3, 1) ~= 1) then
             backgroundMemory = 0x9800
         end
     else
-        if (_bitExtract(lcdControl, 6, 1) == 1) then
-            backgroundMemory = 0x9C00
-        else
+        if (_bitExtract(lcdControl, 6, 1) ~= 1) then
             backgroundMemory = 0x9800
         end
     end
@@ -229,7 +240,7 @@ function renderTiles()
     end
 
     local line = (yPos % 8) * 2
-    local row = _math_floor(yPos / 8) * 32
+    local row = ((yPos / 8) - ((yPos / 8) % 1)) * 32
 
     local cgbAttributes = 0
     local cgbPalette = 0
@@ -237,8 +248,11 @@ function renderTiles()
     local cgbPriority = false
     local cgbFlipX = false
     local cgbFlipY = false
+    local palette = _mmuReadByte(0xFF47)
 
-    for i=0, 159 do
+    local i = 0
+
+    while (i < 160) do
         local xPos = i + scrollX
 
         if (usingWindow) then
@@ -253,21 +267,38 @@ function renderTiles()
             xPos = xPos - 0xff
         end
 
-        local column = _math_floor(xPos / 8)
-        local tileNum = 0
-
-        local tileAddress = backgroundMemory + row + column
+        local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))
 
         if (isCGB) then
-            cgbAttributes = _vram[2][(tileAddress - 0x8000) + 1]
-            cgbPalette = _bitAnd(cgbAttributes, 0x07)
-            cgbBank = (_bitAnd(cgbAttributes, 0x08) > 1) and 2 or 1
-            cgbPriority = _bitAnd(cgbAttributes, 0x80) > 1
-            cgbFlipX = _bitAnd(cgbAttributes, 0x20) > 1
-            cgbFlipY = _bitAnd(cgbAttributes, 0x40) > 1
+            local adjustedAddress = (tileAddress - 0x8000) + 1
+            local attributes = _cacheAttributes[adjustedAddress]
+
+            if (attributes[1] == nil) then
+                cgbAttributes = _vram[2][adjustedAddress]
+
+                cgbPalette = _bitAnd(cgbAttributes, 0x07)
+                cgbBank = (_bitAnd(cgbAttributes, 0x08) > 1) and 2 or 1
+                cgbPriority = _bitAnd(cgbAttributes, 0x80) > 1
+                cgbFlipX = _bitAnd(cgbAttributes, 0x20) > 1
+                cgbFlipY = _bitAnd(cgbAttributes, 0x40) > 1
+
+                attributes[1] = cgbPalette
+                attributes[2] = cgbBank
+                attributes[3] = cgbPriority
+                attributes[4] = cgbFlipX
+                attributes[5] = cgbFlipY
+
+                _cacheAttributes[adjustedAddress] = attributes
+            else
+                cgbPalette = attributes[1]
+                cgbBank = attributes[2]
+                cgbPriority = attributes[3]
+                cgbFlipX = attributes[4]
+                cgbFlipY = attributes[5]
+            end
         end
 
-        tileNum = _vram[1][(tileAddress - 0x8000) + 1]
+        local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
         
         if (not unsigned and tileNum >= 0x80) then
             tileNum = -((0xFF - tileNum) + 1)
@@ -287,16 +318,17 @@ function renderTiles()
             lineWithFlip = (lineWithFlip - 8) * -1
         end
 
-        local byte1 = _vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip]
-        local byte2 = _vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip]
-
         local colorBit = ((xPos % 8) - 7) * -1
 
         if (cgbFlipX) then
             colorBit = (colorBit - 8) * -1
         end
 
-        local colorNum = _bitOr(_bitExtract(byte2, colorBit, 1) * 2, _bitExtract(byte1, colorBit, 1))
+        local colorNum = _bitOr(
+            _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip], colorBit, 1) * 2, 
+            _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip], colorBit, 1)
+        )
+
         local bgPriority = _backgroundPriority[i + 1][scanLine + 1]
 
         bgPriority[1] = cgbPriority
@@ -306,41 +338,23 @@ function renderTiles()
             local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
 
             if (debuggerEnabled) then
-                debugBackground[(cgbBank) and 2 or vramBank][tileLocation] = cgbPalette
+                debugBackground[(cgbBank) and 2 or bank][tileLocation] = cgbPalette
             end
 
-            dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
+            _dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
         else
-            local palette = mmuReadByte(0xFF47)
+            local color = _bitOr(_bitLShift(_bitExtract(palette, (colorNum * 2) + 1, 1), 1), _bitExtract(palette, (colorNum * 2), 1))
 
-            local hi = 0
-            local lo = 0
-
-            if (colorNum == 0) then
-                hi = 1
-                lo = 0
-            elseif (colorNum == 1) then
-                hi = 3
-                lo = 2
-            elseif (colorNum == 2) then
-                hi = 5
-                lo = 4
-            elseif (colorNum == 3) then
-                hi = 7
-                lo = 6
-            end
-
-            local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
-            color = _bitOr(color, _bitExtract(palette, lo, 1))
-
-            dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
+            _dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
         end
+
+        i = i + 1
     end
 end
 
 function renderSprites()
     local is8x16 = false
-    local lcdControl = mmuReadByte(0xFF40)
+    local lcdControl = _mmuReadByte(0xFF40)
     local isCGB = isGameBoyColor()
     local bank = vramBank
 
@@ -351,18 +365,20 @@ function renderSprites()
     local spritesRendered = 0
     local spritePriorityData = {}
 
-    for i=0,39 do
+    local i = 0
+
+    while (i < 40) do
         local index = i * 4
-        local yPos = mmuReadByte(0xFE00 + index) - 16
-        local xPos = mmuReadByte(0xFE00 + index + 1) - 8
+        local yPos = _mmuReadByte(0xFE00 + index) - 16
+        local xPos = _mmuReadByte(0xFE00 + index + 1) - 8
 
         local ySize = (is8x16) and 16 or 8
 
         if (scanLine >= yPos and scanLine < (yPos + ySize)) then
             spritesRendered = spritesRendered + 1
 
-            local tile = mmuReadByte(0xFE00 + index + 2)
-            local attributes = mmuReadByte(0xFE00 + index + 3)
+            local tile = _mmuReadByte(0xFE00 + index + 2)
+            local attributes = _mmuReadByte(0xFE00 + index + 3)
 
             local yFlip = false
             local xFlip = false
@@ -392,17 +408,20 @@ function renderSprites()
 
             if (isCGB and cgbBank) then
                 vramBank = 2
-                byte1 = mmuReadByte(address)
-                byte2 = mmuReadByte(address + 1)
+                byte1 = _mmuReadByte(address)
+                byte2 = _mmuReadByte(address + 1)
                 vramBank = bank
             else
                 vramBank = 1
-                byte1 = mmuReadByte(address)
-                byte2 = mmuReadByte(address + 1)
+                byte1 = _mmuReadByte(address)
+                byte2 = _mmuReadByte(address + 1)
                 vramBank = bank
             end
 
-            for tilePixel=7, 0, -1 do
+            local palette = _mmuReadByte((_bitExtract(attributes, 4, 1) == 1) and 0xFF49 or 0xFF48)
+            local tilePixel = 7
+
+            while (tilePixel > -1) do
                 local xPixel = (-tilePixel) + 7
                 local pixel = xPos + xPixel
 
@@ -414,8 +433,7 @@ function renderSprites()
                         colorBit = colorBit * -1
                     end
 
-                    local colorNum = bitExtract(byte2, colorBit, 1) * 2
-                    colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
+                    local colorNum = _bitOr(_bitExtract(byte2, colorBit, 1) * 2, _bitExtract(byte1, colorBit, 1))
 
                     if (isCGB) then
                         local avoidRender = false
@@ -431,33 +449,13 @@ function renderSprites()
 
                                 local color = _spritePalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
                 
-                                dxSetPixelColor(_screenPixels, pixel, scanLine, color[1], color[2], color[3], 255)
+                                _dxSetPixelColor(_screenPixels, pixel, scanLine, color[1], color[2], color[3], 255)
                             end
                         end
                     else
-                        local palette = mmuReadByte((_bitExtract(attributes, 4, 1) == 1) and 0xFF49 or 0xFF48)
+                        local color = _bitOr(_bitLShift(_bitExtract(palette, (colorNum * 2) + 1, 1), 1), _bitExtract(palette, (colorNum * 2), 1))
 
-                        local hi = 0
-                        local lo = 0
-
-                        if (colorNum == 0) then
-                            hi = 1
-                            lo = 0
-                        elseif (colorNum == 1) then
-                            hi = 3
-                            lo = 2
-                        elseif (colorNum == 2) then
-                            hi = 5
-                            lo = 4
-                        elseif (colorNum == 3) then
-                            hi = 7
-                            lo = 6
-                        end
-
-                        local color = _bitLShift(_bitExtract(palette, hi, 1), 1)
-                        color = _bitOr(color, _bitExtract(palette, lo, 1))
-
-                        local bgColorR, bgColorG, bgColorB, _ = dxGetPixelColor(_screenPixels, pixel, scanLine)
+                        local bgColorR, bgColorG, bgColorB, _ = _dxGetPixelColor(_screenPixels, pixel, scanLine)
                         local avoidRender = false
 
                         if (spritePriorityData[pixel + 1] ~= nil) then
@@ -471,22 +469,26 @@ function renderSprites()
                                 ((_bitExtract(attributes, 7, 1) == 1) and _backgroundPriority[pixel + 1][scanLine + 1][2] == 0)) then
                                 spritePriorityData[pixel + 1] = xPos
 
-                                dxSetPixelColor(_screenPixels, pixel, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
+                                _dxSetPixelColor(_screenPixels, pixel, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
                             end
                         end
                     end
                 end
+
+                tilePixel = tilePixel - 1
             end
         end
 
         if (spritesRendered == 10) then
             break
         end
+
+        i = i + 1
     end
 end
 
 function renderScan()
-    local lcdControl = mmuReadByte(0xFF40)
+    local lcdControl = _mmuReadByte(0xFF40)
 
     if (_bitExtract(lcdControl, 0) == 1) then
         renderTiles()
@@ -503,14 +505,14 @@ function updatePaletteSpec(isSprites, value)
     local color = (isSprites) and _spritePalettes[palette + 1][index + 1][1] or _backgroundPalettes[palette + 1][index + 1][1]
 
     if (_bitExtract(value, 0, 1) == 1) then
-        mmuWriteByte((isSprites) and 0xFF6B or 0xFF69, _bitAnd(_bitRShift(color, 8), 0xFF), true)
+        _mmuWriteByte((isSprites) and 0xFF6B or 0xFF69, _bitAnd(_bitRShift(color, 8), 0xFF), true)
     else
-        mmuWriteByte((isSprites) and 0xFF6B or 0xFF69, _bitAnd(color, 0xFF), true)
+        _mmuWriteByte((isSprites) and 0xFF6B or 0xFF69, _bitAnd(color, 0xFF), true)
     end
 end
 
 function setColorPalette(isSprites, value)
-    local spec = (isSprites) and mmuReadByte(0xFF6A) or mmuReadByte(0xFF68)
+    local spec = (isSprites) and _mmuReadByte(0xFF6A) or _mmuReadByte(0xFF68)
     local index = _bitAnd(_bitRShift(spec, 1), 0x03)
     local palette = _bitAnd(_bitRShift(spec, 3), 0x07)
     local autoIncrement = (_bitExtract(spec, 7, 1) == 1)
@@ -522,7 +524,7 @@ function setColorPalette(isSprites, value)
         address = _bitAnd(address + 1, 0x3F)
         spec = _bitOr(_bitAnd(spec, 0x80), address)
 
-        mmuWriteByte((isSprites) and 0xFF6A or 0xFF68, spec, true)
+        _mmuWriteByte((isSprites) and 0xFF6A or 0xFF68, spec, true)
         updatePaletteSpec(isSprites, spec)
     end
 
@@ -549,14 +551,12 @@ function setColorPalette(isSprites, value)
 end
 
 function gpuStep(ticks)
-    local lcdStatus = mmuReadByte(0xFF41)
+    local lcdStatus = _mmuReadByte(0xFF41)
 
     if (not _screenEnabled) then
-        mmuWriteByte(0xFF41, 0)
-
         lcdStatus = _bitReplace(_bitAnd(lcdStatus, 0xFC), 1, 0, 1)
 
-        mmuWriteByte(0xFF41, lcdStatus)
+        _mmuWriteByte(0xFF41, lcdStatus)
     end
 
     _modeClock = _modeClock + ticks
@@ -574,25 +574,23 @@ function gpuStep(ticks)
                     local clockCycles = mmuPerformHDMA()
                     _modeClock = _modeClock + clockCycles
 
-                    registers.clock.m = registers.clock.m + clockCycles
-                    registers.clock.t = registers.clock.t + (clockCycles * 4)
+                    registers[12].m = registers[12].m + clockCycles
+                    registers[12].t = registers[12].t + (clockCycles * 4)
                 end
 
                 if (scanLine == 144) then
                     _mode = 1
 
-                    lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
-                    lcdStatus = _bitReplace(lcdStatus, 0, 1, 1)
+                    lcdStatus = _bitReplace(_bitReplace(lcdStatus, 1, 0, 1), 0, 1, 1)
                     requireInterrupt = (_bitExtract(lcdStatus, 4, 1) == 1)
 
-                    dxSetTexturePixels(_screen, _screenPixels)
+                    _dxSetTexturePixels(_screen, _screenPixels)
 
                     requestInterrupt(0)
                 else
                     _mode = 2
 
-                    lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
-                    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+                    lcdStatus = _bitReplace(_bitReplace(lcdStatus, 1, 1, 1), 0, 0, 1)
                     requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
                 end
             end
@@ -604,8 +602,7 @@ function gpuStep(ticks)
                 if (scanLine >= 154) then
                     _mode = 2
 
-                    lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
-                    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+                    lcdStatus = _bitReplace(_bitReplace(lcdStatus, 1, 1, 1), 0, 0, 1)
                     requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
 
                     scanLine = 0
@@ -619,10 +616,7 @@ function gpuStep(ticks)
         elseif (_mode == 2) then
             if (_modeClock >= 20) then
                 _modeClock = _modeClock - 20
-
-                lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
-                lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
-
+                lcdStatus = _bitReplace(_bitReplace(lcdStatus, 1, 1, 1), 1, 0, 1)
                 _mode = 3
             end
         elseif (_mode == 3) then
@@ -630,8 +624,7 @@ function gpuStep(ticks)
                 _modeClock = _modeClock - 43
                 _mode = 0
 
-                lcdStatus = _bitReplace(lcdStatus, 0, 1, 1)
-                lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
+                lcdStatus = _bitReplace(_bitReplace(lcdStatus, 0, 1, 1), 0, 0, 1)
                 requireInterrupt = (_bitExtract(lcdStatus, 3, 1) == 1)
 
                 renderScan()
@@ -642,7 +635,7 @@ function gpuStep(ticks)
             requestInterrupt(1)
         end
 
-        if (scanLine == mmuReadByte(0xFF45)) then
+        if (scanLine == _mmuReadByte(0xFF45)) then
             lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
             
             if (_bitExtract(lcdStatus, 6, 1) == 1) then
@@ -653,7 +646,7 @@ function gpuStep(ticks)
         end
     end
 
-    mmuWriteByte(0xFF41, lcdStatus)
+    _mmuWriteByte(0xFF41, lcdStatus)
 end
 
 function enableScreen()
@@ -666,12 +659,12 @@ function enableScreen()
     _modeClock = 0
     scanLine = 0
 
-    local lcdStatus = mmuReadByte(0xFF41)
+    local lcdStatus = _mmuReadByte(0xFF41)
 
     lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
     lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
-    mmuWriteByte(0xFF41, lcdStatus)
+    _mmuWriteByte(0xFF41, lcdStatus)
 end
 
 function disableScreen()
@@ -685,22 +678,23 @@ function disableScreen()
     _modeClock = 0
     scanLine = 0
 
-    for i=0, 159 do
-        for a=0, 143 do
-            dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
+    local i = 0
+
+    while (i < 160) do
+        local a = 0
+
+        while (a < 144) do
+            _dxSetPixelColor(_screenPixels, i, a, 255, 255, 255)
+            a = a + 1
         end
+
+        i = i + 1
     end
 
-    dxSetTexturePixels(_screen, _screenPixels)
+    _dxSetTexturePixels(_screen, _screenPixels)
 
-    local lcdStatus = mmuReadByte(0xFF41)
-
-    lcdStatus = _bitAnd(lcdStatus, 0x7C)
-    lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
-    lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
-
-    mmuWriteByte(0xFF41, lcdStatus)
-    mmuWriteByte(0xFF44, scanLine)
+    _mmuWriteByte(0xFF41, _bitReplace(_bitReplace(_bitAnd(_mmuReadByte(0xFF41), 0x7C), 1, 0, 1), 0, 0, 1))
+    _mmuWriteByte(0xFF44, scanLine)
 end
 
 function isScreenEnabled()
@@ -760,3 +754,11 @@ function loadGPUState(state)
 
     mmuLinkVideoRam(vram)
 end
+
+addEventHandler("onClientResourceStart", resourceRoot,
+    function()
+        _mmuReadByte = mmuReadByte
+        _mmuReadSignedByte = mmuReadSignedByte
+        _mmuWriteByte = mmuWriteByte
+    end
+)

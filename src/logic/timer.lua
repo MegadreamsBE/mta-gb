@@ -6,10 +6,26 @@ local _bitExtract = bitExtract
 local _bitReplace = bitReplace
 local _bitLShift = bitLShift
 local _bitRShift = bitRShift
-local _bitOr = bitOr
 local _bitAnd = bitAnd
 
 local _counter = 0
+
+local _mmuReadByte = false
+local _mmuWriteByte = false
+
+local getCounterFromFrequency = function(frequency)
+    if (frequency == 0) then
+        return 1024
+    elseif (frequency == 1) then
+        return 16
+    elseif (frequency == 2) then
+        return 64
+    elseif (frequency == 3) then
+        return 256
+    end
+
+    return 256
+end
 
 -----------------------------------
 -- * Functions
@@ -43,20 +59,6 @@ function resetTimer()
     end
 end
 
-function getCounterFromFrequency(frequency)
-    if (frequency == 0) then
-        return 1024
-    elseif (frequency == 1) then
-        return 16
-    elseif (frequency == 2) then
-        return 64
-    elseif (frequency == 3) then
-        return 256
-    end
-
-    return 256
-end
-
 function resetTimerClockFrequency(frequency)
     timerClockFrequency = frequency
 end
@@ -64,7 +66,7 @@ end
 function resetTimerDivider()
     if (timerClockEnabled) then
         if (timerDividerRegister == 1) then
-            mmuWriteByte(0xFF05, mmuReadByte(0xFF05) + 1)
+            _mmuWriteByte(0xFF05, _mmuReadByte(0xFF05) + 1)
         end
     end
 
@@ -84,10 +86,10 @@ function handleTACGlitch(oldState, newState, oldFrequency, newFrequency)
     end
             
     if (glitch) then
-        mmuWriteByte(0xFF05, mmuReadByte(0xFF05) + 1)
+        _mmuWriteByte(0xFF05, _mmuReadByte(0xFF05) + 1)
 
-        if (mmuReadByte(0xFF05) == 0xff) then
-            mmuWriteByte(0xFF05, mmuReadByte(0xFF06))
+        if (_mmuReadByte(0xFF05) == 0xff) then
+            _mmuWriteByte(0xFF05, _mmuReadByte(0xFF06))
             requestInterrupt(2)
         end
     end
@@ -102,12 +104,12 @@ function timerStep(ticks)
         local frequency = getCounterFromFrequency(timerClockFrequency)
 
         if (ticks >= (frequency - (_counter % frequency))) then
-            local tima = mmuReadByte(0xFF05) + 1
+            local tima = _mmuReadByte(0xFF05) + 1
 
-            mmuWriteByte(0xFF05, tima)
+            _mmuWriteByte(0xFF05, tima)
 
             if (tima == 0xff) then
-                mmuWriteByte(0xFF05, mmuReadByte(0xFF06))
+                _mmuWriteByte(0xFF05, _mmuReadByte(0xFF06))
                 requestInterrupt(2)
             end
         end
@@ -137,3 +139,10 @@ function loadTimerState(state)
     timerDelayTicks = state.timerDelayTicks
     timerDividerRegister = state.timerDividerRegister
 end
+
+addEventHandler("onClientResourceStart", resourceRoot,
+    function()
+        _mmuReadByte = mmuReadByte
+        _mmuWriteByte = mmuWriteByte
+    end
+)

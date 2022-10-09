@@ -16,6 +16,19 @@ local DEBUGGER_REGISTERS = {
     "sp", "pc"
 }
 
+local DEBUGGER_REGISTER_MAPPING = {
+    ['a'] = 1, 
+    ['b'] = 2, 
+    ['c'] = 3, 
+    ['d'] = 4, 
+    ['e'] = 5, 
+    ['h'] = 6, 
+    ['l'] = 7, 
+    ['f'] = 8, 
+    ['sp'] = 11, 
+    ['pc'] = 10
+}
+
 -----------------------------------
 -- * Locals
 -----------------------------------
@@ -196,7 +209,7 @@ function startDebugger()
             end
 
             if (_debugMemoryPointer == -1) then
-                _debugMemoryPointer = registers.pc
+                _debugMemoryPointer = registers[10]
             end
 
             _debugMemoryPointer = _debugMemoryPointer - 1
@@ -214,7 +227,7 @@ function startDebugger()
             end
 
             if (_debugMemoryPointer == -1) then
-                _debugMemoryPointer = registers.pc
+                _debugMemoryPointer = registers[10]
             end
 
             _debugMemoryPointer = _debugMemoryPointer + 1
@@ -241,7 +254,7 @@ function startDebugger()
             if (_memoryPointerMemory[_currentMenu] ~= nil) then
                 _debugMemoryPointer = _memoryPointerMemory[_currentMenu]
             else
-                _debugMemoryPointer = registers.pc
+                _debugMemoryPointer = registers[10]
             end
 
             _lastRender = 0
@@ -262,7 +275,7 @@ function startDebugger()
             if (_memoryPointerMemory[_currentMenu] ~= nil) then
                 _debugMemoryPointer = _memoryPointerMemory[_currentMenu]
             else
-                _debugMemoryPointer = registers.pc
+                _debugMemoryPointer = registers[10]
             end
 
             _lastRender = 0
@@ -278,33 +291,33 @@ function debuggerStep()
     if (LOG_TRACE and _traceFile) then
         local flags = ""
 
-        flags = flags..((registers.f[1]) and "Z" or "-")
-        flags = flags..((registers.f[2]) and "N" or "-")
-        flags = flags..((registers.f[3]) and "H" or "-")
-        flags = flags..((registers.f[4]) and "C" or "-")
+        flags = flags..((registers[8][1]) and "Z" or "-")
+        flags = flags..((registers[8][2]) and "N" or "-")
+        flags = flags..((registers[8][3]) and "H" or "-")
+        flags = flags..((registers[8][4]) and "C" or "-")
 
-        disassembleSingleInstruction(registers.pc)
+        disassembleSingleInstruction(registers[10])
 
-        local instruction = "[??]0x"..string.format("%.4x", registers.pc)..": "
-        local opcode = mmuReadByte(registers.pc)
+        local instruction = "[??]0x"..string.format("%.4x", registers[10])..": "
+        local opcode = mmuReadByte(registers[10])
         local instructionBytes = ""
         local opcodeLen = getOpcodeLength(opcode + 1)
 
         for i=1, opcodeLen do
-            instructionBytes = instructionBytes..string.format("%.2x", mmuReadByte(registers.pc + (i - 1))):lower().." "
+            instructionBytes = instructionBytes..string.format("%.2x", mmuReadByte(registers[10] + (i - 1))):lower().." "
         end
 
         instruction = instruction..string.format("%-09s", instructionBytes)
-        instruction = instruction.." "..(disassembledData[registers.pc + 1] or "unknown"):lower()
+        instruction = instruction.." "..(disassembledData[registers[10] + 1] or "unknown"):lower()
 
         fileWrite(_traceFile, 
-            "A:"..string.format("%.2x", registers.a):upper()..
+            "A:"..string.format("%.2x", registers[1]):upper()..
             " F:"..flags..
-            " BC:"..string.format("%.4x", readTwoRegisters('b', 'c')):lower()..
-            " DE:"..string.format("%.4x", readTwoRegisters('d', 'e')):lower()..
-            " HL:"..string.format("%.4x", readTwoRegisters('h', 'l')):lower()..
-            " SP:"..string.format("%.4x", registers.sp)..
-            " PC:"..string.format("%.4x", registers.pc)..
+            " BC:"..string.format("%.4x", readTwoRegisters(2, 3)):lower()..
+            " DE:"..string.format("%.4x", readTwoRegisters(4, 5)):lower()..
+            " HL:"..string.format("%.4x", readTwoRegisters(6, 7)):lower()..
+            " SP:"..string.format("%.4x", registers[11])..
+            " PC:"..string.format("%.4x", registers[10])..
             " (cy: "..getCPUClock().t..")"..
             " ppu:"..((isScreenEnabled()) and "+" or "-")..getGPUMode()..
             " |"..instruction..
@@ -312,7 +325,7 @@ function debuggerStep()
             "\n")
     end
 
-    if (_breakpoints[registers.pc] and not _debuggerInducedPause
+    if (_breakpoints[registers[10]] and not _debuggerInducedPause
         and not _passthrough) then
         pauseCPU()
         _debuggerInducedPause = true
@@ -368,7 +381,7 @@ function renderDebugger(delta)
         local renderLineCount = (romMemoryWindowHeight / dxGetFontHeight(1, "default-bold"))
 
         local romMemorySize = MMU_MEMORY_SIZE
-        local startValue = _math_floor(registers.pc - (renderLineCount * 0.5))
+        local startValue = _math_floor(registers[10] - (renderLineCount * 0.5))
 
         if (startValue < 0) then
             startValue = 0
@@ -382,7 +395,7 @@ function renderDebugger(delta)
             local romMemoryValue = mmuReadByte(i)
             local r, g, b = 255, 255, 255
 
-            if (i == registers.pc) then
+            if (i == registers[10]) then
                 r, g, b = 11, 51, 255
             elseif (i == _debugMemoryPointer and _currentMenu == 0) then
                 r, g, b = 255, 51, 11
@@ -416,7 +429,7 @@ function renderDebugger(delta)
         local renderLineCount = (romWindowHeight / dxGetFontHeight(1, "default-bold"))
 
         local romSize = #rom
-        local startValue = _math_floor(registers.pc - (renderLineCount * 0.5))
+        local startValue = _math_floor(registers[10] - (renderLineCount * 0.5))
 
         if (_debugMemoryPointer ~= -1 and _currentMenu == 1) then
             startValue = _math_floor(_debugMemoryPointer - (renderLineCount * 0.5))
@@ -432,7 +445,7 @@ function renderDebugger(delta)
             if (romValue ~= nil) then
                 local r, g, b = 255, 255, 255
 
-                if (i == registers.pc) then
+                if (i == registers[10]) then
                     r, g, b = 11, 51, 255
                 elseif (i == _debugMemoryPointer and _currentMenu == 1) then
                     r, g, b = 255, 51, 11
@@ -473,24 +486,24 @@ function renderDebugger(delta)
 
         for _, registerPair in pairs(DEBUGGER_REGISTERS) do
             if (type(registerPair) == "table") then
-                local value = registers[registerPair[1]] * 256
+                local value = registers[DEBUGGER_REGISTER_MAPPING[registerPair[1]]] * 256
 
-                if (registerPair[2] == "f") then
+                if (DEBUGGER_REGISTER_MAPPING[registerPair[2]] == 8) then
                     value = value + (
-                        ((registers.f[1]) and 1 or 0) * 128 +
-                        ((registers.f[2]) and 1 or 0) * 64 +
-                        ((registers.f[3]) and 1 or 0) * 32 +
-                        ((registers.f[4]) and 1 or 0) * 16
+                        ((registers[8][1]) and 1 or 0) * 128 +
+                        ((registers[8][2]) and 1 or 0) * 64 +
+                        ((registers[8][3]) and 1 or 0) * 32 +
+                        ((registers[8][4]) and 1 or 0) * 16
                     )
                 else
-                    value = value + registers[registerPair[2]]
+                    value = value + registers[DEBUGGER_REGISTER_MAPPING[registerPair[2]]]
                 end
 
                 dxDrawText(registerPair[1]:upper()..registerPair[2]:upper()
                     .." = ".._string_format("%.4x", value):upper(), registersX, registersY,
                     registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
             else
-                local value = registers[registerPair]
+                local value = registers[DEBUGGER_REGISTER_MAPPING[registerPair]]
 
                 dxDrawText(registerPair:upper()
                     .." = ".._string_format("%.4x", value):upper(), registersX, registersY,

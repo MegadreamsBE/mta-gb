@@ -9,13 +9,14 @@
     <!--
     #########   Files   ########
     -->
-    <file src="data/Tetris.gb" />
+    <file src="data/PokemonCrystal.gbc" />
 
     <!--
     #########   Utils   ########
     -->
     <script src="src/utils/log.lua" type="client" />
     <script src="src/utils/utils.lua" type="client" />
+    <script src="src/utils/switch.lua" type="client" />
 
     <!--
     #########   Core   ########

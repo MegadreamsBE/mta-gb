@@ -8,9 +8,9 @@ At this stage it is not possible to dynamically decide which ROM to load. Instea
 
 ## How To Run
 1. Clone or download this repository.
-2. Copy the folder containing this repository to your Multi Theft Auto server under **mods/deatmatch/resources**.
+2. Copy the folder containing this repository to your Multi Theft Auto server under **mods/deathmatch/resources**.
 3. Add a **data** folder inside the resource.
-4. Add a ROM to the **data** folder and adjust **src/gameboy.lua** and **meta.xml** if the filename is not Tetris.gb.
+4. Add a ROM to the **data** folder and adjust **src/gameboy.lua** and **meta.xml**.
 
 ### LÖVE
 A experimental wrapper for the LÖVE framework is available to allow for playing/testing outside of MTA. The following steps are needed to run it:
@@ -30,10 +30,12 @@ This emulator currently has a fully working CPU, GPU, MMU (except some MBC types
 ## TODO
 (This is not a full list)
 - Add sound support.
-- Improve debugging tools by using a proper dxGUI.
-- Improve GPU timings.
-- Add save states.
-- Add missing memory banks and improve existing ones.
+- Improve debugging tools
+- Improve GPU timings
+- Improve timer accuracy
+- Add per-game support to save states
+- Add missing memory banks and improve existing ones
+- Add interface to load a game instead of having it hardcoded
 
 ## Known Problems
 (This is not a full list)
@@ -42,7 +44,7 @@ This emulator currently has a fully working CPU, GPU, MMU (except some MBC types
 - Pokémon Blue/Red has a sprite glitch when the emulator runs in CGB mode (bottom part is white).
 - MBC3 isn't yet fully implemented and causes crashes.
 - GPU timings isn't quite right yet.
-- Slow performance
+- Slow performance (MTA specific)
 - There's a minor scrolling bug causing minor graphical glitches in Pokémon Blue/Red's new game sequence.
 
 ## FAQ
@@ -53,7 +55,7 @@ This emulator currently has a fully working CPU, GPU, MMU (except some MBC types
    Perhaps. This would be far into the future and only if optimization methods deem it feasable.
    
 3. How well does this emulator perform?
-   Poorly in MTA, fairly well on LÖVE. Performance improves are being made.
+   FPS in MTA is playable but games will run slowly, CGB performs better at the moment. Runs at full FPS in LÖVE.
 
 4. Can I contribute?    
    Yes. Feel free to fork this project and help improve it. It's open source for a reason.

@@ -183,25 +183,25 @@ function onKeyUp(key)
         _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x8)
     elseif (key == "lshift" or key == "rshift") then
         _isShiftDown = false
-    elseif (key == "f1") then
+    elseif (key == "f1" or key == "F1") then
         if (_isShiftDown) then
             loadState(1)
         else
             saveState(1)
         end
-    elseif (key == "f2") then
+    elseif (key == "f2" or key == "F2") then
         if (_isShiftDown) then
             loadState(2)
         else
             saveState(2)
         end
-    elseif (key == "f3") then
+    elseif (key == "f3" or key == "F3") then
         if (_isShiftDown) then
             loadState(3)
         else
             saveState(3)
         end
-    elseif (key == "f4") then
+    elseif (key == "f4" or key == "F4") then
         if (_isShiftDown) then
             loadState(4)
         else
@@ -276,6 +276,7 @@ end
 -----------------------------------
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
+    debug.sethook(nil)
     setupGameBoy()
     setupDebugger()
 
@@ -286,7 +287,9 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
             --gameBoyLoadBios("data/bios.gb")
         end
     end
-
+    
     startGameBoy()
     --enableDebugger()
-end)
+end, true, "low-1")
+
+addEvent("gb:cpu:reset", false)

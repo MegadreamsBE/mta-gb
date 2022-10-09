@@ -6,7 +6,8 @@ local _opcodes = opcodes
 
 local _bitAnd = bitAnd
 local _bitReplace = bitReplace
-local _math_floor = math.floor
+
+local _getTickCount = getTickCount
 
 local _clock = {
     m = 0,
@@ -25,28 +26,36 @@ local _stepCallback = nil
 
 local _interruptDelay = 0
 
+local _mmuPushStack = false
+local _mmuReadByte = false
+
+local _gpuStep = false
+local _timerStep = false
+
+local _handleInterrupts = false
+
 -----------------------------------
 -- * Functions
 -----------------------------------
 
 registers = {
-    a = 0x0,
-    b = 0x0,
-    c = 0x0,
-    d = 0x0,
-    e = 0x0,
-    h = 0x0,
-    l = 0x0,
-    f = {
+    0x0, -- register a
+    0x0, -- register b
+    0x0, -- register c
+    0x0, -- register d
+    0x0, -- register e
+    0x0, -- register h
+    0x0, -- register l
+    { -- register f
         -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
         false, false, false, false
     },
-    lastPC = 0x0,
-    pc = 0x0,
-    sp = 0xfffe,
-    clock = {
-        m = 0,
-        t = 0
+    0x0, -- last pc
+    0x0, -- pc
+    0xfffe, -- sp
+    { -- clock
+        0, -- m
+        0 -- t
     }
 }
 
@@ -59,22 +68,23 @@ function setupCPU()
     }
 
     registers = {
-        a = 0x0,
-        b = 0x0,
-        c = 0x0,
-        d = 0x0,
-        e = 0x0,
-        h = 0x0,
-        l = 0x0,
-        f = {
+        0x0, -- register a
+        0x0, -- register b
+        0x0, -- register c
+        0x0, -- register d
+        0x0, -- register e
+        0x0, -- register h
+        0x0, -- register l
+        { -- register f
             -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
             false, false, false, false
         },
-        pc = 0x0,
-        sp = 0xfffe,
-        clock = {
-            m = 0,
-            t = 0
+        0x0, -- last pc
+        0x0, -- pc
+        0xfffe, -- sp
+        { -- clock
+            0, -- m
+            0 -- t
         }
     }
 
@@ -99,63 +109,66 @@ function resetCPU()
     -- If we have a BIOS we want to ensure all registers are zeroed out.
     if (isBiosLoaded()) then
         registers = {
-            a = 0x0,
-            b = 0x0,
-            c = 0x0,
-            d = 0x0,
-            e = 0x0,
-            h = 0x0,
-            l = 0x0,
-            f = {
+            0x0, -- register a
+            0x0, -- register b
+            0x0, -- register c
+            0x0, -- register d
+            0x0, -- register e
+            0x0, -- register h
+            0x0, -- register l
+            { -- register f
                 -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
                 false, false, false, false
             },
-            pc = 0x0,
-            sp = 0xfffe,
-            clock = {
-                m = 0,
-                t = 0
+            0x0, -- last pc
+            0x0, -- pc
+            0xfffe, -- sp
+            { -- clock
+                0, -- m
+                0 -- t
             }
         }
     else
         if (isGameBoyColor()) then
             registers = {
-                a = 0x11,
-                b = 0x00,
-                c = 0x00,
-                d = 0xff,
-                e = 0x56,
-                h = 0x00,
-                l = 0x0d,
-                f = {
+                0x11, -- register a
+                0x0, -- register b
+                0x0, -- register c
+                0xff, -- register d
+                0x56, -- register e
+                0x0, -- register h
+                0xd, -- register l
+                { -- register f
                     -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
-                    true, false, false, false
+                    false, false, false, false
                 },
-                pc = 0x100,
-                sp = 0xfffe,
-                clock = {
-                    m = 0,
-                    t = 0
+                0x0, -- last pc
+                0x100, -- pc
+                0xfffe, -- sp
+                { -- clock
+                    0, -- m
+                    0 -- t
                 }
             }
         else
             registers = {
-                a = 0x01,
-                b = 0x00,
-                c = 0x13,
-                d = 0x00,
-                e = 0xd8,
-                h = 0x01,
-                l = 0x4d,
-                f = {
+                0x01, -- register a
+                0x0, -- register b
+                0x13, -- register c
+                0x0, -- register d
+                0xd8, -- register e
+                0x01, -- register h
+                0x4d, -- register l
+                { -- register f
                     -- FLAG_ZERO, FLAG_SUBSTRACT, FLAG_HALFCARRY, FLAG_CARRY
-                    true, false, true, true
+                    false, false, false, false
                 },
-                pc = 0x100,
-                sp = 0xfffe,
-                clock = {
-                    m = 0,
-                    t = 0
+                0x0, -- last pc
+                0x100, -- pc
+                0xfffe, -- sp
+                { -- clock
+                    0, -- m
+                    0 -- t
                 }
             }
         end
@@ -167,6 +180,8 @@ function resetCPU()
         removeEventHandler("onClientPreRender", root, _stepCallback)
         _stepCallback = nil
     end
+
+    triggerEvent("gb:cpu:reset", root)
 end
 
 function pauseCPU()
@@ -191,7 +206,7 @@ function haltCPU()
             _paused = true
             _pausedUntilInterrupts = true
 
-            handleInterrupts()
+            _handleInterrupts()
             
             _paused = false
             _pausedUntilInterrupts = false
@@ -228,12 +243,12 @@ function readTwoRegisters(r1, r2)
     local value = _registers[r1]
     value = value * 256
 
-    if (r2 == "f") then
+    if (r2 == 8) then
         value = value + (
-            ((_registers.f[1]) and 1 or 0) * 128 +
-            ((_registers.f[2]) and 1 or 0) * 64 +
-            ((_registers.f[3]) and 1 or 0) * 32 +
-            ((_registers.f[4]) and 1 or 0) * 16
+            ((_registers[8][1]) and 1 or 0) * 128 +
+            ((_registers[8][2]) and 1 or 0) * 64 +
+            ((_registers[8][3]) and 1 or 0) * 32 +
+            ((_registers[8][4]) and 1 or 0) * 16
         )
     else
         value = value + _registers[r2]
@@ -243,13 +258,14 @@ function readTwoRegisters(r1, r2)
 end
 
 function writeTwoRegisters(r1, r2, value)
-    _registers[r1] = _math_floor(_bitAnd(0xFF00, value) / 256)
+    local reg1 = _bitAnd(0xFF00, value) / 256
+    _registers[r1] = reg1 - (reg1 % 1)
 
-    if (r2 == "f") then
-        _registers.f[1] = (_bitAnd(value, 0x80) > 0)
-        _registers.f[2] = (_bitAnd(value, 0x40) > 0)
-        _registers.f[3] = (_bitAnd(value, 0x20) > 0)
-        _registers.f[4] = (_bitAnd(value, 0x10) > 0)
+    if (r2 == 8) then
+        _registers[8][1] = (_bitAnd(value, 0x80) > 0)
+        _registers[8][2] = (_bitAnd(value, 0x40) > 0)
+        _registers[8][3] = (_bitAnd(value, 0x20) > 0)
+        _registers[8][4] = (_bitAnd(value, 0x10) > 0)
     else
         _registers[r2] = _bitAnd(0x00FF, value)
     end
@@ -265,19 +281,19 @@ function hasIncomingInterrupt()
 end
 
 function handleInterrupts()
-    if (((_interrupts or _pausedUntilInterrupts) and _bitAnd(interrupts, interruptFlags) ~= 0 and _interruptDelay <= 0)) then
-        local maskedFlags = _bitAnd(interrupts, interruptFlags)
+    local maskedFlags = _bitAnd(interrupts, interruptFlags)
 
+    if (((_interrupts or _pausedUntilInterrupts) and maskedFlags ~= 0 and _interruptDelay <= 0)) then
         if (_bitAnd(maskedFlags, 0x01) ~= 0) then
             if (_interrupts) then
                 interruptFlags = _bitAnd(interruptFlags, 0xFE)
 
-                mmuPushStack(_registers.pc)
+                _mmuPushStack(_registers[10])
 
-                _registers.pc = 0x40
+                _registers[10] = 0x40
 
-                _registers.clock.m = 5
-                _registers.clock.t = 20
+                _registers[12].m = 5
+                _registers[12].t = 20
             end
 
             _interrupts = false
@@ -285,12 +301,12 @@ function handleInterrupts()
             if (_interrupts) then
                 interruptFlags = _bitAnd(interruptFlags, 0xFD)
 
-                mmuPushStack(_registers.pc)
+                _mmuPushStack(_registers[10])
 
-                _registers.pc = 0x48
+                _registers[10] = 0x48
 
-                _registers.clock.m = 5
-                _registers.clock.t = 20
+                _registers[12].m = 5
+                _registers[12].t = 20
             end
 
             _interrupts = false
@@ -298,12 +314,12 @@ function handleInterrupts()
             if (_interrupts) then
                 interruptFlags = _bitAnd(interruptFlags, 0xFB)
 
-                mmuPushStack(_registers.pc)
+                _mmuPushStack(_registers[10])
 
-                _registers.pc = 0x50
+                _registers[10] = 0x50
 
-                _registers.clock.m = 5
-                _registers.clock.t = 20
+                _registers[12].m = 5
+                _registers[12].t = 20
             end
 
             _interrupts = false
@@ -311,12 +327,12 @@ function handleInterrupts()
             if (_interrupts) then
                 interruptFlags = _bitAnd(interruptFlags, 0xF7)
 
-                mmuPushStack(_registers.pc)
+                _mmuPushStack(_registers[10])
 
-                _registers.pc = 0x58
+                _registers[10] = 0x58
 
-                _registers.clock.m = 5
-                _registers.clock.t = 20
+                _registers[12].m = 5
+                _registers[12].t = 20
             end
 
             _interrupts = false
@@ -324,12 +340,12 @@ function handleInterrupts()
             if (_interrupts) then
                 interruptFlags = _bitAnd(interruptFlags, 0xEF)
 
-                mmuPushStack(_registers.pc)
+                _mmuPushStack(_registers[10])
 
-                _registers.pc = 0x60
+                _registers[10] = 0x60
 
-                _registers.clock.m = 5
-                _registers.clock.t = 20
+                _registers[12].m = 5
+                _registers[12].t = 20
             end
 
             _interrupts = false
@@ -342,9 +358,12 @@ function handleInterrupts()
             _paused = false
         end
     elseif (_interruptDelay > 0) then
-        _interruptDelay = _interruptDelay - _registers.clock.t
+        _interruptDelay = _interruptDelay - _registers[12].t
     end
 end
+
+local currentCycles = 0
+local nextOpcode = 0
 
 function runCPU()
     if (_stepCallback) then
@@ -352,9 +371,11 @@ function runCPU()
         _stepCallback = nil
     end
 
+    local debuggerEnabled = isDebuggerEnabled()
+
     _stepCallback = function(delta)
         if (not _paused or _pausedUntilInterrupts) then
-            local currentCycles = 0
+            currentCycles = 0
 
             while(currentCycles < 69905) do
                 if (_paused and not _pausedUntilInterrupts) then
@@ -379,65 +400,41 @@ function runCPU()
                     _queueChangeActive = true
                 end
 
-                local haltBug = false
+                if (not _paused and (not debuggerEnabled or debuggerStep())) then
+                    _registers[9] = _registers[10]
+                
+                    _registers[12].m = 0
+                    _registers[12].t = 0
+                    _registers[10] = _registers[10] + 1
+                
+                    _opcodes[_mmuReadByte(_registers[10] - 1) + 1]()
+                
+                    _clock.m = _clock.m + _registers[12].m
+                    _clock.t = _clock.t + _registers[12].t
+                end
 
                 if (_triggerHaltBug and not _paused) then
                     _triggerHaltBug = false
-                    haltBug = true
+                    _registers[10] = _registers[10] - 1
                 end
 
-                if (not _paused) then
-                    if ((not isDebuggerEnabled() or debuggerStep())) then
-                        local nextOpcode = mmuReadByte(_registers.pc)
-                    
-                        _registers.lastPC = _registers.pc
-                    
-                        _registers.clock.m = 0
-                        _registers.clock.t = 0
-                        _registers.pc = _registers.pc + 1
-                    
-                        local opcode = _opcodes[nextOpcode + 1]
-                    
-                        if (opcode == nil) then
-                            pauseCPU()
-                            _registers.pc = _registers.pc - 1
-                            return Log.error("CPU", "Unknown opcode 0x%s at 0x%s", string.format("%.2x", nextOpcode), string.format("%.2x", _registers.pc))
-                        end
-                    
-                        opcode()
-                    
-                        _clock.m = _clock.m + _registers.clock.m
-                        _clock.t = _clock.t + _registers.clock.t
-                    end
-                end
-
-                if (haltBug) then
-                    _registers.pc = _registers.pc - 1
-                end
-
-                local ticks = _registers.clock.t
+                local ticks = _registers[12].t
 
                 if (_paused) then
-                    ticks = 4
+                    _timerStep(4)
+                    _gpuStep(1)
+                else
+                    _timerStep(ticks)
+                    _gpuStep(_registers[12].m)
                 end
 
-                timerStep(ticks)
+                _handleInterrupts()
 
-                ticks = _registers.clock.m
-
-                if (_paused) then
-                    gpuStep(1)
-                end
-
-                gpuStep(ticks)
-
-                handleInterrupts()
-
-                currentCycles = currentCycles + _registers.clock.t
+                currentCycles = currentCycles + _registers[12].t
             end
         end
 
-        if (eramUpdated and (getTickCount() - eramLastUpdated) > 1000) then
+        if (eramUpdated and (_getTickCount() - eramLastUpdated) > 1000) then
             mmuSaveExternalRam()
         end
     end
@@ -479,3 +476,13 @@ function loadCPUState(state)
     _registers = registers
     clock = _clock
 end
+
+addEventHandler("onClientResourceStart", resourceRoot, function()
+    _mmuPushStack = mmuPushStack
+    _mmuReadByte = mmuReadByte
+
+    _gpuStep = gpuStep
+    _timerStep = timerStep
+
+    _handleInterrupts = handleInterrupts
+end, true, "high")

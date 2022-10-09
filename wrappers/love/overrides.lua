@@ -4,6 +4,8 @@ inspect = require "inspect"
 local events = {}
 local keyBinds = {}
 
+function addEvent() end
+
 function addEventHandler(event, _, handler)
     if (events[event] == nil) then
         events[event] = {}

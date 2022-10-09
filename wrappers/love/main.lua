@@ -13,9 +13,7 @@ function love.load(args)
 
     require "src/utils/log"
     require "src/utils/utils"
-
-    require "src/gameboy"
-    require "src/rom"
+    require "src/utils/switch"
 
     require "src/logic/opcodes"
     require "src/logic/cpu"
@@ -24,6 +22,11 @@ function love.load(args)
     require "src/logic/debugger"
     require "src/logic/disassembler"
     require "src/logic/mmu"
+
+    triggerEvent("onClientResourceStart")
+
+    require "src/gameboy"
+    require "src/rom"
 
     setupGameBoy()
     setupDebugger()
