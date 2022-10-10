@@ -253,6 +253,8 @@ function renderTiles()
     local palette = _mmuReadByte(0xFF47)
 
     local i = 0
+    local lastTileAddress = 0
+    local colorNum = 0
 
     while (i < 160) do
         local xPos = i + scrollX
@@ -271,65 +273,67 @@ function renderTiles()
 
         local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))
 
-        if (isCGB) then
-            local adjustedAddress = (tileAddress - 0x8000) + 1
-            local attributes = _cacheAttributes[adjustedAddress]
+        if (lastTileAddress ~= tileAddress) then
+            if (isCGB) then
+                local adjustedAddress = (tileAddress - 0x8000) + 1
+                local attributes = _cacheAttributes[adjustedAddress]
 
-            if (attributes[1] == nil) then
-                cgbAttributes = _vram[2][adjustedAddress]
+                if (attributes[1] == nil) then
+                    cgbAttributes = _vram[2][adjustedAddress]
 
-                cgbPalette = _bitAnd(cgbAttributes, 0x07)
-                cgbBank = (_bitAnd(cgbAttributes, 0x08) > 1) and 2 or 1
-                cgbPriority = _bitAnd(cgbAttributes, 0x80) > 1
-                cgbFlipX = _bitAnd(cgbAttributes, 0x20) > 1
-                cgbFlipY = _bitAnd(cgbAttributes, 0x40) > 1
+                    cgbPalette = _bitAnd(cgbAttributes, 0x07)
+                    cgbBank = (_bitAnd(cgbAttributes, 0x08) > 1) and 2 or 1
+                    cgbPriority = _bitAnd(cgbAttributes, 0x80) > 1
+                    cgbFlipX = _bitAnd(cgbAttributes, 0x20) > 1
+                    cgbFlipY = _bitAnd(cgbAttributes, 0x40) > 1
 
-                attributes[1] = cgbPalette
-                attributes[2] = cgbBank
-                attributes[3] = cgbPriority
-                attributes[4] = cgbFlipX
-                attributes[5] = cgbFlipY
+                    attributes[1] = cgbPalette
+                    attributes[2] = cgbBank
+                    attributes[3] = cgbPriority
+                    attributes[4] = cgbFlipX
+                    attributes[5] = cgbFlipY
 
-                _cacheAttributes[adjustedAddress] = attributes
-            else
-                cgbPalette = attributes[1]
-                cgbBank = attributes[2]
-                cgbPriority = attributes[3]
-                cgbFlipX = attributes[4]
-                cgbFlipY = attributes[5]
+                    _cacheAttributes[adjustedAddress] = attributes
+                else
+                    cgbPalette = attributes[1]
+                    cgbBank = attributes[2]
+                    cgbPriority = attributes[3]
+                    cgbFlipX = attributes[4]
+                    cgbFlipY = attributes[5]
+                end
             end
+
+            local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
+            
+            if (not unsigned and tileNum >= 0x80) then
+                tileNum = -((0xFF - tileNum) + 1)
+            end
+
+            local tileLocation = 0
+
+            if (unsigned) then
+                tileLocation = tileData + tileNum * 16
+            else
+                tileLocation = tileData + (tileNum + 128) * 16
+            end
+
+            local lineWithFlip = line
+
+            if (cgbFlipY) then
+                lineWithFlip = (lineWithFlip - 8) * -1
+            end
+
+            local colorBit = ((xPos % 8) - 7) * -1
+
+            if (cgbFlipX) then
+                colorBit = (colorBit - 8) * -1
+            end
+
+            colorNum = _bitOr(
+                _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip], colorBit, 1) * 2, 
+                _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip], colorBit, 1)
+            )
         end
-
-        local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
-        
-        if (not unsigned and tileNum >= 0x80) then
-            tileNum = -((0xFF - tileNum) + 1)
-        end
-
-        local tileLocation = 0
-
-        if (unsigned) then
-            tileLocation = tileData + tileNum * 16
-        else
-            tileLocation = tileData + (tileNum + 128) * 16
-        end
-
-        local lineWithFlip = line
-
-        if (cgbFlipY) then
-            lineWithFlip = (lineWithFlip - 8) * -1
-        end
-
-        local colorBit = ((xPos % 8) - 7) * -1
-
-        if (cgbFlipX) then
-            colorBit = (colorBit - 8) * -1
-        end
-
-        local colorNum = _bitOr(
-            _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip], colorBit, 1) * 2, 
-            _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip], colorBit, 1)
-        )
 
         local bgPriority = _backgroundPriority[i + 1][scanLine + 1]
 
