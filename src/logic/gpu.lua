@@ -217,22 +217,16 @@ function renderTiles()
         unsigned = false
     end
 
-    if (not usingWindow) then
-        if (_bitExtract(lcdControl, 3, 1) ~= 1) then
-            backgroundMemory = 0x9800
-        end
-    else
-        if (_bitExtract(lcdControl, 6, 1) ~= 1) then
-            backgroundMemory = 0x9800
-        end
-    end
-
     local yPos = 0
+    local windowTileMapArea = 0
+    local bgTileMapArea = 0
 
-    if (not usingWindow) then
-        yPos = scrollY + scanLine
-    else
+    if (usingWindow) then
+        windowTileMapArea = _bitExtract(lcdControl, 6, 1)
         yPos = scanLine - windowY
+    else
+        bgTileMapArea = _bitExtract(lcdControl, 3, 1)
+        yPos = scrollY + scanLine
     end
 
     if (yPos < 0) then
@@ -256,19 +250,31 @@ function renderTiles()
     local lastTileAddress = 0
     local colorNum = 0
 
-    while (i < 160) do
-        local xPos = i + scrollX
+    local xPos = 0
 
-        if (usingWindow) then
-            if (i >= windowX) then
-                xPos = i - windowX
-            end
+    while (i < 160) do
+        if (usingWindow and i >= windowX) then
+            xPos = i - windowX
+        else
+            xPos = i + scrollX
         end
 
         if (xPos < 0) then
             xPos = xPos + 0xff
         elseif (xPos > 0xff) then
             xPos = xPos - 0xff
+        end
+
+        backgroundMemory = 0x9C00
+
+        if (usingWindow and i >= windowX) then
+            if (windowTileMapArea ~= 1) then
+                backgroundMemory = 0x9800
+            end
+        else
+            if (bgTileMapArea ~= 1) then
+                backgroundMemory = 0x9800
+            end
         end
 
         local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))

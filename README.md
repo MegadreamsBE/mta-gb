@@ -40,12 +40,10 @@ This emulator currently has a fully working CPU, GPU, MMU (except some MBC types
 ## Known Problems
 (This is not a full list)
 - Donkey Kong land shows a white screen.
-- Pokémon Crystal glitches when opening the PokéDex.
-- Pokémon Blue/Red has a sprite glitch when the emulator runs in CGB mode (bottom part is white).
+- Pokémon Blue/Red has a sprite glitch when the emulator runs in CGB mode (bottom part is white)
 - MBC3 isn't yet fully implemented and causes crashes.
-- GPU timings isn't quite right yet.
+- GPU timings aren't quite right yet.
 - Slow performance (MTA specific)
-- There's a minor scrolling bug causing minor graphical glitches in Pokémon Blue/Red's new game sequence.
 
 ## FAQ
 1. Why Multi Theft Auto?    

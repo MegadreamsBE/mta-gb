@@ -639,13 +639,13 @@ local readByteSwitch = switch()
             if (isGameBoyColor()) then
                 if (address < 0x900 and (address < 0x100 or address >= 0x200)) then
                     return bios[address + 1] or 0
-                elseif (registers[10] == 0x100) then
+                elseif (registers[10] >= 0x100 and registers[10] < 0x200) then
                     _inBios = false
                 end
             else
                 if (address < 0x100) then
                     return bios[address + 1] or 0
-                elseif (registers[10] == 0x100) then
+                elseif (registers[10] >= 0x100) then
                     _inBios = false
                 end
             end
