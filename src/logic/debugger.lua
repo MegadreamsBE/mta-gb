@@ -571,7 +571,7 @@ function renderDebugger(delta)
         for renderBank=1, ((isCGB) and 2 or 1) do
             vramBank = renderBank
 
-            for tile=0, 384 do
+            for tile=0, 383 do
                 local address = 0x8000 + (tile * 16)
 
                 local cgbPalette = nil
@@ -590,7 +590,7 @@ function renderDebugger(delta)
                         local colorNum = _bitLShift(_bitExtract(byte2, colorBit, 1), 1)
                         colorNum = _bitOr(colorNum, _bitExtract(byte1, colorBit, 1))
 
-                        if (isCGB and cgbPalette ~= nil) then
+                        if (isCGB and cgbPalette ~= nil and cgbPalette ~= false) then
                             local color = backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
                 
                             dxDrawRectangle(currentX + column * size, currentY + row * size, size, size,

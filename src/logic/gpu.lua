@@ -43,7 +43,7 @@ local _backgroundPalettes = createFilledTable(8)
 local _spritePalettes = createFilledTable(8)
 local _backgroundPriority = createFilledTable(160)
 
-debugBackground = {createFilledTable(0xFFFF), createFilledTable(0xFFFF)}
+debugBackground = {createFilledTable(0x10000), createFilledTable(0x10000)}
 
 local _mmuReadByte = false
 local _mmuReadSignedByte = false
@@ -60,7 +60,7 @@ local _frameSkips = 0
 
 function setupGPU()
     vram = {
-        createFilledTable(0xFFFF), createFilledTable(0xFFFF)
+        createFilledTable(0x10000), createFilledTable(0x10000)
     }
 
     _vram = vram
@@ -78,7 +78,7 @@ function setupGPU()
 
     scanLine = 0
 
-    _tileSet = createFilledTable(0xFFFF)
+    _tileSet = createFilledTable(0x10000)
     _screen = dxCreateTexture(160, 144)
     _screenPixels = dxGetTexturePixels(_screen)
 
@@ -119,7 +119,7 @@ end
 
 function resetGPU()
     vram = {
-        createFilledTable(0xFFFF), createFilledTable(0xFFFF)
+        createFilledTable(0x10000), createFilledTable(0x10000)
     }
 
     _vram = vram
@@ -141,7 +141,7 @@ function resetGPU()
         scanLine = 0x90
     end
 
-    _tileSet = createFilledTable(0xFFFF)
+    _tileSet = createFilledTable(0x10000)
     _screen = dxCreateTexture(160, 144)
     _screenPixels = dxGetTexturePixels(_screen)
 
@@ -350,7 +350,21 @@ function renderTiles()
             local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
 
             if (debuggerEnabled) then
-                debugBackground[(cgbBank) and 2 or bank][tileLocation] = cgbPalette
+                local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
+            
+                if (not unsigned and tileNum >= 0x80) then
+                    tileNum = -((0xFF - tileNum) + 1)
+                end
+
+                local tileLocation = 0
+
+                if (unsigned) then
+                    tileLocation = tileData + tileNum * 16
+                else
+                    tileLocation = tileData + (tileNum + 128) * 16
+                end
+
+                debugBackground[bank][tileLocation] = cgbPalette
             end
             
             _dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
@@ -624,7 +638,7 @@ function gpuStep(ticks)
 
                     scanLine = 0
 
-                    if (isDebuggerEnabled() and isGameBoyColor()) then
+                    if (isDebuggerEnabled() and isGameBoyColor() and _frameSkips == 0) then
                         cachedDebugBackground = {debugBackground[1], debugBackground[2]}
                         debugBackground = {{}, {}}
                     end
@@ -713,7 +727,6 @@ function disableScreen()
     _dxSetTexturePixels(_screen, _screenPixels)
 
     _mmuWriteByte(0xFF41, _bitReplace(_bitReplace(_bitAnd(_mmuReadByte(0xFF41), 0x7C), 1, 0, 1), 0, 0, 1))
-    _mmuWriteByte(0xFF44, scanLine)
 end
 
 function isScreenEnabled()

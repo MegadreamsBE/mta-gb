@@ -40,7 +40,7 @@ function love.load(args)
     end
 
     startGameBoy()
-    --enableDebugger()
+    enableDebugger()
 
     Log.log = log
 end

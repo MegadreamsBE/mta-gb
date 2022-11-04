@@ -36,6 +36,7 @@ local _mbc = {
     {},
     {
         rombank = 0,
+        rombankHigh = 0,
         rambank = 0,
         ramon = 0,
         mode = 0
@@ -95,9 +96,10 @@ end
 
 function resetMMU()
     _mbc = {
-        createFilledTable(0xFFFF),
+        createFilledTable(0x10000),
         {
             rombank = 0,
+            rombankHigh = 0,
             rambank = 0,
             ramon = 0,
             mode = 0
@@ -105,14 +107,14 @@ function resetMMU()
     }
 
     _wram = {
-        createFilledTable(0xFFFF), 
-        createFilledTable(0xFFFF), 
-        createFilledTable(0xFFFF), 
-        createFilledTable(0xFFFF), 
-        createFilledTable(0xFFFF), 
-        createFilledTable(0xFFFF), 
-        createFilledTable(0xFFFF), 
-        createFilledTable(0xFFFF)
+        createFilledTable(0x10000), 
+        createFilledTable(0x10000), 
+        createFilledTable(0x10000), 
+        createFilledTable(0x10000), 
+        createFilledTable(0x10000), 
+        createFilledTable(0x10000), 
+        createFilledTable(0x10000), 
+        createFilledTable(0x10000)
     }
 
     _wramBank = 1
@@ -162,7 +164,7 @@ function resetMMU()
         _hdma[i] = 0
     end
 
-    _oam = createFilledTable(0xFFFF)
+    _oam = createFilledTable(0x10000)
     oam = _oam
 
     mmuLinkVideoRam(vram or {})
@@ -179,7 +181,9 @@ end
 function mmuLoadRom(rom)
     _rom = rom
     _cartridgeType = _rom[0x0147 + 1]
-    
+
+    print("Cartridge type: "..string.format("%.2x", _cartridgeType))
+
     local romSize = _rom[0x0148 + 1]
 
     if (romSize == 0x01) then
@@ -247,11 +251,13 @@ local writeByteSwitch = switch()
             _romOffset = _mbc[2].rombank * 0x4000
         elseif (_cartridgeType >= 25 and _cartridgeType <= 30) then
             if (address <= 0x2FFF) then
-                _mbc[2].rombank = _bitAnd( _bitOr(value, _bitAnd(_mbc[2].rombank, 0x100)), _romBankCount - 1)
+                _mbc[2].rombank = _bitOr(value, _mbc[2].rombankHigh)
             else
-                _mbc[2].rombank = _bitAnd(_bitOr(_bitAnd(_mbc[2].rombank, 0xFF), _bitLShift(_bitAnd(value, 0x01), 8)), _romBankCount - 1)
+                _mbc[2].rombankHigh = _bitLShift(_bitAnd(value, 0x01), 8)
+                _mbc[2].rombank = _bitOr(_bitAnd(_mbc[2].rombank, 0xFF), _mbc[2].rombankHigh)
             end
 
+            _mbc[2].rombank = _bitAnd(_mbc[2].rombank, _romBankCount - 1)
             _romOffset = _mbc[2].rombank * 0x4000
         end
     end)
@@ -272,7 +278,8 @@ local writeByteSwitch = switch()
                 _ramOffset = _mbc[2].rambank * 0x2000
             end
         elseif (_cartridgeType >= 25 and _cartridgeType <= 30) then
-            _mbc[2].rambank = _bitAnd(_bitAnd(value, 0x0F), _ramBankCount - 1)
+            _mbc[2].rambank = _bitAnd(value, 0x0F)
+            _mbc[2].rambank = _bitAnd(_mbc[2].rambank, _ramBankCount - 1)
             _ramOffset = _mbc[2].rambank * 0x2000
         end
     end)
@@ -503,7 +510,7 @@ local writeByteSwitch = switch()
             _ram[address + 1] = value
         end
     end)
-    .caseRange(0xFF80, 0xFFFE, function(address, value, onlyWrite)
+    .caseRange(0xFF7F, 0xFFFE, function(address, value, onlyWrite)
         _zram[address + 1] = value
     end)
     .case(0xFFFF, function(address, value, onlyWrite)
@@ -663,7 +670,7 @@ local readByteSwitch = switch()
         return _vram[vramBank][(address - 0x8000) + 1] or 0
     end)
     .caseRange(0xA000, 0xBFFF, function(address)
-        return _eram[_ramOffset + (address - 0xA000) + 1] or 0
+        return _eram[_ramOffset + ((address - 0xA000) + 1)] or 0
     end)
     .caseRange(0xC000, 0xEFFF, function(address)
         if (isGameBoyColor()) then
@@ -727,7 +734,11 @@ local readByteSwitch = switch()
     .caseRange(0xF000, 0xFFFF, function(address)
         if (address >= 0xF000 and address <= 0xFDFF) then
             return _ram[address + 1] or 0
-        elseif (address >= 0xFE00 and address <= 0xFEFF) then
+        elseif (address >= 0xFE00 and address <= 0xFE9F) then
+            if (getGPUMode() > 2 and isScreenEnabled()) then
+                return 0xFF
+            end
+
             return _oam[address + 1] or 0
         elseif (address >= 0xFF00 and address <= 0xFFFF) then
             if (address == 0xFFFF) then

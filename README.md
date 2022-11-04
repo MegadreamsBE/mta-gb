@@ -41,7 +41,6 @@ This emulator currently has a fully working CPU, GPU, MMU (except some MBC types
 (This is not a full list)
 - Donkey Kong land shows a white screen.
 - Pokémon Blue/Red has a sprite glitch when the emulator runs in CGB mode (bottom part is white)
-- MBC3 isn't yet fully implemented and causes crashes.
 - GPU timings aren't quite right yet.
 - Slow performance (MTA specific)
 
