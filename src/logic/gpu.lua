@@ -310,7 +310,7 @@ function renderWindow()
                 local lineWithFlip = line
 
                 if (cgbFlipY) then
-                    lineWithFlip = (lineWithFlip - 8) * -1
+                    lineWithFlip = (16 - -(0 - lineWithFlip)) - 2
                 end
 
                 local colorBit = ((xPos % 8) - 7) * -1
@@ -371,15 +371,7 @@ function renderBackground()
     local lcdControl = _mmuReadByte(0xFF40)
     local scrollY = _mmuReadSignedByte(0xFF42)
     local scrollX = _mmuReadSignedByte(0xFF43)
-    local windowY = _mmuReadByte(0xFF4A)
-    local windowX = _mmuReadByte(0xFF4B) - 7
-
-    if (_bitExtract(lcdControl, 5, 1) == 1) then
-       if (windowY <= _mmuReadByte(0xFF44)) then
-           usingWindow = true
-       end
-    end
-
+    
     if (scanLine >= 144) then
         return
     end
@@ -488,13 +480,13 @@ function renderBackground()
             local lineWithFlip = line
 
             if (cgbFlipY) then
-                lineWithFlip = (lineWithFlip - 8) * -1
+                lineWithFlip = (16 - -(0 - lineWithFlip)) - 2
             end
 
             local colorBit = ((xPos % 8) - 7) * -1
 
             if (cgbFlipX) then
-                colorBit = (colorBit - 8) * -1
+                colorBit = ((colorBit - 8) * -1)
             end
 
             colorNum = _bitOr(
