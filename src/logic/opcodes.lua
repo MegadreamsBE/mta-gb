@@ -443,8 +443,8 @@ local cbOpcodes = {
     function()
         _registers[1] = helper_rlc(_registers[1], 8)
     
-        _registers[12].m = 1
-        _registers[12].t = 4
+        _registers[12].m = 2
+        _registers[12].t = 8
     end,
     -- Opcode: 0x08
     function()
@@ -557,8 +557,8 @@ local cbOpcodes = {
     function()
         _registers[1] = helper_rl(_registers[1], 8)
 
-        _registers[12].m = 1
-        _registers[12].t = 4
+        _registers[12].m = 2
+        _registers[12].t = 8
     end,
     -- Opcode: 0x18
     function()
@@ -2334,8 +2334,7 @@ opcodes = {
     end,
     -- Opcode: 0x10
     function()
-        -- TODO
-        --haltCPU()
+        stopCPU()
 
         _registers[12].m = 1
         _registers[12].t = 4
@@ -2705,12 +2704,15 @@ opcodes = {
     function()
         if (_registers[8][4]) then
             _registers[10] = _registers[10] + _mmuReadSignedByte(_registers[10]) + 1
+
+            _registers[12].m = 2
+            _registers[12].t = 12
         else
             _registers[10] = _registers[10] + 1
-        end
 
-        _registers[12].m = 2
-        _registers[12].t = 8
+            _registers[12].m = 2
+            _registers[12].t = 8
+        end
     end,
     -- Opcode: 0x39
     function()
@@ -3696,6 +3698,10 @@ opcodes = {
     function()
         if (not _registers[8][1]) then
             _registers[10] = _mmuPopStack()
+
+            _registers[12].m = 2
+            _registers[12].t = 20
+            return
         end
 
         _registers[12].m = 2
@@ -3712,12 +3718,15 @@ opcodes = {
     function()
         if (not _registers[8][1]) then
             _registers[10] = _mmuReadUInt16(_registers[10])
+
+            _registers[12].m = 3
+            _registers[12].t = 16
         else
             _registers[10] = _registers[10] + 2
-        end
 
-        _registers[12].m = 3
-        _registers[12].t = 12
+            _registers[12].m = 3
+            _registers[12].t = 12
+        end
     end,
     -- Opcode: 0xc3
     function()
@@ -3763,8 +3772,8 @@ opcodes = {
         _mmuPushStack(_registers[10])
         _registers[10] = 0x0
 
-        _registers[12].m = 8
-        _registers[12].t = 32
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xc8
     function()
@@ -3789,12 +3798,15 @@ opcodes = {
     function()
         if (_registers[8][1]) then
             _registers[10] = _mmuReadUInt16(_registers[10])
+
+            _registers[12].m = 3
+            _registers[12].t = 16
         else
             _registers[10] = _registers[10] + 2
-        end
 
-        _registers[12].m = 3
-        _registers[12].t = 12
+            _registers[12].m = 3
+            _registers[12].t = 12
+        end
     end,
     -- Opcode: 0xcb
     function()
@@ -3840,8 +3852,8 @@ opcodes = {
         _mmuPushStack(_registers[10])
         _registers[10] = 0x08
 
-        _registers[12].m = 8
-        _registers[12].t = 32
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xd0
     function()
@@ -3866,12 +3878,15 @@ opcodes = {
     function()
         if (not _registers[8][4]) then
             _registers[10] = _mmuReadUInt16(_registers[10])
+
+            _registers[12].m = 3
+            _registers[12].t = 16
         else
             _registers[10] = _registers[10] + 2
-        end
 
-        _registers[12].m = 3
-        _registers[12].t = 12
+            _registers[12].m = 3
+            _registers[12].t = 12
+        end
     end,
     -- Opcode: 0xd3
     function() end,
@@ -3910,16 +3925,21 @@ opcodes = {
         _mmuPushStack(_registers[10])
         _registers[10] = 0x10
 
-        _registers[12].m = 8
-        _registers[12].t = 32
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xd8
     function()
         if (_registers[8][4]) then
             _registers[10] = _mmuPopStack()
+
+            _registers[12].m = 1
+            _registers[12].t = 20
+
+            return
         end
 
-        _registers[12].m = 2
+        _registers[12].m = 1
         _registers[12].t = 8
     end,
     -- Opcode: 0xd9
@@ -3927,19 +3947,22 @@ opcodes = {
         _registers[10] = _mmuPopStack()
         setInterrupts()
 
-        _registers[12].m = 2
-        _registers[12].t = 8
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xda
     function()
         if (_registers[8][4]) then
             _registers[10] = _mmuReadUInt16(_registers[10])
+
+            _registers[12].m = 3
+            _registers[12].t = 16
         else
             _registers[10] = _registers[10] + 2
-        end
 
-        _registers[12].m = 3
-        _registers[12].t = 12
+            _registers[12].m = 3
+            _registers[12].t = 12
+        end
     end,
     -- Opcode: 0xdb
     function() end,
@@ -3973,8 +3996,8 @@ opcodes = {
         _mmuPushStack(_registers[10])
         _registers[10] = 0x18
 
-        _registers[12].m = 8
-        _registers[12].t = 32
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xe0
     function()
@@ -4022,8 +4045,8 @@ opcodes = {
         _mmuPushStack(_registers[10])
         _registers[10] = 0x20
 
-        _registers[12].m = 8
-        _registers[12].t = 32
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xe8
     function()
@@ -4068,8 +4091,8 @@ opcodes = {
         _mmuPushStack(_registers[10])
         _registers[10] = 0x28
 
-        _registers[12].m = 8
-        _registers[12].t = 32
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xf0
     function()
@@ -4122,8 +4145,8 @@ opcodes = {
         _mmuPushStack(_registers[10])
         _registers[10] = 0x30
 
-        _registers[12].m = 8
-        _registers[12].t = 32
+        _registers[12].m = 1
+        _registers[12].t = 16
     end,
     -- Opcode: 0xf8
     function()

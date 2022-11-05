@@ -198,6 +198,14 @@ function isCPUPaused()
     return _paused
 end
 
+function stopCPU()
+    if (cgbPrepareSpeedChange) then
+        cgbDoubleSpeed = not cgbDoubleSpeed
+        
+        mmuWriteByte(0xFF4D, _bitReplace(_bitReplace(_mmuReadByte(0xFF4D), cgbDoubleSpeed and 1 or 0, 7, 1), 0, 0, 1))
+    end
+end
+
 function haltCPU()
     if (not _interrupts) then
         _interruptDelay = 0
@@ -377,7 +385,13 @@ function runCPU()
         if (not _paused or _pausedUntilInterrupts) then
             currentCycles = 0
 
-            while(currentCycles < 69905) do
+            local cyclesToRun = 69905
+
+            if (isGameBoyColor() and cgbDoubleSpeed) then
+                cyclesToRun = cyclesToRun * 2
+            end
+
+            while(currentCycles < cyclesToRun) do
                 if (_paused and not _pausedUntilInterrupts) then
                     break
                 end
@@ -425,12 +439,17 @@ function runCPU()
                     _gpuStep(1)
                 else
                     _timerStep(ticks)
-                    _gpuStep(_registers[12].m)
+
+                    if (isGameBoyColor() and cgbDoubleSpeed) then
+                        _gpuStep(_registers[12].m / 2)
+                    else
+                        _gpuStep(_registers[12].m)
+                    end
                 end
 
                 _handleInterrupts()
 
-                currentCycles = currentCycles + _registers[12].t
+                currentCycles = currentCycles + ticks
             end
         end
 

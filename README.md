@@ -31,17 +31,15 @@ This emulator currently has a fully working CPU, GPU, MMU (except some MBC types
 (This is not a full list)
 - Add sound support.
 - Improve debugging tools
-- Improve GPU timings
-- Improve timer accuracy
 - Add per-game support to save states
 - Add missing memory banks and improve existing ones
 - Add interface to load a game instead of having it hardcoded
 
 ## Known Problems
 (This is not a full list)
-- Donkey Kong land shows a white screen.
 - Pokémon Blue/Red has a sprite glitch when the emulator runs in CGB mode (bottom part is white)
-- GPU timings aren't quite right yet.
+- Pokémon Pinball has an issue where the screen goes white after the ball leaves the screen
+- Various games have graphical glitches likely due to mistakes in window support
 - Slow performance (MTA specific)
 
 ## FAQ

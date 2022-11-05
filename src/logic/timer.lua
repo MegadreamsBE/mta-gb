@@ -9,6 +9,7 @@ local _bitRShift = bitRShift
 local _bitAnd = bitAnd
 
 local _counter = 0
+local _dividerCounter = 0
 
 local _mmuReadByte = false
 local _mmuWriteByte = false
@@ -96,14 +97,21 @@ function handleTACGlitch(oldState, newState, oldFrequency, newFrequency)
 end
 
 function timerStep(ticks)
-    if (ticks >= (4096 - (_counter % 4096))) then
+    _dividerCounter = _dividerCounter + ticks
+
+    if (_dividerCounter > 4096) then
         timerDividerRegister = (timerDividerRegister + 1) % 0x100
+        _dividerCounter = _dividerCounter - 4096
     end
+
+    _counter = _counter + ticks
 
     if (timerClockEnabled) then
         local frequency = getCounterFromFrequency(timerClockFrequency)
 
-        if (ticks >= (frequency - (_counter % frequency))) then
+        while (_counter >= frequency) do
+            _counter = _counter - frequency
+
             local tima = _mmuReadByte(0xFF05) + 1
 
             _mmuWriteByte(0xFF05, tima)
@@ -114,8 +122,6 @@ function timerStep(ticks)
             end
         end
     end
-
-    _counter = _counter + ticks
 
     if (_counter > 0xffff) then
         _counter = _counter - 0xffff
