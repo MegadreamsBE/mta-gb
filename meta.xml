@@ -10,6 +10,7 @@
     #########   Files   ########
     -->
     <file src="data/PokemonCrystal.gbc" />
+    <file src="shaders/upscale.fx" />
 
     <!--
     #########   Utils   ########

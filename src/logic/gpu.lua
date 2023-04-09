@@ -30,6 +30,8 @@ local COLORS = {
 
 _COLORS = COLORS
 
+local _upscaleShader = false
+
 local _vram = vram
 
 local _mode = 0
@@ -85,6 +87,7 @@ function setupGPU()
 
     _screenEnabled = true
     _backgroundPriority = createFilledTable(160)
+    _upscaleShader = dxCreateShader("shaders/upscale.fx")
 
     for i=0, 159 do
         _backgroundPriority[i + 1] = createFilledTable(144)
@@ -113,8 +116,27 @@ function setupGPU()
     _dxSetTexturePixels(_screen, _screenPixels)
 
     addEventHandler("onClientRender", root, function()
-        local width, height = 320 * (1920 / SCREEN_WIDTH), 288 * (1920 / SCREEN_WIDTH)
-        dxDrawImage((SCREEN_WIDTH / 2) - (width / 2), (SCREEN_HEIGHT / 2) - (height / 2), width, height, _screen)
+        local debuggerEnabled = isDebuggerEnabled()
+
+        local width = debuggerEnabled and 800 or 1200
+        local height = width * 0.9
+
+        local scaleW, scaleH = width / 160, height / 144
+
+        dxSetShaderValue(_upscaleShader, "tex", _screen)
+        dxSetShaderValue(_upscaleShader, "scale", {scaleW, scaleH})
+
+        dxDrawImageSection((SCREEN_WIDTH / 2) - (width / 2), (SCREEN_HEIGHT / 2) - (height / 2), width, height, 0, 0, 160 * scaleW, 144 * scaleH, _upscaleShader)
+    
+        --[[if (debuggerEnabled) then
+            for i=0, 159 do
+                dxDrawLine((SCREEN_WIDTH / 2) - (width / 2) + (i * scaleW), (SCREEN_HEIGHT / 2) - (height / 2), (SCREEN_WIDTH / 2) - (width / 2) + (i * scaleW), (SCREEN_HEIGHT / 2) - (height / 2) + (144 * scaleH), tocolor(0, 0, 0, 255), 1)
+            
+                for a=0, 143 do
+                    dxDrawLine((SCREEN_WIDTH / 2) - (width / 2), (SCREEN_HEIGHT / 2) - (height / 2) + (a * scaleH), (SCREEN_WIDTH / 2) - (width / 2) + (160 * scaleW), (SCREEN_HEIGHT / 2) - (height / 2) + (a * scaleH), tocolor(0, 0, 0, 255), 1)
+                end
+            end
+        end]]
     end)
 end
 
@@ -186,16 +208,15 @@ function resetGPU()
     _cacheAttributes = cacheAttributes
 
     mmuLinkCache(cacheAttributes)
+
+    if (not isBiosLoaded()) then
+        disableScreen()
+        enableScreen()
+    end
 end
 
 function renderWindow()
-    local isCGB = isGameBoyColor()
-    local bank = vramBank
-    local debuggerEnabled = isDebuggerEnabled()
-
     local lcdControl = _mmuReadByte(0xFF40)
-    local scrollY = _mmuReadSignedByte(0xFF42)
-    local scrollX = _mmuReadSignedByte(0xFF43)
     local windowY = _mmuReadByte(0xFF4A)
     local windowX = _mmuReadByte(0xFF4B) - 7
 
@@ -207,10 +228,13 @@ function renderWindow()
         return
     end
 
+    local isCGB = isGameBoyColor()
+    local bank = vramBank
+    local debuggerEnabled = isDebuggerEnabled()
+
     local unsigned = true
 
     local tileData = 0x8000
-    local backgroundMemory = 0x9C00
 
     if (_bitExtract(lcdControl, 4, 1) == 1) then
         tileData = 0x8000
@@ -220,179 +244,15 @@ function renderWindow()
     end
 
     local windowTileMapArea = _bitExtract(lcdControl, 6, 1)
-    local yPos = scanLine - windowY
 
-    if (yPos < 0) then
-        yPos = yPos + 0xff
-    elseif (yPos > 0xff) then
-        yPos = yPos - 0xff
-    end
-
-    local line = (yPos % 8) * 2
-    local row = ((yPos / 8) - ((yPos / 8) % 1)) * 32
-
-    local cgbAttributes = 0
-    local cgbPalette = 0
-    local cgbBank = 1
-    local cgbPriority = false
-    local cgbFlipX = false
-    local cgbFlipY = false
-    local palette = _mmuReadByte(0xFF47)
-
-    local i = 0
-    local lastTileAddress = 0
-    local colorNum = 0
-
-    local xPos = 0
-
-    while (i < 160) do
-        if (i >= windowX) then
-            xPos = i - windowX
-
-            if (xPos < 0) then
-                xPos = xPos + 0xff
-            elseif (xPos > 0xff) then
-                xPos = xPos - 0xff
-            end
-
-            backgroundMemory = 0x9C00
-
-            if (windowTileMapArea ~= 1) then
-                backgroundMemory = 0x9800
-            end
-
-            local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))
-
-            if (lastTileAddress ~= tileAddress) then
-                if (isCGB) then
-                    local adjustedAddress = (tileAddress - 0x8000) + 1
-                    local attributes = _cacheAttributes[adjustedAddress]
-
-                    if (attributes[1] == nil) then
-                        cgbAttributes = _vram[2][adjustedAddress]
-
-                        cgbPalette = _bitAnd(cgbAttributes, 0x07)
-                        cgbBank = (_bitAnd(cgbAttributes, 0x08) > 1) and 2 or 1
-                        cgbPriority = _bitAnd(cgbAttributes, 0x80) > 1
-                        cgbFlipX = _bitAnd(cgbAttributes, 0x20) > 1
-                        cgbFlipY = _bitAnd(cgbAttributes, 0x40) > 1
-
-                        attributes[1] = cgbPalette
-                        attributes[2] = cgbBank
-                        attributes[3] = cgbPriority
-                        attributes[4] = cgbFlipX
-                        attributes[5] = cgbFlipY
-
-                        _cacheAttributes[adjustedAddress] = attributes
-                    else
-                        cgbPalette = attributes[1]
-                        cgbBank = attributes[2]
-                        cgbPriority = attributes[3]
-                        cgbFlipX = attributes[4]
-                        cgbFlipY = attributes[5]
-                    end
-                end
-
-                local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
-                
-                if (not unsigned and tileNum >= 0x80) then
-                    tileNum = -((0xFF - tileNum) + 1)
-                end
-
-                local tileLocation = 0
-
-                if (unsigned) then
-                    tileLocation = tileData + tileNum * 16
-                else
-                    tileLocation = tileData + (tileNum + 128) * 16
-                end
-
-                local lineWithFlip = line
-
-                if (cgbFlipY) then
-                    lineWithFlip = (16 - -(0 - lineWithFlip)) - 2
-                end
-
-                local colorBit = ((xPos % 8) - 7) * -1
-
-                if (cgbFlipX) then
-                    colorBit = (colorBit - 8) * -1
-                end
-
-                colorNum = _bitOr(
-                    _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip], colorBit, 1) * 2, 
-                    _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip], colorBit, 1)
-                )
-            end
-
-            local bgPriority = _backgroundPriority[i + 1][scanLine + 1]
-
-            bgPriority[1] = cgbPriority
-            bgPriority[2] = colorNum
-
-            if (isCGB) then
-                local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
-
-                if (debuggerEnabled) then
-                    local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
-                
-                    if (not unsigned and tileNum >= 0x80) then
-                        tileNum = -((0xFF - tileNum) + 1)
-                    end
-
-                    local tileLocation = 0
-
-                    if (unsigned) then
-                        tileLocation = tileData + tileNum * 16
-                    else
-                        tileLocation = tileData + (tileNum + 128) * 16
-                    end
-
-                    debugBackground[bank][tileLocation] = cgbPalette
-                end
-                
-                _dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
-            else
-                local color = _bitOr(_bitLShift(_bitExtract(palette, (colorNum * 2) + 1, 1), 1), _bitExtract(palette, (colorNum * 2), 1))
-
-                _dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
-            end
-        end
-
-        i = i + 1
-    end
-end
-
-function renderBackground()
-    local isCGB = isGameBoyColor()
-    local bank = vramBank
-    local debuggerEnabled = isDebuggerEnabled()
-
-    local lcdControl = _mmuReadByte(0xFF40)
-    local scrollY = _mmuReadSignedByte(0xFF42)
-    local scrollX = _mmuReadSignedByte(0xFF43)
-    
-    if (scanLine >= 144) then
-        return
-    end
-
-    local unsigned = true
-
-    local tileData = 0x8000
     local backgroundMemory = 0x9C00
 
-    if (_bitExtract(lcdControl, 4, 1) == 1) then
-        tileData = 0x8000
-    else
-        tileData = 0x8800
-        unsigned = false
+    if (windowTileMapArea ~= 1) then
+        backgroundMemory = 0x9800
     end
 
-    local yPos = 0
-    local bgTileMapArea = _bitExtract(lcdControl, 3, 1)
-
-    yPos = scrollY + scanLine
-
+    local yPos = scanLine - windowY
+    
     if (yPos < 0) then
         yPos = yPos + 0xff
     elseif (yPos > 0xff) then
@@ -410,25 +270,19 @@ function renderBackground()
     local cgbFlipY = false
     local palette = _mmuReadByte(0xFF47)
 
-    local i = 0
+    local i = windowX
     local lastTileAddress = 0
     local colorNum = 0
 
     local xPos = 0
 
     while (i < 160) do
-        xPos = i + scrollX
+        xPos = i - windowX
 
         if (xPos < 0) then
             xPos = xPos + 0xff
         elseif (xPos > 0xff) then
             xPos = xPos - 0xff
-        end
-
-        backgroundMemory = 0x9C00
-
-        if (bgTileMapArea ~= 1) then
-            backgroundMemory = 0x9800
         end
 
         local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))
@@ -486,22 +340,20 @@ function renderBackground()
             local colorBit = ((xPos % 8) - 7) * -1
 
             if (cgbFlipX) then
-                colorBit = ((colorBit - 8) * -1)
+                colorBit = (colorBit - 7) * -1
             end
 
-            colorNum = _bitOr(
-                _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip], colorBit, 1) * 2, 
+            colorNum = _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip], colorBit, 1) * 2 + 
                 _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip], colorBit, 1)
-            )
         end
 
         local bgPriority = _backgroundPriority[i + 1][scanLine + 1]
 
         bgPriority[1] = cgbPriority
         bgPriority[2] = colorNum
-
+        
         if (isCGB) then
-            local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
+            local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2]
 
             if (debuggerEnabled) then
                 local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
@@ -518,7 +370,176 @@ function renderBackground()
                     tileLocation = tileData + (tileNum + 128) * 16
                 end
 
-                debugBackground[bank][tileLocation] = cgbPalette
+                if (debuggerEnabled) then
+                    debugBackground[bank][tileLocation] = cgbPalette
+                end
+            end
+            
+            _dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
+        else
+            local color = _bitOr(_bitLShift(_bitExtract(palette, (colorNum * 2) + 1, 1), 1), _bitExtract(palette, (colorNum * 2), 1))
+
+            _dxSetPixelColor(_screenPixels, i, scanLine, COLORS[color + 1][1], COLORS[color + 1][2], COLORS[color + 1][3], 255)
+        end
+
+        i = i + 1
+    end
+end
+
+function renderBackground()
+    if (scanLine >= 144) then
+        return
+    end
+
+    local isCGB = isGameBoyColor()
+    local bank = vramBank
+    local debuggerEnabled = isDebuggerEnabled()
+
+    local lcdControl = _mmuReadByte(0xFF40)
+    local scrollY = _mmuReadSignedByte(0xFF42)
+    local scrollX = _mmuReadSignedByte(0xFF43)
+    
+    local unsigned = true
+    local tileData = 0x8000
+
+    if (_bitExtract(lcdControl, 4, 1) == 1) then
+        tileData = 0x8000
+    else
+        tileData = 0x8800
+        unsigned = false
+    end
+
+    local yPos = 0
+    local bgTileMapArea = _bitExtract(lcdControl, 3, 1)
+
+    local backgroundMemory = 0x9C00
+
+    if (bgTileMapArea ~= 1) then
+        backgroundMemory = 0x9800
+    end
+    
+    yPos = scrollY + scanLine
+
+    if (yPos < 0) then
+        yPos = yPos + 0xff
+    elseif (yPos > 0xff) then
+        yPos = yPos - 0xff
+    end
+
+    local line = (yPos % 8) * 2
+    local row = ((yPos / 8) - ((yPos / 8) % 1)) * 32
+
+    local cgbAttributes = 0
+    local cgbPalette = 0
+    local cgbBank = 1
+    local cgbPriority = false
+    local cgbFlipX = false
+    local cgbFlipY = false
+    local palette = _mmuReadByte(0xFF47)
+
+    local i = 0
+    local lastTileAddress = 0
+    local colorNum = 0
+
+    local xPos = 0
+
+    while (i < 160) do
+        xPos = i + scrollX
+
+        if (xPos < 0) then
+            xPos = xPos + 0xff
+        elseif (xPos > 0xff) then
+            xPos = xPos - 0xff
+        end
+
+        local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))
+
+        if (lastTileAddress ~= tileAddress) then
+            if (isCGB) then
+                local adjustedAddress = (tileAddress - 0x8000) + 1
+                local attributes = _cacheAttributes[adjustedAddress]
+
+                if (attributes[1] == nil) then
+                    cgbAttributes = _vram[2][adjustedAddress]
+
+                    cgbPalette = _bitAnd(cgbAttributes, 0x07)
+                    cgbBank = (_bitAnd(cgbAttributes, 0x08) >= 1) and 2 or 1
+                    cgbPriority = _bitAnd(cgbAttributes, 0x80) >= 1
+                    cgbFlipX = _bitAnd(cgbAttributes, 0x20) >= 1
+                    cgbFlipY = _bitAnd(cgbAttributes, 0x40) >= 1
+
+                    attributes[1] = cgbPalette
+                    attributes[2] = cgbBank
+                    attributes[3] = cgbPriority
+                    attributes[4] = cgbFlipX
+                    attributes[5] = cgbFlipY
+
+                    _cacheAttributes[adjustedAddress] = attributes
+                else
+                    cgbPalette = attributes[1]
+                    cgbBank = attributes[2]
+                    cgbPriority = attributes[3]
+                    cgbFlipX = attributes[4]
+                    cgbFlipY = attributes[5]
+                end
+            end
+
+            local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
+            
+            if (not unsigned and tileNum >= 0x80) then
+                tileNum = -((0xFF - tileNum) + 1)
+            end
+
+            local tileLocation = 0
+
+            if (unsigned) then
+                tileLocation = tileData + tileNum * 16
+            else
+                tileLocation = tileData + (tileNum + 128) * 16
+            end
+
+            local lineWithFlip = line
+
+            if (cgbFlipY) then
+                lineWithFlip = (16 - -(0 - lineWithFlip)) - 2
+            end
+
+            local colorBit = ((xPos % 8) - 7) * -1
+
+            if (cgbFlipX) then
+                colorBit = ((colorBit - 7) * -1)
+            end
+
+            colorNum = _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 2 + lineWithFlip], colorBit, 1) * 2 + 
+                _bitExtract(_vram[cgbBank][(tileLocation - 0x8000) + 1 + lineWithFlip], colorBit, 1)
+        end
+
+        local bgPriority = _backgroundPriority[i + 1][scanLine + 1]
+
+        bgPriority[1] = cgbPriority
+        bgPriority[2] = colorNum
+
+        if (isCGB) then
+            local color = _backgroundPalettes[cgbPalette + 1][colorNum + 1][2]
+
+            if (debuggerEnabled) then
+                local tileNum = _vram[1][(tileAddress - 0x8000) + 1]
+            
+                if (not unsigned and tileNum >= 0x80) then
+                    tileNum = -((0xFF - tileNum) + 1)
+                end
+
+                local tileLocation = 0
+
+                if (unsigned) then
+                    tileLocation = tileData + tileNum * 16
+                else
+                    tileLocation = tileData + (tileNum + 128) * 16
+                end
+
+                if (debuggerEnabled) then
+                    debugBackground[bank][tileLocation] = cgbPalette
+                end
             end
             
             _dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
@@ -533,13 +554,13 @@ function renderBackground()
 end
 
 function renderSprites()
-    local is8x16 = false
+    local ySize = 8
     local lcdControl = _mmuReadByte(0xFF40)
     local isCGB = isGameBoyColor()
     local bank = vramBank
 
     if (_bitExtract(lcdControl, 2, 1) == 1) then
-        is8x16 = true
+        ySize = 16
     end
 
     local spritesRendered = 0
@@ -551,8 +572,6 @@ function renderSprites()
         local index = i * 4
         local yPos = _mmuReadByte(0xFE00 + index) - 16
         local xPos = _mmuReadByte(0xFE00 + index + 1) - 8
-
-        local ySize = (is8x16) and 16 or 8
 
         if (scanLine >= yPos and scanLine < (yPos + ySize)) then
             spritesRendered = spritesRendered + 1
@@ -613,7 +632,7 @@ function renderSprites()
                         colorBit = colorBit * -1
                     end
 
-                    local colorNum = _bitOr(_bitExtract(byte2, colorBit, 1) * 2, _bitExtract(byte1, colorBit, 1))
+                    local colorNum = _bitExtract(byte2, colorBit, 1) * 2 + _bitExtract(byte1, colorBit, 1)
 
                     if (isCGB) then
                         local avoidRender = false
@@ -818,8 +837,7 @@ function gpuStep(ticks)
                     scanLine = 0
 
                     if (isDebuggerEnabled() and isGameBoyColor() and _frameSkips == 0) then
-                        cachedDebugBackground = {debugBackground[1], debugBackground[2]}
-                        debugBackground = {{}, {}}
+                        debugBackground = {debugBackground[1], debugBackground[2]}
                     end
                 end
             end

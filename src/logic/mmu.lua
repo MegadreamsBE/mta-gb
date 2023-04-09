@@ -585,10 +585,10 @@ function mmuPerformHDMA()
     local source = _bitAnd(_hdmaSource, 0xFFF0)
     local destination = _bitOr(_bitAnd(_hdmaDestination, 0x1FF0), 0x8000)
 
-    local i = 1
+    local i = 0
     
-    while (i < 0x11) do
-        mmuWriteByte(destination + (i - 1), mmuReadByte(source + (i - 1)))
+    while (i < 0x10) do
+        mmuWriteByte(destination + i, mmuReadByte(source + i))
         i = i + 1
     end
 
@@ -624,7 +624,6 @@ function mmuPerformHDMA()
     if (_hdma[5] < 0) then
         _hdma[5] = _hdma[5] + 0xFF
     end
-
     if (_hdma[5] == 0xFF) then
         hdmaEnabled = false
     end
@@ -636,10 +635,10 @@ function mmuPerformGDMA(value)
     local source = _bitAnd(_hdmaSource, 0xFFF0)
     local destination = _bitOr(_bitAnd(_hdmaDestination, 0x1FF0), 0x8000)
 
-    local i = 1
+    local i = 0
 
-    while (i <= _hdmaBytes) do
-        mmuWriteByte(destination + (i - 1), mmuReadByte(source + (i - 1)))
+    while (i < _hdmaBytes) do
+        mmuWriteByte(destination + i, mmuReadByte(source + i))
         i = i + 1
     end
     

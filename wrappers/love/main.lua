@@ -51,7 +51,7 @@ function love.update(dt)
 end
 
 function love.draw()
-    if accumulator >= tickPeriod then
+    if (accumulator >= tickPeriod) then
         love.graphics.clear()
         triggerEvent("onClientPreRender", timeSinceLastFrame * 1000)
         triggerEvent("onClientRender")
@@ -74,7 +74,7 @@ function love.keypressed(key)
     end
 
     triggerKeyEvent(key, "down")
-    triggerEvent("onClientKey", key, true)    
+    triggerEvent("onClientKey", key, true)
 end
  
 function love.keyreleased(key)
@@ -91,5 +91,5 @@ function love.keyreleased(key)
     end
 
     triggerKeyEvent(key, "up")
-    triggerEvent("onClientKey", key, false)    
+    triggerEvent("onClientKey", key, false)
 end

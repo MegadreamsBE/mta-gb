@@ -46,8 +46,6 @@ local _fpsNextTick = 0
 
 local _lastRender = 0
 
-cachedDebugBackground = {{}, {}}
-
 local binaryFormat = function(value, minLen)
     local binaryFormat = ""
     local num = value
@@ -577,7 +575,7 @@ function renderDebugger(delta)
                 local cgbPalette = nil
                 
                 if (isCGB) then
-                    cgbPalette = cachedDebugBackground[renderBank][address]
+                    cgbPalette = debugBackground[renderBank][address]
                 end
 
                 for row=1, 8 do

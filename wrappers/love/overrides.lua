@@ -42,11 +42,36 @@ function guiGetScreenSize()
     return love.graphics.getWidth(), love.graphics.getHeight()
 end
 
+function dxCreateShader(filePath)
+    local currentDirectory = love.filesystem.getWorkingDirectory()
+
+    filePath = filePath:gsub(".fx", ".glsl")
+    
+    return {'shader', love.graphics.newShader(filePath), false}
+end
+
+function dxSetShaderValue(shader, parameter, value)
+    if (parameter == 'tex') then
+        shader[3] = value
+        return
+    end
+
+    if (type(value) == "table" and #value == 5 and value[1] ~= 'shader') then
+        value = value[5]
+    end
+
+    shader[2]:send(parameter, value)
+end
+
 function dxCreateTexture(width, height)
     local canvas = love.graphics.newCanvas(width, height)
     local pixels = canvas:newImageData(nil, nil, 0, 0, width, height)
+    local texture = love.graphics.newImage(pixels)
 
-    return {width, height, canvas, pixels, love.graphics.newImage(pixels)}
+    texture:setFilter("nearest", "nearest", 0)
+    texture:setWrap("clamp", "clamp")
+
+    return {width, height, canvas, pixels, texture}
 end
 
 function dxCreateRenderTarget(width, height, withAlpha)
@@ -80,6 +105,7 @@ end
 
 function dxSetTexturePixels(texture, pixels)
     texture[5]:replacePixels(pixels, nil, nil, 0, 0, false)
+    texture[4] = pixels
 end
 
 function dxGetTexturePixels(texture)
@@ -111,6 +137,15 @@ function dxDrawImage(x, y, width, height, image, rotation, rotOffsetX, rotOffset
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+function dxDrawImageSection(x, y, width, height, u ,v ,usize, vsize, image, _)
+    if (image[1] == 'shader') then
+        love.graphics.setShader(image[2])
+        love.graphics.draw(image[3][5], love.graphics.newQuad(u, v, usize, vsize, image[3][5]), 
+            x or 0, y or 0, 0, 1, 1)
+        love.graphics.setShader()
+    end
+end
+
 function dxDrawText(text, left, top, right, bottom, color, scale, font, alignX, alignY)
     if (color == nil) then
         color = {255, 255, 255, 255}
@@ -132,6 +167,18 @@ function dxDrawRectangle(x, y, width, height, color)
 
     love.graphics.setColor((color[1] or 255) / 255, (color[2] or 255) / 255, (color[3] or 255) / 255, (color[4] or 255) / 255)
     love.graphics.rectangle("fill", x, y, width, height)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+function dxDrawLine(startX, startY, endX, endY, color, width)
+    if (color == nil) then
+        color = {255, 255, 255, 255}
+    end
+
+    love.graphics.setColor((color[1] or 255) / 255, (color[2] or 255) / 255, (color[3] or 255) / 255, (color[4] or 255) / 255)
+    love.graphics.setLineWidth(width or 1)
+    love.graphics.line(startX, startY, endX, endY)
+    love.graphics.setLineWidth(1)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
