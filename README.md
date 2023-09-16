@@ -38,9 +38,8 @@ This emulator currently has a fully working CPU, GPU, MMU (except some MBC types
 ## Known Problems
 (This is not a full list)
 - Pokémon Blue/Red has a sprite glitch when the emulator runs in CGB mode (bottom part is white)
-- Pokémon Pinball has an issue where the screen goes white after the ball leaves the screen
-- Various games have graphical glitches likely due to mistakes in window support
 - Slow performance (MTA specific)
+- Harry Potter and the Chambers of Secrets freezes on battle sequence and degnoming
 
 ## FAQ
 1. Why Multi Theft Auto?    
