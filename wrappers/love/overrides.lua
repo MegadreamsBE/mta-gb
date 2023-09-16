@@ -103,6 +103,14 @@ function dxSetBlendMode(mode)
     love.graphics.setBlendMode(mode)]]
 end
 
+function dxConvertPixels(pixels, format)
+    if (format == 'jpeg') then
+        return pixels:encode('png')
+    end
+
+    return false -- unsupported
+end
+
 function dxSetTexturePixels(texture, pixels)
     texture[5]:replacePixels(pixels, nil, nil, 0, 0, false)
     texture[4] = pixels
@@ -114,6 +122,25 @@ end
 
 function tocolor(r, g, b, a)
     return {r, g, b, a}
+end
+
+function isElement(element)
+    return (type(element) == "table" or type(element) == "userdata")
+end
+
+function destroyElement(element)
+    if (type(element) == "userdata") then
+        element:release()
+        return
+    elseif (type(element) == "table") then
+        if (element[1] == 'shader') then
+            element[2]:release()
+        else
+            element[3]:release()
+        end
+    end
+
+    return false
 end
 
 function dxSetPixelColor(pixels, x, y, r, g, b, a)

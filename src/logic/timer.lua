@@ -108,23 +108,24 @@ function timerStep(ticks)
 
     if (timerClockEnabled) then
         local frequency = getCounterFromFrequency(timerClockFrequency)
+        local tima = _mmuReadByte(0xFF05)
+        local timerIncrease = 0
 
         while (_counter >= frequency) do
             _counter = _counter - frequency
-
-            local tima = _mmuReadByte(0xFF05) + 1
-
-            _mmuWriteByte(0xFF05, tima)
-
+            tima = tima + 1
+            
             if (tima == 0xff) then
-                _mmuWriteByte(0xFF05, _mmuReadByte(0xFF06))
+                tima = _mmuReadByte(0xFF06)
                 requestInterrupt(2)
             end
         end
+
+        _mmuWriteByte(0xFF05, tima)
     end
 
     if (_counter > 0xffff) then
-        _counter = _counter - 0xffff
+        _counter = _counter - 0x10000
     end
 end
 

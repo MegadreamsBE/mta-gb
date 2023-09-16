@@ -170,84 +170,12 @@ local helper_xor = function(value1, value2)
     return value
 end
 
-local helper_lshift = function(value, bitSize)
-    value = _bitReplace(value * 2, 0, 0, 1)
-
-    local bitsCalculated = _math_log(value) / LOG_TWO
-    local bits = (bitsCalculated - (bitsCalculated % 1)) + 1
-
-    if (bits < 0) then
-        bits = 0
-    end
-
-    if (bits > bitSize) then
-        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
-    end
-
-    return value
-end
-
-local helper_rshift = function(value, bitSize)
-    value = _bitReplace((value / 2) - ((value / 2) % 1), 0, bitSize - 1, 1)
-
-    local bitsCalculated = _math_log(value) / LOG_TWO
-    local bits = (bitsCalculated - (bitsCalculated % 1)) + 1
-
-    if (bits < 0) then
-        bits = 0
-    end
-
-    if (bits > bitSize) then
-        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
-    end
-
-    return value
-end
-
-local helper_lrotate = function(value, bitSize)
-    local bit = ((value / (2 ^ (bitSize - 1))) % 2 >= 1) and 1 or 0
-
-    value = _bitReplace(value * 2, bit, 0, 1)
-
-    local bitsCalculated = _math_log(value) / LOG_TWO
-    local bits = (bitsCalculated - (bitsCalculated % 1)) + 1
-
-    if (bits < 0) then
-        bits = 0
-    end
-
-    if (bits > bitSize) then
-        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
-    end
-
-    return value
-end
-
-local helper_rrotate = function(value, bitSize)
-    local bit = ((value / (2 ^ 0)) % 2 >= 1) and 1 or 0
-
-    value = _bitReplace((value / 2) - ((value / 2) % 1), bit, bitSize - 1, 1)
-
-    local bitsCalculated = _math_log(value) / LOG_TWO
-    local bits = (bitsCalculated - (bitsCalculated % 1)) + 1
-
-    if (bits < 0) then
-        bits = 0
-    end
-
-    if (bits > bitSize) then
-        value = _bitReplace(value, 0, bits - 1, (bits - bitSize))
-    end
-
-    return value
-end
-
-local helper_rl = function(value, bitSize)
+local helper_rl = function(value)
     local carry = _registers[8][4] and 1 or 0
 
     _registers[8][4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
 
-    local result = _bitOr(helper_lshift(value, bitSize), carry)
+    local result = _bitOr(_bitAnd(_bitReplace(value * 2, 0, 0, 1), 0xFF), carry)
 
     _registers[8][1] = (result == 0) and true or false -- FLAG_ZERO
     _registers[8][2] = false -- FLAG_SUBSTRACT
@@ -256,10 +184,10 @@ local helper_rl = function(value, bitSize)
     return result
 end
 
-local helper_rlc = function(value, bitSize)
+local helper_rlc = function(value)
     _registers[8][4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
 
-    local result = helper_lrotate(value, bitSize)
+    local result = _bitAnd(_bitReplace(value * 2, ((value / (2 ^ 7)) % 2 >= 1) and 1 or 0, 0, 1), 0xFF)
 
     _registers[8][1] = (result == 0) and true or false -- FLAG_ZERO
     _registers[8][2] = false -- FLAG_SUBSTRACT
@@ -268,12 +196,12 @@ local helper_rlc = function(value, bitSize)
     return result
 end
 
-local helper_rr = function(value, bitSize)
+local helper_rr = function(value)
     local carry = _registers[8][4] and 0x80 or 0
 
     _registers[8][4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
 
-    local result = _bitOr(helper_rshift(value, bitSize), carry)
+    local result = _bitOr(_bitAnd(_bitReplace((value / 2) - ((value / 2) % 1), 0, 7, 1), 0xFF), carry)
 
     _registers[8][1] = (result == 0) and true or false -- FLAG_ZERO
     _registers[8][2] = false -- FLAG_SUBSTRACT
@@ -282,10 +210,10 @@ local helper_rr = function(value, bitSize)
     return result
 end
 
-local helper_rrc = function(value, bitSize)
+local helper_rrc = function(value)
     _registers[8][4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
 
-    local result = helper_rrotate(value, bitSize)
+    local result = _bitAnd(_bitReplace((value / 2) - ((value / 2) % 1), ((value / (2 ^ 0)) % 2 >= 1) and 1 or 0, 7, 1), 0xFF)
 
     _registers[8][1] = (result == 0) and true or false -- FLAG_ZERO
     _registers[8][2] = false -- FLAG_SUBSTRACT
@@ -294,10 +222,10 @@ local helper_rrc = function(value, bitSize)
     return result
 end
 
-local helper_sla = function(value, bitSize)
+local helper_sla = function(value)
     _registers[8][4] = (_bitAnd(value, 0x80) ~= 0) -- FLAG_CARRY
 
-    local result = helper_lshift(value, bitSize)
+    local result = _bitAnd(_bitReplace(value * 2, 0, 0, 1), 0xFF)
 
     _registers[8][1] = (result == 0) and true or false -- FLAG_ZERO
     _registers[8][2] = false -- FLAG_SUBSTRACT
@@ -306,10 +234,10 @@ local helper_sla = function(value, bitSize)
     return result
 end
 
-local helper_sra = function(value, bitSize)
+local helper_sra = function(value)
     _registers[8][4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
 
-    local result = helper_rshift(value, bitSize)
+    local result = _bitAnd(_bitReplace((value / 2) - ((value / 2) % 1), 0, 7, 1), 0xFF)
 
     if ((_bitAnd(value, 0x80) ~= 0)) then
         result = _bitOr(result, 0x80)
@@ -322,10 +250,10 @@ local helper_sra = function(value, bitSize)
     return result
 end
 
-local helper_srl = function(value, bitSize)
+local helper_srl = function(value)
     _registers[8][4] = (_bitAnd(value, 0x01) ~= 0) -- FLAG_CARRY
 
-    local result = helper_rshift(value, bitSize)
+    local result = _bitAnd(_bitReplace((value / 2) - ((value / 2) % 1), 0, 7, 1), 0xFF)
 
     _registers[8][1] = (result == 0) and true or false -- FLAG_ZERO
     _registers[8][2] = false -- FLAG_SUBSTRACT
@@ -391,42 +319,42 @@ end
 local cbOpcodes = {
     -- Opcode: 0x00
     function()
-        _registers[2] = helper_rlc(_registers[2], 8)
+        _registers[2] = helper_rlc(_registers[2])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x01
     function()
-        _registers[3] = helper_rlc(_registers[3], 8)
+        _registers[3] = helper_rlc(_registers[3])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x02
     function()
-        _registers[4] = helper_rlc(_registers[4], 8)
+        _registers[4] = helper_rlc(_registers[4])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x03
     function()
-        _registers[5] = helper_rlc(_registers[5], 8)
+        _registers[5] = helper_rlc(_registers[5])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x04
     function()
-        _registers[6] = helper_rlc(_registers[6], 8)
+        _registers[6] = helper_rlc(_registers[6])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x05
     function()
-        _registers[7] = helper_rlc(_registers[7], 8)
+        _registers[7] = helper_rlc(_registers[7])
     
         _registers[12].m = 2
         _registers[12].t = 8
@@ -434,56 +362,56 @@ local cbOpcodes = {
     -- Opcode: 0x06
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rlc(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_rlc(_mmuReadByte(address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
     end,
     -- Opcode: 0x07
     function()
-        _registers[1] = helper_rlc(_registers[1], 8)
+        _registers[1] = helper_rlc(_registers[1])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x08
     function()
-        _registers[2] = helper_rrc(_registers[2], 8)
+        _registers[2] = helper_rrc(_registers[2])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x09
     function()
-        _registers[3] = helper_rrc(_registers[3], 8)
+        _registers[3] = helper_rrc(_registers[3])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x0a
     function()
-        _registers[4] = helper_rrc(_registers[4], 8)
+        _registers[4] = helper_rrc(_registers[4])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x0b
     function()
-        _registers[5] = helper_rrc(_registers[5], 8)
+        _registers[5] = helper_rrc(_registers[5])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x0c
     function()
-        _registers[6] = helper_rrc(_registers[6], 8)
+        _registers[6] = helper_rrc(_registers[6])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x0d
     function()
-        _registers[7] = helper_rrc(_registers[7], 8)
+        _registers[7] = helper_rrc(_registers[7])
     
         _registers[12].m = 2
         _registers[12].t = 8
@@ -491,56 +419,56 @@ local cbOpcodes = {
     -- Opcode: 0x0e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rrc(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_rrc(_mmuReadByte(address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
     end,
     -- Opcode: 0x0f
     function()
-        _registers[1] = helper_rrc(_registers[1], 8)
+        _registers[1] = helper_rrc(_registers[1])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x10
     function()
-        _registers[2] = helper_rl(_registers[2], 8)
+        _registers[2] = helper_rl(_registers[2])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x11
     function()
-        _registers[3] = helper_rl(_registers[3], 8)
+        _registers[3] = helper_rl(_registers[3])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x12
     function()
-        _registers[4] = helper_rl(_registers[4], 8)
+        _registers[4] = helper_rl(_registers[4])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x13
     function()
-        _registers[5] = helper_rl(_registers[5], 8)
+        _registers[5] = helper_rl(_registers[5])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x14
     function()
-        _registers[6] = helper_rl(_registers[6], 8)
+        _registers[6] = helper_rl(_registers[6])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x15
     function()
-        _registers[7] = helper_rl(_registers[7], 8)
+        _registers[7] = helper_rl(_registers[7])
     
         _registers[12].m = 2
         _registers[12].t = 8
@@ -548,56 +476,56 @@ local cbOpcodes = {
     -- Opcode: 0x16
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rl(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_rl(_mmuReadByte(address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
     end,
     -- Opcode: 0x17
     function()
-        _registers[1] = helper_rl(_registers[1], 8)
+        _registers[1] = helper_rl(_registers[1])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x18
     function()
-        _registers[2] = helper_rr(_registers[2], 8)
+        _registers[2] = helper_rr(_registers[2])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x19
     function()
-        _registers[3] = helper_rr(_registers[3], 8)
+        _registers[3] = helper_rr(_registers[3])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x1a
     function()
-        _registers[4] = helper_rr(_registers[4], 8)
+        _registers[4] = helper_rr(_registers[4])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x1b
     function()
-        _registers[5] = helper_rr(_registers[5], 8)
+        _registers[5] = helper_rr(_registers[5])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x1c
     function()
-        _registers[6] = helper_rr(_registers[6], 8)
+        _registers[6] = helper_rr(_registers[6])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x1d
     function()
-        _registers[7] = helper_rr(_registers[7], 8)
+        _registers[7] = helper_rr(_registers[7])
     
         _registers[12].m = 2
         _registers[12].t = 8
@@ -605,56 +533,56 @@ local cbOpcodes = {
     -- Opcode: 0x1e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rr(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_rr(_mmuReadByte(address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
     end,
     -- Opcode: 0x1f
     function()
-        _registers[1] = helper_rr(_registers[1], 8)
+        _registers[1] = helper_rr(_registers[1])
     
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x20
     function()
-        _registers[2] = helper_sla(_registers[2], 8)
+        _registers[2] = helper_sla(_registers[2])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x21
     function()
-        _registers[3] = helper_sla(_registers[3], 8)
+        _registers[3] = helper_sla(_registers[3])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x22
     function()
-        _registers[4] = helper_sla(_registers[4], 8)
+        _registers[4] = helper_sla(_registers[4])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x23
     function()
-        _registers[5] = helper_sla(_registers[5], 8)
+        _registers[5] = helper_sla(_registers[5])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x24
     function()
-        _registers[6] = helper_sla(_registers[6], 8)
+        _registers[6] = helper_sla(_registers[6])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x25
     function()
-        _registers[7] = helper_sla(_registers[7], 8)
+        _registers[7] = helper_sla(_registers[7])
 
         _registers[12].m = 2
         _registers[12].t = 8
@@ -662,56 +590,56 @@ local cbOpcodes = {
     -- Opcode: 0x26
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_sla(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_sla(_mmuReadByte(address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
     end,
     -- Opcode: 0x27
     function()
-        _registers[1] = helper_sla(_registers[1], 8)
+        _registers[1] = helper_sla(_registers[1])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x28
     function()
-        _registers[2] = helper_sra(_registers[2], 8)
+        _registers[2] = helper_sra(_registers[2])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x29
     function()
-        _registers[3] = helper_sra(_registers[3], 8)
+        _registers[3] = helper_sra(_registers[3])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x2a
     function()
-        _registers[4] = helper_sra(_registers[4], 8)
+        _registers[4] = helper_sra(_registers[4])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x2b
     function()
-        _registers[5] = helper_sra(_registers[5], 8)
+        _registers[5] = helper_sra(_registers[5])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x2c
     function()
-        _registers[6] = helper_sra(_registers[6], 8)
+        _registers[6] = helper_sra(_registers[6])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x2d
     function()
-        _registers[7] = helper_sra(_registers[7], 8)
+        _registers[7] = helper_sra(_registers[7])
 
         _registers[12].m = 2
         _registers[12].t = 8
@@ -719,14 +647,14 @@ local cbOpcodes = {
     -- Opcode: 0x2e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_sra(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_sra(_mmuReadByte(address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
     end,
     -- Opcode: 0x2f
     function()
-        _registers[1] = helper_sra(_registers[1], 8)
+        _registers[1] = helper_sra(_registers[1])
 
         _registers[12].m = 2
         _registers[12].t = 8
@@ -776,7 +704,7 @@ local cbOpcodes = {
     -- Opcode: 0x36
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_swap(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_swap(_mmuReadByte(address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -790,42 +718,42 @@ local cbOpcodes = {
     end,
     -- Opcode: 0x38
     function()
-        _registers[2] = helper_srl(_registers[2], 8)
+        _registers[2] = helper_srl(_registers[2])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x39
     function()
-        _registers[3] = helper_srl(_registers[3], 8)
+        _registers[3] = helper_srl(_registers[3])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x3a
     function()
-        _registers[4] = helper_srl(_registers[4], 8)
+        _registers[4] = helper_srl(_registers[4])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x3b
     function()
-        _registers[5] = helper_srl(_registers[5], 8)
+        _registers[5] = helper_srl(_registers[5])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x3c
     function()
-        _registers[6] = helper_srl(_registers[6], 8)
+        _registers[6] = helper_srl(_registers[6])
 
         _registers[12].m = 2
         _registers[12].t = 8
     end,
     -- Opcode: 0x3d
     function()
-        _registers[7] = helper_srl(_registers[7], 8)
+        _registers[7] = helper_srl(_registers[7])
 
         _registers[12].m = 2
         _registers[12].t = 8
@@ -833,14 +761,14 @@ local cbOpcodes = {
     -- Opcode: 0x3e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_srl(_mmuReadByte(address), 8))
+        _mmuWriteByte(address, helper_srl(_mmuReadByte(address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
     end,
     -- Opcode: 0x3f
     function()
-        _registers[1] = helper_srl(_registers[1], 8)
+        _registers[1] = helper_srl(_registers[1])
 
         _registers[12].m = 2
         _registers[12].t = 8
@@ -2267,7 +2195,7 @@ opcodes = {
     end,
     -- Opcode: 0x07
     function()
-        _registers[1] = helper_rlc(_registers[1], 8)
+        _registers[1] = helper_rlc(_registers[1])
         _registers[8][1] = false
 
         _registers[12].m = 1
@@ -2326,7 +2254,7 @@ opcodes = {
     end,
     -- Opcode: 0x0f
     function()
-        _registers[1] = helper_rrc(_registers[1], 8)
+        _registers[1] = helper_rrc(_registers[1])
         _registers[8][1] = false
     
         _registers[12].m = 1
@@ -2385,7 +2313,7 @@ opcodes = {
     end,
     -- Opcode: 0x17
     function()
-        _registers[1] = helper_rl(_registers[1], 8)
+        _registers[1] = helper_rl(_registers[1])
         _registers[8][1] = false
 
         _registers[12].m = 1
@@ -2445,7 +2373,7 @@ opcodes = {
     end,
     -- Opcode: 0x1f
     function()
-        _registers[1] = helper_rr(_registers[1], 8)
+        _registers[1] = helper_rr(_registers[1])
     
         _registers[8][1] = false -- FLAG_ZERO
 

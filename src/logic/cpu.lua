@@ -33,6 +33,7 @@ local _gpuStep = false
 local _timerStep = false
 
 local _handleInterrupts = false
+local _rom = {}
 
 -----------------------------------
 -- * Functions
@@ -94,6 +95,7 @@ function setupCPU()
 end
 
 function cpuLoadRom(romData)
+    _rom = romData
     mmuLoadRom(romData)
 end
 
@@ -249,20 +251,17 @@ end
 
 function readTwoRegisters(r1, r2)
     local value = _registers[r1]
-    value = value * 256
 
     if (r2 == 8) then
-        value = value + (
+        return value * 256 + (
             ((_registers[8][1]) and 1 or 0) * 128 +
             ((_registers[8][2]) and 1 or 0) * 64 +
             ((_registers[8][3]) and 1 or 0) * 32 +
             ((_registers[8][4]) and 1 or 0) * 16
         )
-    else
-        value = value + _registers[r2]
     end
 
-    return value
+    return value * 256 + _registers[r2]
 end
 
 function writeTwoRegisters(r1, r2, value)
@@ -280,8 +279,11 @@ function writeTwoRegisters(r1, r2, value)
 end
 
 function requestInterrupt(interrupt)
+    --print("Interrupt: "..interrupt)
+    --print("Before: "..interruptFlags)
     interruptFlags = _bitReplace(interruptFlags, 1, interrupt, 1)
     _interruptDelay = 4
+    --print("After: "..interruptFlags)
 end
 
 function hasIncomingInterrupt()
@@ -309,12 +311,14 @@ function handleInterrupts()
             if (_interrupts) then
                 interruptFlags = _bitAnd(interruptFlags, 0xFD)
 
-                _mmuPushStack(_registers[10])
+                if (isScreenEnabled()) then
+                    _mmuPushStack(_registers[10])
 
-                _registers[10] = 0x48
+                    _registers[10] = 0x48
 
-                _registers[12].m = 5
-                _registers[12].t = 20
+                    _registers[12].m = 5
+                    _registers[12].t = 20
+                end
             end
 
             _interrupts = false
@@ -379,15 +383,31 @@ function runCPU()
         _stepCallback = nil
     end
 
-    local debuggerEnabled = isDebuggerEnabled()
+    local gameBoyColor = isGameBoyColor()
+    local biosLoaded = isBiosLoaded()
+
+    local parsedBios = {}
+    local parsedRom = {}
+
+    for i = 1, #_rom do
+        parsedRom[i] = _opcodes[_rom[i] + 1]
+    end
+
+    if (biosLoaded) then
+        for i = 1, #bios do
+            parsedBios[i] = _opcodes[bios[i] + 1]
+        end
+    end
 
     _stepCallback = function(delta)
+        local debuggerEnabled = isDebuggerEnabled()
+
         if (not _paused or _pausedUntilInterrupts) then
             currentCycles = 0
 
             local cyclesToRun = 69905
 
-            if (isGameBoyColor() and cgbDoubleSpeed) then
+            if (cgbDoubleSpeed) then
                 cyclesToRun = cyclesToRun * 2
             end
 
@@ -415,13 +435,37 @@ function runCPU()
                 end
 
                 if (not _paused and (not debuggerEnabled or debuggerStep())) then
-                    _registers[9] = _registers[10]
+                    local pc = _registers[10] + 1
+                    
+                    _registers[9] = pc - 1
                 
                     _registers[12].m = 0
                     _registers[12].t = 0
-                    _registers[10] = _registers[10] + 1
+                    _registers[10] = pc
                 
-                    _opcodes[_mmuReadByte(_registers[10] - 1) + 1]()
+                    if (pc < 0x1000) then
+                        if (biosLoaded) then
+                            if (gameBoyColor) then
+                                if (pc < 0x900 and (pc < 0x100 or pc >= 0x200)) then
+                                    parsedBios[pc]()
+                                elseif (pc >= 0x100 and pc < 0x200) then
+                                    bios = nil
+                                    biosLoaded = false
+                                end
+                            else
+                                if (pc < 0x100) then
+                                    parsedBios[pc]()
+                                elseif (pc >= 0x100) then
+                                    bios = nil
+                                    biosLoaded = false
+                                end
+                            end
+                        else
+                            parsedRom[pc]()
+                        end
+                    else
+                        _opcodes[_mmuReadByte(pc - 1) + 1]()
+                    end
                 
                     _clock.m = _clock.m + _registers[12].m
                     _clock.t = _clock.t + _registers[12].t
@@ -440,7 +484,7 @@ function runCPU()
                 else
                     _timerStep(ticks)
 
-                    if (isGameBoyColor() and cgbDoubleSpeed) then
+                    if (cgbDoubleSpeed) then
                         _gpuStep(_registers[12].m / 2)
                     else
                         _gpuStep(_registers[12].m)
@@ -465,6 +509,14 @@ function getCPUClock()
     return _clock
 end
 
+function getInterrupts()
+    return interrupts
+end
+
+function getInterruptFlags()
+    return interruptFlags
+end
+
 function saveCPUState()
     return {
         clock = _clock,
@@ -476,7 +528,7 @@ function saveCPUState()
         queuedDisableInterrupts = _queuedDisableInterrupts,
         queueChangeActive = _queueChangeActive,
         interruptDelay = _interruptDelay,
-        registers = _registers
+        registers = _registers,
     }
 end
 
@@ -494,6 +546,8 @@ function loadCPUState(state)
 
     _registers = registers
     clock = _clock
+
+    triggerEvent("gb:cpu:reset", root)
 end
 
 addEventHandler("onClientResourceStart", resourceRoot, function()

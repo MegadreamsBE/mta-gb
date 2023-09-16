@@ -9,7 +9,7 @@ local _bitOr = bitOr
 -- * Constants
 -----------------------------------
 
-local ROM_PATH = "data/PokemonCrystal.gbc"
+local ROM_PATH = "data/Crystalis (USA).gbc"
 
 -----------------------------------
 -- * Locals
@@ -19,6 +19,7 @@ local _keypad = {}
 local _onClientKeyHandler = false
 local _debuggerEnabled = false
 local _isGameBoyColor = false
+local _isControlDown = false
 local _isShiftDown = false
 
 local _rom = nil
@@ -159,6 +160,8 @@ function onKeyDown(key)
     elseif (key == "enter") then
         _keypad.keys[1] = _bitAnd(_keypad.keys[1], 0x7)
         requestInterrupt(4)
+    elseif (key == "lctrl" or key == "rctrl") then
+        _isControlDown = true
     elseif (key == "lshift" or key == "rshift") then
         _isShiftDown = true
     end
@@ -181,30 +184,100 @@ function onKeyUp(key)
         _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x4)
     elseif (key == "enter") then
         _keypad.keys[1] = _bitOr(_keypad.keys[1], 0x8)
+    elseif (key == "lctrl" or key == "rctrl") then
+        _isControlDown = false
     elseif (key == "lshift" or key == "rshift") then
         _isShiftDown = false
     elseif (key == "f1" or key == "F1") then
         if (_isShiftDown) then
             loadState(1)
-        else
+            pauseCPU()
+
+            local frameRendered = false
+            local mode3Passed = false
+
+            while (not frameRendered) do
+                local lastScanLine = getScanLine()
+                gpuStep(1)
+
+                if (getScanLine() == 144 and getGPUMode() == 1 and mode3Passed and getFrameSkips() == 0) then
+                    frameRendered = true
+                end
+
+                if (getGPUMode() == 3 and getFrameSkips() == 0) then
+                    mode3Passed = true
+                end
+            end
+        elseif (_isControlDown) then
             saveState(1)
         end
     elseif (key == "f2" or key == "F2") then
         if (_isShiftDown) then
             loadState(2)
-        else
+            pauseCPU()
+
+            local frameRendered = false
+            local mode3Passed = false
+
+            while (not frameRendered) do
+                local lastScanLine = getScanLine()
+                gpuStep(1)
+
+                if (getScanLine() == 144 and getGPUMode() == 1 and mode3Passed and getFrameSkips() == 0) then
+                    frameRendered = true
+                end
+
+                if (getGPUMode() == 3 and getFrameSkips() == 0) then
+                    mode3Passed = true
+                end
+            end
+        elseif (_isControlDown) then
             saveState(2)
         end
     elseif (key == "f3" or key == "F3") then
         if (_isShiftDown) then
             loadState(3)
-        else
+            pauseCPU()
+
+            local frameRendered = false
+            local mode3Passed = false
+
+            while (not frameRendered) do
+                local lastScanLine = getScanLine()
+                gpuStep(1)
+
+                if (getScanLine() == 144 and getGPUMode() == 1 and mode3Passed and getFrameSkips() == 0) then
+                    frameRendered = true
+                end
+
+                if (getGPUMode() == 3 and getFrameSkips() == 0) then
+                    mode3Passed = true
+                end
+            end
+        elseif (_isControlDown) then
             saveState(3)
         end
     elseif (key == "f4" or key == "F4") then
         if (_isShiftDown) then
             loadState(4)
-        else
+            pauseCPU()
+
+            local frameRendered = false
+            local mode3Passed = false
+
+            while (not frameRendered) do
+                local lastScanLine = getScanLine()
+                gpuStep(1)
+
+                if (getScanLine() == 144 and getGPUMode() == 1 and mode3Passed and getFrameSkips() == 0) then
+                    frameRendered = true
+                end
+
+                if (getGPUMode() == 3 and getFrameSkips() == 0) then
+                    mode3Passed = true
+                end
+            end
+        elseif (_isControlDown) then
             saveState(4)
         end
     end
@@ -220,6 +293,7 @@ end
 
 function saveState(slot)
     local state = {
+        bios = bios,
         cpu = saveCPUState(),
         gpu = saveGPUState(),
         timer = saveTimerState(),
@@ -244,6 +318,7 @@ function loadState(slot)
         fileClose(file)
 
         if (state) then
+            bios = state.bios
             loadCPUState(state.cpu)
             loadMMUState(state.mmu)
             loadGPUState(state.gpu)
@@ -262,7 +337,7 @@ function serialize(tbl)
 end
 
 function unserialize(str)
-    local func = loadstring("return " .. str)
+    local func, error = loadstring("return " .. str)
 
     if (func) then
         return func()
@@ -282,7 +357,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
 
     if (gameBoyLoadRom(ROM_PATH)) then
         if (isGameBoyColor()) then
-            --gameBoyLoadBios("data/gbc_bios.bin")
+            gameBoyLoadBios("data/gbc_bios.bin")
         else
             --gameBoyLoadBios("data/bios.gb")
         end

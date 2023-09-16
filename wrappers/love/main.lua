@@ -7,7 +7,11 @@ local accumulator = 0.0
 local timeSinceLastFrame = 0.0
 
 function love.load(args)
-    love.window.setMode(1920, 1080)
+    love.window.setMode(1920, 1080, {
+        --[[resizable = true,
+        minwidth = 1920,
+        minheight = 1080,]]
+    })
 
     package.path = "../../?.lua;"..package.path
 
@@ -33,7 +37,7 @@ function love.load(args)
 
     if (gameBoyLoadRom(args[1])) then
         if (isGameBoyColor()) then
-            --gameBoyLoadBios("data/gbc_bios.bin")
+            gameBoyLoadBios("data/gbc_bios.bin")
         else
             --gameBoyLoadBios("data/bios.gb")
         end
@@ -93,3 +97,8 @@ function love.keyreleased(key)
     triggerKeyEvent(key, "up")
     triggerEvent("onClientKey", key, false)
 end
+
+function love.resize(width, height)
+    gpuResize(width, height)
+    debuggerResize(width, height)
+  end

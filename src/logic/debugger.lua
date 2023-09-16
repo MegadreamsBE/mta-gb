@@ -4,7 +4,9 @@
 
 local RENDER = true
 local LOG_TRACE = false
+local LOG_GPU_FRAMES = false
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
+local WINDOW_SCALE = math.min((SCREEN_WIDTH / 1920), (SCREEN_HEIGHT / 1080))
 
 local DEBUGGER_WIDTH, DEBUGGER_HEIGHT = 500, 768
 
@@ -43,8 +45,10 @@ local _string_format = string.format
 
 local _fps = 0
 local _fpsNextTick = 0
+local _debugFramesPassed = 0
 
 local _lastRender = 0
+local _frameLogged = false
 
 local binaryFormat = function(value, minLen)
     local binaryFormat = ""
@@ -124,8 +128,8 @@ function setupDebugger()
     end)
 
     addEventHandler("onClientRender", root, function()
-        dxDrawText(math.floor(_fps), SCREEN_WIDTH - (((200 * (1920 / SCREEN_WIDTH)) / 2)), 
-            (((30 * (1920 / SCREEN_WIDTH)) / 2)), 0, 0, tocolor(255, 255, 255), (((6 * (1920 / SCREEN_WIDTH)) / 2)),
+        dxDrawText(math.floor(_fps), SCREEN_WIDTH - (((200 * WINDOW_SCALE) / 2)), 
+            (((30 * WINDOW_SCALE) / 2)), 0, 0, tocolor(255, 255, 255), (((6 * WINDOW_SCALE) / 2)),
             "default-bold")
     end)
 end
@@ -323,6 +327,29 @@ function debuggerStep()
             "\n")
     end
 
+    if (LOG_GPU_FRAMES) then
+        local maskedFlags = _bitAnd(getInterrupts(), getInterruptFlags())
+
+        if (_bitAnd(maskedFlags, 0x01) ~= 0) then
+            if (not _frameLogged) then
+                local convertedPixels = dxConvertPixels(getScreenPixels(), 'jpeg')
+
+                if (fileExists("data/frames/".._debugFramesPassed..".jpg")) then
+                    fileDelete("data/frames/".._debugFramesPassed..".jpg")
+                end
+
+                local file = fileCreate("data/frames/".._debugFramesPassed..".jpg")
+                fileWrite(file, convertedPixels)
+                fileClose(file)
+
+                _debugFramesPassed = _debugFramesPassed + 1
+                _frameLogged = true
+            end
+        else
+            _frameLogged = false
+        end
+    end
+
     if (_breakpoints[registers[10]] and not _debuggerInducedPause
         and not _passthrough) then
         pauseCPU()
@@ -355,28 +382,28 @@ function renderDebugger(delta)
         dxSetBlendMode("modulate_add")
 
         local screenStartX = 0
-        local screenStartY = (SCREEN_HEIGHT / 2) - (DEBUGGER_HEIGHT / 2)
+        local screenStartY = (SCREEN_HEIGHT / 2) - ((DEBUGGER_HEIGHT * WINDOW_SCALE) / 2)
 
-        local screenWidth = DEBUGGER_WIDTH * (1920 / SCREEN_WIDTH)
-        local screenHeight = DEBUGGER_HEIGHT * (1920 / SCREEN_WIDTH)
+        local screenWidth = DEBUGGER_WIDTH * WINDOW_SCALE
+        local screenHeight = DEBUGGER_HEIGHT * WINDOW_SCALE
 
         dxDrawRectangle(screenStartX, screenStartY, screenWidth, screenHeight
             , tocolor(0, 0, 0, 200))
 
-        local romMemoryWindowStartX = screenStartX + (1920 / SCREEN_WIDTH)
-        local romMemoryWindowStartY = screenStartY + (1920 / SCREEN_WIDTH)
+        local romMemoryWindowStartX = screenStartX + WINDOW_SCALE
+        local romMemoryWindowStartY = screenStartY + WINDOW_SCALE
 
-        local romMemoryWindowWidth = 75
-        local romMemoryWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
+        local romMemoryWindowWidth = (75 * WINDOW_SCALE)
+        local romMemoryWindowHeight = ((DEBUGGER_HEIGHT - (100 * WINDOW_SCALE)) * WINDOW_SCALE)
 
         dxDrawRectangle(romMemoryWindowStartX, romMemoryWindowStartY, romMemoryWindowWidth, romMemoryWindowHeight,
             tocolor(255, 196, 196, 150))
 
-        local yPadding = (20 * (1920 / SCREEN_WIDTH))
+        local yPadding = (20 * WINDOW_SCALE)
 
-        local romMemoryX = romMemoryWindowStartX + (10 * (1920 / SCREEN_WIDTH))
+        local romMemoryX = romMemoryWindowStartX + (10 * WINDOW_SCALE)
         local romMemoryY = romMemoryWindowStartY + (yPadding / 2)
-        local renderLineCount = (romMemoryWindowHeight / dxGetFontHeight(1, "default-bold"))
+        local renderLineCount = (romMemoryWindowHeight / dxGetFontHeight(1 * WINDOW_SCALE, "default-bold"))
 
         local romMemorySize = MMU_MEMORY_SIZE
         local startValue = _math_floor(registers[10] - (renderLineCount * 0.5))
@@ -401,7 +428,7 @@ function renderDebugger(delta)
 
             dxDrawText(_string_format("%.4x", i):upper()..": ".._string_format("%.2x", romMemoryValue):upper()
                 , romMemoryX, romMemoryY,
-                romMemoryWindowStartX + romMemoryWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(r, g, b), 1, "default-bold")
+                romMemoryWindowStartX + romMemoryWindowWidth - (10 * WINDOW_SCALE), 0, tocolor(r, g, b), 1 * WINDOW_SCALE, "default-bold")
 
             romMemoryY = romMemoryY + yPadding
 
@@ -413,7 +440,7 @@ function renderDebugger(delta)
         local romWindowStartX = romMemoryWindowStartX + romMemoryWindowWidth
         local romWindowStartY = romMemoryWindowStartY
 
-        local romWindowWidth = ((DEBUGGER_WIDTH - (200 * (1920 / SCREEN_WIDTH))) * (1920 / SCREEN_WIDTH)) - romMemoryWindowWidth
+        local romWindowWidth = (((DEBUGGER_WIDTH * WINDOW_SCALE) - (200 * WINDOW_SCALE)) * WINDOW_SCALE) - romMemoryWindowWidth
         local romWindowHeight = romMemoryWindowHeight
 
         dxDrawRectangle(romWindowStartX, romWindowStartY
@@ -422,9 +449,9 @@ function renderDebugger(delta)
 
         local rom = disassembledData
 
-        local romX = romWindowStartX + (10 * (1920 / SCREEN_WIDTH))
+        local romX = romWindowStartX + (10 * WINDOW_SCALE)
         local romY = romWindowStartY + (yPadding / 2)
-        local renderLineCount = (romWindowHeight / dxGetFontHeight(1, "default-bold"))
+        local renderLineCount = (romWindowHeight / dxGetFontHeight(1 * WINDOW_SCALE, "default-bold"))
 
         local romSize = #rom
         local startValue = _math_floor(registers[10] - (renderLineCount * 0.5))
@@ -451,17 +478,17 @@ function renderDebugger(delta)
 
                 if (_breakpoints[i]) then
                     dxDrawText("X", romX, romY,
-                        romWindowStartX + romWindowWidth - (10 * (1920 / SCREEN_WIDTH)),
-                        0, tocolor(255, 0, 0), 1, "default-bold")
+                        romWindowStartX + romWindowWidth - (10 * WINDOW_SCALE),
+                        0, tocolor(255, 0, 0), 1 * WINDOW_SCALE, "default-bold")
 
-                    romX = romX + (15 * (1920 / SCREEN_WIDTH))
+                    romX = romX + (15 * WINDOW_SCALE)
                 end
 
                 dxDrawText(_string_format("%.4x", i):upper()..": "..romValue, romX, romY,
-                    romWindowStartX + romWindowWidth - (10 * (1920 / SCREEN_WIDTH)),
-                    0, tocolor(r, g, b), 1, "default-bold")
+                    romWindowStartX + romWindowWidth - (10 * WINDOW_SCALE),
+                    0, tocolor(r, g, b), 1 * WINDOW_SCALE, "default-bold")
 
-                romX = romWindowStartX + (10 * (1920 / SCREEN_WIDTH))
+                romX = romWindowStartX + (10 * WINDOW_SCALE)
                 romY = romY + yPadding
 
                 if (romY > (romWindowStartY + romWindowHeight - yPadding)) then
@@ -470,16 +497,16 @@ function renderDebugger(delta)
             end
         end
 
-        local registersWindowStartX = (romWindowStartX + romWindowWidth) + (10 * (1920 / SCREEN_WIDTH))
-        local registersWindowStartY = screenStartY + (1920 / SCREEN_WIDTH)
+        local registersWindowStartX = (romWindowStartX + romWindowWidth) + (10 * WINDOW_SCALE)
+        local registersWindowStartY = screenStartY + WINDOW_SCALE
 
-        local registersWindowWidth = (DEBUGGER_WIDTH - (registersWindowStartX - screenStartX)) - (50 * (1920 / SCREEN_WIDTH))
-        local registersWindowHeight = ((DEBUGGER_HEIGHT - 100) * (1920 / SCREEN_WIDTH))
+        local registersWindowWidth = ((DEBUGGER_WIDTH * WINDOW_SCALE) - (registersWindowStartX - screenStartX)) - (50 * WINDOW_SCALE)
+        local registersWindowHeight = ((DEBUGGER_HEIGHT - (100 * WINDOW_SCALE)) * WINDOW_SCALE)
 
         dxDrawRectangle(registersWindowStartX, registersWindowStartY, registersWindowWidth, registersWindowHeight,
             tocolor(255, 255, 255, 150))
 
-        local registersX = registersWindowStartX + (10 * (1920 / SCREEN_WIDTH))
+        local registersX = registersWindowStartX + (10 * WINDOW_SCALE)
         local registersY = registersWindowStartY + (yPadding / 2)
 
         for _, registerPair in pairs(DEBUGGER_REGISTERS) do
@@ -499,20 +526,20 @@ function renderDebugger(delta)
 
                 dxDrawText(registerPair[1]:upper()..registerPair[2]:upper()
                     .." = ".._string_format("%.4x", value):upper(), registersX, registersY,
-                    registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
+                    registersWindowStartX + registersWindowWidth - (10 * WINDOW_SCALE), 0, tocolor(0, 0, 0), 1 * WINDOW_SCALE, "default-bold")
             else
                 local value = registers[DEBUGGER_REGISTER_MAPPING[registerPair]]
 
                 dxDrawText(registerPair:upper()
                     .." = ".._string_format("%.4x", value):upper(), registersX, registersY,
-                    registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
+                    registersWindowStartX + registersWindowWidth - (10 * WINDOW_SCALE), 0, tocolor(0, 0, 0), 1 * WINDOW_SCALE, "default-bold")
             end
 
             registersY = registersY + yPadding
         end
 
         dxDrawText("LY".." = ".._string_format("%.2x", scanLine):upper(), registersX, registersY,
-            registersWindowStartX + registersWindowWidth - (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
+            registersWindowStartX + registersWindowWidth - (10 * WINDOW_SCALE), 0, tocolor(0, 0, 0), 1 * WINDOW_SCALE, "default-bold")
 
         registersY = registersY + yPadding
         registersY = registersY + yPadding
@@ -521,21 +548,21 @@ function renderDebugger(delta)
             dxDrawText("0x".._string_format("%.4x", i):upper()..": "
                 .._string_format("%.2x", mmuReadByte(i)):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -
-                (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
+                (10 * WINDOW_SCALE), 0, tocolor(0, 0, 0), WINDOW_SCALE, "default-bold")
 
             registersY = registersY + yPadding
         end
 
         dxDrawText("Stack: ", registersX, registersY,
             registersWindowStartX + registersWindowWidth -
-            (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
+            (10 * WINDOW_SCALE), 0, tocolor(0, 0, 0), WINDOW_SCALE, "default-bold")
 
         registersY = registersY + yPadding
 
         for _, address in pairs(stackDebug) do
             dxDrawText("0x".._string_format("%.4x", address):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -
-                (10 * (1920 / SCREEN_WIDTH)), 0, tocolor(0, 0, 0), 1, "default-bold")
+                (10 * WINDOW_SCALE), 0, tocolor(0, 0, 0), WINDOW_SCALE, "default-bold")
 
             registersY = registersY + yPadding
         end
@@ -550,19 +577,19 @@ function renderDebugger(delta)
             is8x16 = true
         end
 
-        local size = (2 * (1920 / SCREEN_WIDTH))
+        local size = 2 * WINDOW_SCALE
         local palette = mmuReadByte(0xFF47)
 
         if (isCGB) then
             palette = 0xFC
         end
 
-        local tileRenderStart = SCREEN_WIDTH - (16 * (((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))))
+        local tileRenderStart = SCREEN_WIDTH - (16 * (((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE)))
 
         local currentX = tileRenderStart
         local currentY = (SCREEN_HEIGHT / 2) - ((((math.ceil((384 * (((isCGB) and 2 or 1))) / 16) + 1) * 
-            (((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH)))) + (20 * (1920 / SCREEN_WIDTH)) +
-            ((math.ceil(39 / 16) + 1) * ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH)))) / 2)
+            (((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE))) + (20 * WINDOW_SCALE) +
+            ((math.ceil(39 / 16) + 1) * ((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE))) / 2)
 
         local backgroundPalettes = getBackgroundPalettes()
 
@@ -624,23 +651,23 @@ function renderDebugger(delta)
                     address = address + 2
                 end
 
-                currentX = currentX + (8 * size) + 2
+                currentX = currentX + ((8 * WINDOW_SCALE) * size) + 2 * WINDOW_SCALE
 
                 if (((384 * (renderBank - 1)) + (tile + 1)) % 16 == 0) then
                     currentX = tileRenderStart
-                    currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+                    currentY = currentY + ((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE)
                 end
             end
 
             vramBank = bank
         end
 
-        currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH)) + (20 * (1920 / SCREEN_WIDTH))
+        currentY = currentY + ((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE) + (20 * WINDOW_SCALE)
 
         local currentX = tileRenderStart
-        local currentY = currentY + (10 * (1920 / SCREEN_WIDTH))
+        local currentY = currentY + (10 * WINDOW_SCALE)
 
-        local size = 2
+        local size = 2 * WINDOW_SCALE
         local spritePalettes = getSpritePalettes()
 
         for oam=0, 39 do
@@ -721,11 +748,11 @@ function renderDebugger(delta)
                 address = address + 2
             end
 
-            currentX = currentX + (8 * size) + 2
+            currentX = currentX + ((8 * WINDOW_SCALE) * size) + 2 * WINDOW_SCALE
 
             if ((oam + 1) % 16 == 0) then
                 currentX = tileRenderStart
-                currentY = currentY + ((8 * (1920 / SCREEN_WIDTH)) * size) + (2 * (1920 / SCREEN_WIDTH))
+                currentY = currentY + ((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE)
             end
         end
 
@@ -746,4 +773,17 @@ end
 
 function removeBreakpoint(address)
     _breakpoints[address] = false
+end
+
+function debuggerResize(width, height)
+    SCREEN_WIDTH = width
+    SCREEN_HEIGHT = height
+
+    WINDOW_SCALE = math.min((SCREEN_WIDTH / 1920), (SCREEN_HEIGHT / 1080))
+
+    if (isElement(_renderTarget)) then
+        destroyElement(_renderTarget)
+    end
+
+    _renderTarget = dxCreateRenderTarget(SCREEN_WIDTH, SCREEN_HEIGHT, true)
 end

@@ -85,7 +85,6 @@ for i=1, 0xF000 do
     _ram[i] = 0
 end
 
-local _inBios = true
 local _cacheAttributes = false
 
 -----------------------------------
@@ -123,8 +122,6 @@ function resetMMU()
 
     _romOffset = 0x4000
     _ramOffset = 0x0000
-
-    _inBios = isBiosLoaded()
 
     if (not isBiosLoaded()) then
         mmuWriteByte(0xFF00, 0xFF)
@@ -224,6 +221,8 @@ function mmuLoadRom(rom)
         _ramBankCount = 0
     end
 end
+
+local _statSignal = 0
 
 local writeByteSwitch = switch()
     .caseRange(0x0, 0x1FFF, function(address, value, onlyWrite)
@@ -334,6 +333,65 @@ local writeByteSwitch = switch()
 
         address = address - 0xC000
         _wram[1][address + 1] = value
+    end)
+    .case(0xFF41, function(address, value, onlyWrite)
+        if (onlyWrite) then
+            _ram[address + 1] = value
+            return
+        end
+
+        local currentStat = mmuReadByte(0xFF41)
+        local newStat = _bitOr(_bitAnd(value, 0x78), _bitAnd(currentStat, 0x07))
+
+        _ram[address + 1] = newStat
+
+        local lcdc = mmuReadByte(0xFF40)
+        local mode = getGPUMode()
+
+        statInterrupt = _bitAnd(_bitRShift(newStat, 3), 0x0F)
+        _statSignal = _bitAnd(_bitRShift(newStat, 3), 0x0F)
+
+        if (_bitExtract(lcdc, 7) == 1) then
+            if (mode == 0 and _bitExtract(newStat, 3) == 1) then
+                if (_statSignal == 0) then
+                    requestInterrupt(1)
+                end
+
+                _statSignal = _bitReplace(_statSignal, 0, 1)
+            elseif (mode == 1 and _bitExtract(newStat, 4) == 1) then
+                if (_statSignal == 0) then
+                    requestInterrupt(1)
+                end
+
+                _statSignal = _bitReplace(_statSignal, 1, 1)
+            elseif (mode == 2 and _bitExtract(newStat, 5) == 1) then
+                if (_statSignal == 0) then
+                    requestInterrupt(1)
+                end
+
+                _statSignal = _bitReplace(_statSignal, 2, 1)
+            end
+        end
+
+        if (isScreenEnabled()) then
+            local lyc = mmuReadByte(0xFF45)
+            local stat = mmuReadByte(0xFF41)
+            
+            if (lyc == getScanLine()) then
+                stat = _bitOr(stat, 0x04)
+
+                if (_bitExtract(stat, 6) == 1 and _statSignal == 0) then
+                    requestInterrupt(1)
+                end
+
+                _statSignal = _bitReplace(_statSignal, 3, 1)
+            else
+                stat = _bitAnd(stat, 0xFB)
+                _statSignal = _bitReplace(_statSignal, 3, 0)
+            end
+
+            _ram[address + 1] = stat
+        end
     end)
     .case(0xFF4D, function(address, value, onlyWrite)
         if (isGameBoyColor()) then
@@ -517,6 +575,10 @@ local writeByteSwitch = switch()
                 else
                     disableScreen()
                 end
+
+                if (not isGameBoyColor() and _bitExtract(value, 0, 1) == 0) then
+                    value = _bitAnd(value, 0xDF)
+                end
             elseif (address == 0xFF44) then
                 return
             elseif (address == 0xFF46) then
@@ -595,7 +657,7 @@ function mmuPerformHDMA()
     _hdmaDestination = _hdmaDestination + 0x10
 
     if (_hdmaDestination > 0xFFFF) then
-        _hdmaDestination = _hdmaDestination - 0xFFFF
+        _hdmaDestination = _hdmaDestination - 0x10000
     end
 
     if (_hdmaDestination == 0xA000) then
@@ -605,7 +667,7 @@ function mmuPerformHDMA()
     _hdmaSource = _hdmaSource + 0x10
 
     if (_hdmaSource > 0xFFFF) then
-        _hdmaSource = _hdmaSource - 0xFFFF
+        _hdmaSource = _hdmaSource - 0x10000
     end
 
     if (_hdmaSource == 0x8000) then
@@ -622,7 +684,7 @@ function mmuPerformHDMA()
     _hdma[5] = _hdma[5] - 1
 
     if (_hdma[5] < 0) then
-        _hdma[5] = _hdma[5] + 0xFF
+        _hdma[5] = _hdma[5] + 0x100
     end
     if (_hdma[5] == 0xFF) then
         hdmaEnabled = false
@@ -645,13 +707,13 @@ function mmuPerformGDMA(value)
     _hdmaDestination = _hdmaDestination + _hdmaBytes
 
     if (_hdmaDestination > 0xFFFF) then
-        _hdmaDestination = _hdmaDestination - 0xFFFF
+        _hdmaDestination = _hdmaDestination - 0x10000
     end
 
     _hdmaSource = _hdmaSource + _hdmaBytes
 
     if (_hdmaSource > 0xFFFF) then
-        _hdmaSource = _hdmaSource - 0xFFFF
+        _hdmaSource = _hdmaSource - 0x10000
     end
 
     for i=1, 5 do
@@ -672,18 +734,14 @@ end
 
 local readByteSwitch = switch()
     .caseRange(0x0, 0xFFF, function(address)
-        if (_inBios) then
+        if (isBiosLoaded()) then
             if (isGameBoyColor()) then
                 if (address < 0x900 and (address < 0x100 or address >= 0x200)) then
                     return bios[address + 1] or 0
-                elseif (registers[10] >= 0x100 and registers[10] < 0x200) then
-                    _inBios = false
                 end
             else
                 if (address < 0x100) then
                     return bios[address + 1] or 0
-                elseif (registers[10] >= 0x100) then
-                    _inBios = false
                 end
             end
         end
@@ -853,7 +911,7 @@ function mmuReadUInt16(address)
 end
 
 function mmuReadInt16(address)
-    local value = mmuReadByte(address + 1)
+    local value = readByteSwitch[address + 1](address + 1)
 
     value = (value * 256) + readByteSwitch[address](address)
 
@@ -914,14 +972,9 @@ function mmuLoadExternalRam()
     end
 end
 
-function mmuIsInBios()
-    return _inBios
-end
-
 function saveMMUState()
     return {
         mbc = _mbc,
-        bios = bios,
         interrupts = interrupts,
         interruptFlags = interruptFlags,
         stackDebug = stackDebug,
@@ -945,13 +998,11 @@ function saveMMUState()
         rom = _rom,
         oam = _oam,
         wramBank = _wramBank,
-        inBios = _inBios
     }
 end
 
 function loadMMUState(state)
     _mbc = state.mbc
-    bios = state.bios
     interrupts = state.interrupts
     interruptFlags = state.interruptFlags
     stackDebug = state.stackDebug
@@ -974,7 +1025,6 @@ function loadMMUState(state)
     _ram = state.ram
     _rom = state.rom
     _wramBank = state.wramBank
-    _inBios = state.inBios
     _oam = state.oam
 
     oam = _oam

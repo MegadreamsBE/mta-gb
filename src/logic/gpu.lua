@@ -2,6 +2,8 @@ vramBank = 1
 vram = {}
 
 scanLine = 0
+windowLine = 0
+renderWindowThisLine = 0
 
 -----------------------------------
 -- * Locals
@@ -118,7 +120,7 @@ function setupGPU()
     addEventHandler("onClientRender", root, function()
         local debuggerEnabled = isDebuggerEnabled()
 
-        local width = debuggerEnabled and 800 or 1200
+        local width = (debuggerEnabled and 800 or 1200) * math.min((SCREEN_WIDTH / 1920), (SCREEN_HEIGHT / 1080))
         local height = width * 0.9
 
         local scaleW, scaleH = width / 160, height / 144
@@ -129,14 +131,30 @@ function setupGPU()
         dxDrawImageSection((SCREEN_WIDTH / 2) - (width / 2), (SCREEN_HEIGHT / 2) - (height / 2), width, height, 0, 0, 160 * scaleW, 144 * scaleH, _upscaleShader)
     
         --[[if (debuggerEnabled) then
-            for i=0, 159 do
-                dxDrawLine((SCREEN_WIDTH / 2) - (width / 2) + (i * scaleW), (SCREEN_HEIGHT / 2) - (height / 2), (SCREEN_WIDTH / 2) - (width / 2) + (i * scaleW), (SCREEN_HEIGHT / 2) - (height / 2) + (144 * scaleH), tocolor(0, 0, 0, 255), 1)
+            for i=0, 19 do
+                dxDrawLine((SCREEN_WIDTH / 2) - (width / 2) + ((i * 8) * scaleW), (SCREEN_HEIGHT / 2) - (height / 2), (SCREEN_WIDTH / 2) - (width / 2) + ((i * 8) * scaleW), (SCREEN_HEIGHT / 2) - (height / 2) + (144 * scaleH), tocolor(0, 0, 0, 255), 1)
             
-                for a=0, 143 do
-                    dxDrawLine((SCREEN_WIDTH / 2) - (width / 2), (SCREEN_HEIGHT / 2) - (height / 2) + (a * scaleH), (SCREEN_WIDTH / 2) - (width / 2) + (160 * scaleW), (SCREEN_HEIGHT / 2) - (height / 2) + (a * scaleH), tocolor(0, 0, 0, 255), 1)
+                for a=0, 17 do
+                    dxDrawLine((SCREEN_WIDTH / 2) - (width / 2), (SCREEN_HEIGHT / 2) - (height / 2) + ((a * 8) * scaleH), (SCREEN_WIDTH / 2) - (width / 2) + (160 * scaleW), (SCREEN_HEIGHT / 2) - (height / 2) + ((a * 8) * scaleH), tocolor(0, 0, 0, 255), 1)
                 end
             end
         end]]
+
+        --[[if (debuggerEnabled) then
+            local lcdControl = _mmuReadByte(0xFF40)
+            local windowY = _mmuReadByte(0xFF4A)
+            local windowX = _mmuReadByte(0xFF4B) - 7
+
+            if (_bitExtract(lcdControl, 5, 1) ~= 1) then
+                return
+            end
+
+            dxDrawRectangle(
+                (SCREEN_WIDTH / 2) - (width / 2) + windowX * scaleW, 
+                (SCREEN_HEIGHT / 2) - (height / 2) + windowY * scaleH, 
+                (160 - windowX) * scaleW, 
+                (144 - windowY) * scaleH, tocolor(255, 0, 0, 100)) ]]
+        --end
     end)
 end
 
@@ -201,7 +219,7 @@ function resetGPU()
         lcdStatus = _bitReplace(lcdStatus, 1, 1, 1)
         lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
-        _mmuWriteByte(0xFF41, lcdStatus)
+        _mmuWriteByte(0xFF41, lcdStatus, true)
     end
 
     cacheAttributes = createFilledTable(0xFFFF, {})
@@ -216,15 +234,15 @@ function resetGPU()
 end
 
 function renderWindow()
+    if (not renderWindowThisLine) then
+        return
+    end
+
     local lcdControl = _mmuReadByte(0xFF40)
     local windowY = _mmuReadByte(0xFF4A)
     local windowX = _mmuReadByte(0xFF4B) - 7
 
-    if (_bitExtract(lcdControl, 5, 1) ~= 1) then
-        return
-    end
-
-    if (windowY > _mmuReadByte(0xFF44)) then
+    if (_bitExtract(lcdControl, 5, 1) ~= 1 or windowX > 160 or windowY > 144) then
         return
     end
 
@@ -234,7 +252,7 @@ function renderWindow()
 
     local unsigned = true
 
-    local tileData = 0x8000
+    local tileData = 0x8800
 
     if (_bitExtract(lcdControl, 4, 1) == 1) then
         tileData = 0x8000
@@ -251,12 +269,12 @@ function renderWindow()
         backgroundMemory = 0x9800
     end
 
-    local yPos = scanLine - windowY
+    local yPos = windowLine
     
     if (yPos < 0) then
-        yPos = yPos + 0xff
+        yPos = yPos + 0x100
     elseif (yPos > 0xff) then
-        yPos = yPos - 0xff
+        yPos = yPos - 0x100
     end
 
     local line = (yPos % 8) * 2
@@ -280,9 +298,9 @@ function renderWindow()
         xPos = i - windowX
 
         if (xPos < 0) then
-            xPos = xPos + 0xff
+            xPos = xPos + 0x100
         elseif (xPos > 0xff) then
-            xPos = xPos - 0xff
+            xPos = xPos - 0x100
         end
 
         local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))
@@ -384,6 +402,8 @@ function renderWindow()
 
         i = i + 1
     end
+
+    windowLine = windowLine + 1
 end
 
 function renderBackground()
@@ -421,9 +441,9 @@ function renderBackground()
     yPos = scrollY + scanLine
 
     if (yPos < 0) then
-        yPos = yPos + 0xff
+        yPos = yPos + 0x100
     elseif (yPos > 0xff) then
-        yPos = yPos - 0xff
+        yPos = yPos - 0x100
     end
 
     local line = (yPos % 8) * 2
@@ -447,9 +467,9 @@ function renderBackground()
         xPos = i + scrollX
 
         if (xPos < 0) then
-            xPos = xPos + 0xff
+            xPos = xPos + 0x100
         elseif (xPos > 0xff) then
-            xPos = xPos - 0xff
+            xPos = xPos - 0x100
         end
 
         local tileAddress = backgroundMemory + row + ((xPos / 8) - ((xPos / 8) % 1))
@@ -541,7 +561,7 @@ function renderBackground()
                     debugBackground[bank][tileLocation] = cgbPalette
                 end
             end
-            
+
             _dxSetPixelColor(_screenPixels, i, scanLine, color[1], color[2], color[3], 255)
         else
             local color = _bitOr(_bitLShift(_bitExtract(palette, (colorNum * 2) + 1, 1), 1), _bitExtract(palette, (colorNum * 2), 1))
@@ -579,6 +599,10 @@ function renderSprites()
             local tile = _mmuReadByte(0xFE00 + index + 2)
             local attributes = _mmuReadByte(0xFE00 + index + 3)
 
+            if (ySize == 16) then
+                tile = _bitAnd(tile, 0xFE)
+            end
+
             local yFlip = false
             local xFlip = false
             local line = scanLine - yPos
@@ -597,11 +621,10 @@ function renderSprites()
             end
 
             if (yFlip) then
-                line = line - ySize
-                line = line * -1
+                line = (ySize - 1) - line
             end
 
-            local address = (0x8000 + (tile* 16)) + (line * 2)
+            local address = (0x8000 + (tile * 16)) + (line * 2)
             local byte1 = 0
             local byte2 = 0
 
@@ -616,7 +639,6 @@ function renderSprites()
                 byte2 = _mmuReadByte(address + 1)
                 vramBank = bank
             end
-
             local palette = _mmuReadByte((_bitExtract(attributes, 4, 1) == 1) and 0xFF49 or 0xFF48)
             local tilePixel = 7
 
@@ -628,8 +650,7 @@ function renderSprites()
                     local colorBit = tilePixel
 
                     if (xFlip) then
-                        colorBit = colorBit - 7
-                        colorBit = colorBit * -1
+                        colorBit = 7 - colorBit
                     end
 
                     local colorNum = _bitExtract(byte2, colorBit, 1) * 2 + _bitExtract(byte1, colorBit, 1)
@@ -647,7 +668,7 @@ function renderSprites()
                                 spritePriorityData[pixel + 1] = true
 
                                 local color = _spritePalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
-                
+
                                 _dxSetPixelColor(_screenPixels, pixel, scanLine, color[1], color[2], color[3], 255)
                             end
                         end
@@ -754,9 +775,9 @@ function gpuStep(ticks)
     local lcdStatus = _mmuReadByte(0xFF41)
 
     if (not _screenEnabled) then
-        lcdStatus = _bitReplace(_bitAnd(lcdStatus, 0xFC), 1, 0, 1)
+        lcdStatus = _bitOr(_bitAnd(lcdStatus, 0xFC), _bitAnd(_mode, 0x03))
 
-        _mmuWriteByte(0xFF41, lcdStatus)
+        _mmuWriteByte(0xFF41, lcdStatus, true)
     end
 
     _modeClock = _modeClock + ticks
@@ -828,13 +849,15 @@ function gpuStep(ticks)
                 _modeClock = _modeClock - 114
                 scanLine = scanLine + 1
 
-                if (scanLine >= 154) then
+                if (scanLine == 153) then
                     _mode = 2
 
                     lcdStatus = _bitReplace(_bitReplace(lcdStatus, 1, 1, 1), 0, 0, 1)
                     requireInterrupt = (_bitExtract(lcdStatus, 5, 1) == 1)
 
                     scanLine = 0
+                    windowLine = 0
+                    renderWindowThisLine = false
 
                     if (isDebuggerEnabled() and isGameBoyColor() and _frameSkips == 0) then
                         debugBackground = {debugBackground[1], debugBackground[2]}
@@ -842,6 +865,8 @@ function gpuStep(ticks)
                 end
             end
         elseif (_mode == 2) then
+            renderWindowThisLine = (renderWindowThisLine or _mmuReadByte(0xFF4A) == scanLine)
+
             if (_modeClock >= 20) then
                 _modeClock = _modeClock - 20
                 lcdStatus = _bitReplace(_bitReplace(lcdStatus, 1, 1, 1), 1, 0, 1)
@@ -865,7 +890,7 @@ function gpuStep(ticks)
             requestInterrupt(1)
         end
 
-        if (scanLine == _mmuReadByte(0xFF45)) then
+        if ((scanLine + 1) == _mmuReadByte(0xFF45)) then
             lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
             
             if (_bitExtract(lcdStatus, 6, 1) == 1) then
@@ -876,7 +901,7 @@ function gpuStep(ticks)
         end
     end
 
-    _mmuWriteByte(0xFF41, lcdStatus)
+    _mmuWriteByte(0xFF41, lcdStatus, true)
 end
 
 function enableScreen()
@@ -888,6 +913,7 @@ function enableScreen()
     _mode = 0
     _modeClock = 0
     scanLine = 0
+    windowLine = 0
     _screenDelay = 110
 
     local lcdStatus = _mmuReadByte(0xFF41)
@@ -895,7 +921,15 @@ function enableScreen()
     lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
     lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
-    _mmuWriteByte(0xFF41, lcdStatus)
+    if ((scanLine + 1) == _mmuReadByte(0xFF45)) then
+        lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
+
+        requestInterrupt(1)
+    else
+        lcdStatus = _bitReplace(lcdStatus, 0, 2, 1)
+    end
+
+    _mmuWriteByte(0xFF41, lcdStatus, true)
 end
 
 function disableScreen()
@@ -908,6 +942,7 @@ function disableScreen()
     _mode = 0
     _modeClock = 0
     scanLine = 0
+    windowLine = 0
 
     local i = 0
 
@@ -924,7 +959,12 @@ function disableScreen()
 
     _dxSetTexturePixels(_screen, _screenPixels)
 
-    _mmuWriteByte(0xFF41, _bitReplace(_bitReplace(_bitAnd(_mmuReadByte(0xFF41), 0x7C), 1, 0, 1), 0, 0, 1))
+    _mmuWriteByte(0xFF41, _bitAnd(_mmuReadByte(0xFF41), 0x7C), true)
+end
+
+function gpuResize(width, height)
+    SCREEN_WIDTH = width
+    SCREEN_HEIGHT = height
 end
 
 function isScreenEnabled()
@@ -939,12 +979,24 @@ function getGPUModeClock()
     return _modeClock
 end
 
+function getScanLine()
+    return scanLine
+end
+
+function getFrameSkips()
+    return _frameSkips
+end
+
 function getBackgroundPalettes()
     return _backgroundPalettes
 end
 
 function getSpritePalettes()
     return _spritePalettes
+end
+
+function getScreenPixels()
+    return _screenPixels
 end
 
 function saveGPUState()
@@ -959,7 +1011,9 @@ function saveGPUState()
         screenEnabled = _screenEnabled,
         backgroundPalettes = _backgroundPalettes,
         spritePalettes = _spritePalettes,
-        backgroundPriority = _backgroundPriority
+        backgroundPriority = _backgroundPriority,
+        cacheAttributes = _cacheAttributes,
+        frameSkips = _frameSkips
     }
 end
 
@@ -975,6 +1029,8 @@ function loadGPUState(state)
     _backgroundPalettes = state.backgroundPalettes
     _spritePalettes = state.spritePalettes
     _backgroundPriority = state.backgroundPriority
+    _cacheAttributes = state.cacheAttributes
+    _frameSkips = state.frameSkips
 
     _screen = dxCreateTexture(160, 144)
     _screenPixels = dxGetTexturePixels(_screen)
@@ -983,6 +1039,7 @@ function loadGPUState(state)
     _vram = vram
 
     mmuLinkVideoRam(vram)
+    mmuLinkCache(_cacheAttributes)
 end
 
 addEventHandler("onClientResourceStart", resourceRoot,
