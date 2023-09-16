@@ -37,7 +37,7 @@ function love.load(args)
 
     if (gameBoyLoadRom(args[1])) then
         if (isGameBoyColor()) then
-            gameBoyLoadBios("data/gbc_bios.bin")
+            --gameBoyLoadBios("data/gbc_bios.bin")
         else
             --gameBoyLoadBios("data/bios.gb")
         end

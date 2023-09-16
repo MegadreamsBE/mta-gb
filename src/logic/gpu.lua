@@ -609,12 +609,14 @@ function renderSprites()
 
             local cgbPalette = 0
             local cgbBank = false
+            local cgbPriority = false
 
             if (isCGB) then
                 cgbPalette = _bitAnd(attributes, 0x07)
                 cgbBank = _bitAnd(attributes, 0x08) > 1
                 xFlip = _bitAnd(attributes, 0x20) > 1
                 yFlip = _bitAnd(attributes, 0x40) > 1
+                cgbPriority = _bitAnd(attributes, 0x80) >= 1
             else
                 xFlip = _bitAnd(attributes, 0x20) > 1
                 yFlip = _bitAnd(attributes, 0x40) > 1
@@ -658,13 +660,14 @@ function renderSprites()
                     if (isCGB) then
                         local avoidRender = false
 
-                        if (_backgroundPriority[pixel + 1][scanLine + 1][1] or spritePriorityData[pixel + 1] ~= nil) then
+                        if ((_backgroundPriority[pixel + 1][scanLine + 1][1] and _backgroundPriority[pixel + 1][scanLine + 1][2] > 0 and 
+                            _bitExtract(lcdControl, 0, 1) == 1) or spritePriorityData[pixel + 1] ~= nil) then
                             avoidRender = true
                         end
 
                         if (not avoidRender and colorNum ~= 0) then
-                            if ((_bitExtract(attributes, 7, 1) == 0) or 
-                                ((_bitExtract(attributes, 7, 1) == 1) and _backgroundPriority[pixel + 1][scanLine + 1][2] == 0)) then
+                            if (not cgbPriority or 
+                                (cgbPriority and _backgroundPriority[pixel + 1][scanLine + 1][2] == 0)) then
                                 spritePriorityData[pixel + 1] = true
 
                                 local color = _spritePalettes[cgbPalette + 1][colorNum + 1][2] or {255, 255, 255}
@@ -710,7 +713,7 @@ end
 function renderScan()
     local lcdControl = _mmuReadByte(0xFF40)
 
-    if (_bitExtract(lcdControl, 0) == 1) then
+    if (_bitExtract(lcdControl, 0) == 1 or isGameBoyColor()) then
         renderBackground()
         renderWindow()
     end
