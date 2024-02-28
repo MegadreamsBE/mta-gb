@@ -19,13 +19,16 @@ function love.load(args)
     require "src/utils/utils"
     require "src/utils/switch"
 
+    require "src/debug/debugger"
+    require "src/debug/disassembler"
+
     require "src/logic/opcodes"
     require "src/logic/cpu"
     require "src/logic/gpu"
     require "src/logic/timer"
-    require "src/logic/debugger"
-    require "src/logic/disassembler"
     require "src/logic/mmu"
+
+    require "src/utils/profile"
 
     triggerEvent("onClientResourceStart")
 
@@ -36,7 +39,7 @@ function love.load(args)
     setupDebugger()
 
     if (gameBoyLoadRom(args[1])) then
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             --gameBoyLoadBios("data/gbc_bios.bin")
         else
             --gameBoyLoadBios("data/bios.gb")
@@ -44,7 +47,7 @@ function love.load(args)
     end
 
     startGameBoy()
-    enableDebugger()
+    --enableDebugger()
 
     Log.log = log
 end
@@ -59,7 +62,7 @@ function love.draw()
         love.graphics.clear()
         triggerEvent("onClientPreRender", timeSinceLastFrame * 1000)
         triggerEvent("onClientRender")
-        acumulator = accumulator - tickPeriod
+        accumulator = accumulator - tickPeriod
         timeSinceLastFrame = 0
     end
 end

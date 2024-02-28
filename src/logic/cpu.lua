@@ -28,6 +28,8 @@ local _interruptDelay = 0
 
 local _mmuPushStack = false
 local _mmuReadByte = false
+local _readByteSwitch = false
+local _writeByteSwitch = false
 
 local _gpuStep = false
 local _timerStep = false
@@ -131,7 +133,7 @@ function resetCPU()
             }
         }
     else
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             registers = {
                 0x11, -- register a
                 0x0, -- register b
@@ -204,7 +206,7 @@ function stopCPU()
     if (cgbPrepareSpeedChange) then
         cgbDoubleSpeed = not cgbDoubleSpeed
         
-        mmuWriteByte(0xFF4D, _bitReplace(_bitReplace(_mmuReadByte(0xFF4D), cgbDoubleSpeed and 1 or 0, 7, 1), 0, 0, 1))
+        _writeByteSwitch[0xFF4D](0xFF4D, _bitReplace(_bitReplace(_readByteSwitch[0xFF4D](0xFF4D), cgbDoubleSpeed and 1 or 0, 7, 1), 0, 0, 1))
     end
 end
 
@@ -250,23 +252,20 @@ function setInterrupts()
 end
 
 function readTwoRegisters(r1, r2)
-    local value = _registers[r1]
-
     if (r2 == 8) then
-        return value * 256 + (
-            ((_registers[8][1]) and 1 or 0) * 128 +
-            ((_registers[8][2]) and 1 or 0) * 64 +
-            ((_registers[8][3]) and 1 or 0) * 32 +
-            ((_registers[8][4]) and 1 or 0) * 16
+        return _registers[r1] * 256 + (
+            ((_registers[8][1]) and 128 or 0) +
+            ((_registers[8][2]) and 64 or 0) +
+            ((_registers[8][3]) and 32 or 0) +
+            ((_registers[8][4]) and 16 or 0)
         )
     end
 
-    return value * 256 + _registers[r2]
+    return _registers[r1] * 256 + _registers[r2]
 end
 
 function writeTwoRegisters(r1, r2, value)
-    local reg1 = _bitAnd(0xFF00, value) / 256
-    _registers[r1] = reg1 - (reg1 % 1)
+    _registers[r1] = _bitAnd(0xFF00, value) / 256
 
     if (r2 == 8) then
         _registers[8][1] = (_bitAnd(value, 0x80) > 0)
@@ -282,7 +281,6 @@ function requestInterrupt(interrupt)
     --print("Interrupt: "..interrupt)
     --print("Before: "..interruptFlags)
     interruptFlags = _bitReplace(interruptFlags, 1, interrupt, 1)
-    _interruptDelay = 4
     --print("After: "..interruptFlags)
 end
 
@@ -383,7 +381,7 @@ function runCPU()
         _stepCallback = nil
     end
 
-    local gameBoyColor = isGameBoyColor()
+    local gameBoyColor = isGameBoyColor
     local biosLoaded = isBiosLoaded()
 
     local parsedBios = {}
@@ -399,13 +397,14 @@ function runCPU()
         end
     end
 
+    local cyclesToRun = 69905
+
     _stepCallback = function(delta)
         local debuggerEnabled = isDebuggerEnabled()
 
         if (not _paused or _pausedUntilInterrupts) then
             currentCycles = 0
-
-            local cyclesToRun = 69905
+            cyclesToRun = 69905
 
             if (cgbDoubleSpeed) then
                 cyclesToRun = cyclesToRun * 2
@@ -477,6 +476,7 @@ function runCPU()
                 end
 
                 local ticks = _registers[12].t
+
 
                 if (_paused) then
                     _timerStep(4)
@@ -553,6 +553,8 @@ end
 addEventHandler("onClientResourceStart", resourceRoot, function()
     _mmuPushStack = mmuPushStack
     _mmuReadByte = mmuReadByte
+    _readByteSwitch = readByteSwitch
+    _writeByteSwitch = writeByteSwitch
 
     _gpuStep = gpuStep
     _timerStep = timerStep

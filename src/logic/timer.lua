@@ -13,20 +13,15 @@ local _dividerCounter = 0
 
 local _mmuReadByte = false
 local _mmuWriteByte = false
+local _readByteSwitch = false
+local _writeByteSwitch = false
 
-local getCounterFromFrequency = function(frequency)
-    if (frequency == 0) then
-        return 1024
-    elseif (frequency == 1) then
-        return 16
-    elseif (frequency == 2) then
-        return 64
-    elseif (frequency == 3) then
-        return 256
-    end
-
-    return 256
-end
+local _frequencyToCounter = {
+    [1] = 1024,
+    [2] = 16,
+    [3] = 64,
+    [4] = 256,
+}
 
 -----------------------------------
 -- * Functions
@@ -67,7 +62,7 @@ end
 function resetTimerDivider()
     if (timerClockEnabled) then
         if (timerDividerRegister == 1) then
-            _mmuWriteByte(0xFF05, _mmuReadByte(0xFF05) + 1)
+            _writeByteSwitch[0xFF05](0xFF05, _readByteSwitch[0xFF05](0xFF05) + 1)
         end
     end
 
@@ -80,17 +75,17 @@ function handleTACGlitch(oldState, newState, oldFrequency, newFrequency)
 
     if (oldState) then
         if (newState) then
-            glitch = ((_bitAnd(_counter, getCounterFromFrequency(oldFrequency) / 2) ~= 0) and (_bitAnd(_counter, getCounterFromFrequency(newFrequency) / 2) == 0))
+            glitch = ((_bitAnd(_counter, _frequencyToCounter[oldFrequency + 1] / 2) ~= 0) and (_bitAnd(_counter, _frequencyToCounter[newFrequency + 1] / 2) == 0))
         else
-            glitch = (_bitAnd(_counter, getCounterFromFrequency(oldFrequency) / 2) ~= 0)
+            glitch = (_bitAnd(_counter, _frequencyToCounter[oldFrequency + 1] / 2) ~= 0)
         end
     end
             
     if (glitch) then
-        _mmuWriteByte(0xFF05, _mmuReadByte(0xFF05) + 1)
+        _writeByteSwitch[0xFF05](0xFF05, _readByteSwitch[0xFF05](0xFF05) + 1)
 
-        if (_mmuReadByte(0xFF05) == 0xff) then
-            _mmuWriteByte(0xFF05, _mmuReadByte(0xFF06))
+        if (_readByteSwitch[0xFF05](0xFF05) == 0xff) then
+            _writeByteSwitch[0xFF05](0xFF05, _readByteSwitch[0xFF06](0xFF06))
             requestInterrupt(2)
         end
     end
@@ -107,21 +102,20 @@ function timerStep(ticks)
     _counter = _counter + ticks
 
     if (timerClockEnabled) then
-        local frequency = getCounterFromFrequency(timerClockFrequency)
-        local tima = _mmuReadByte(0xFF05)
-        local timerIncrease = 0
+        local frequency = _frequencyToCounter[timerClockFrequency + 1]
+        local tima = _readByteSwitch[0xFF05](0xFF05)
 
-        while (_counter >= frequency) do
-            _counter = _counter - frequency
-            tima = tima + 1
-            
-            if (tima == 0xff) then
-                tima = _mmuReadByte(0xFF06)
-                requestInterrupt(2)
-            end
+        local cyclesToIncrement = math.floor(_counter / frequency)
+        _counter = _counter % frequency 
+        
+        tima = tima + cyclesToIncrement
+
+        if (tima >= 0xff) then
+            tima = _readByteSwitch[0xFF06](0xFF06)
+            requestInterrupt(2)
         end
 
-        _mmuWriteByte(0xFF05, tima)
+        _writeByteSwitch[0xFF05](0xFF05, tima)
     end
 
     if (_counter > 0xffff) then
@@ -151,5 +145,7 @@ addEventHandler("onClientResourceStart", resourceRoot,
     function()
         _mmuReadByte = mmuReadByte
         _mmuWriteByte = mmuWriteByte
+        _readByteSwitch = readByteSwitch
+        _writeByteSwitch = writeByteSwitch
     end
 )

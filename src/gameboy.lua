@@ -9,7 +9,7 @@ local _bitOr = bitOr
 -- * Constants
 -----------------------------------
 
-local ROM_PATH = "data/Crystalis (USA).gbc"
+local ROM_PATH = "data/PokemonCrystal.gbc"
 
 -----------------------------------
 -- * Locals
@@ -18,12 +18,13 @@ local ROM_PATH = "data/Crystalis (USA).gbc"
 local _keypad = {}
 local _onClientKeyHandler = false
 local _debuggerEnabled = false
-local _isGameBoyColor = false
 local _isControlDown = false
 local _isShiftDown = false
 
 local _rom = nil
 bios = nil
+
+isGameBoyColor = false
 
 -----------------------------------
 -- * Functions
@@ -284,11 +285,7 @@ function onKeyUp(key)
 end
 
 function setGameBoyColorMode(toggle)
-    _isGameBoyColor = toggle
-end
-
-function isGameBoyColor()
-    return _isGameBoyColor
+    isGameBoyColor = toggle
 end
 
 function saveState(slot)
@@ -350,14 +347,17 @@ end
 -- * Events
 -----------------------------------
 
+local counter = 0
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
     debug.sethook(nil)
+
     setupGameBoy()
     setupDebugger()
 
     if (gameBoyLoadRom(ROM_PATH)) then
-        if (isGameBoyColor()) then
-            gameBoyLoadBios("data/gbc_bios.bin")
+        if (isGameBoyColor) then
+            --gameBoyLoadBios("data/gbc_bios.bin")
         else
             --gameBoyLoadBios("data/bios.gb")
         end

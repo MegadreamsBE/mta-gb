@@ -6,6 +6,7 @@ local LOG_TWO = math.log(2)
 
 local _math_abs = math.abs
 local _math_log = math.log
+local _math_floor = math.floor
 local _bitOr = bitOr
 local _bitAnd = bitAnd
 local _bitXor = bitXor
@@ -19,6 +20,8 @@ local _string_format = string.format
 local _readTwoRegisters = readTwoRegisters
 local _writeTwoRegisters = writeTwoRegisters
 
+local _readByteSwitch = false
+local _writeByteSwitch = false
 local _mmuReadByte = false
 local _mmuWriteByte = false
 local _mmuReadUInt16 = false
@@ -294,7 +297,7 @@ local helper_not = function(value)
 end
 
 local helper_test = function(bit, value)
-    _registers[8][1] = (_bitExtract(value, bit, 1) == 0) -- FLAG_ZERO
+    _registers[8][1] = ((_math_floor(value / (2^bit)) % 2) == 0) -- FLAG_ZERO
     _registers[8][2] = false -- FLAG_SUBSTRACT
     _registers[8][3] = true -- FLAG_HALFCARRY
 end
@@ -362,7 +365,7 @@ local cbOpcodes = {
     -- Opcode: 0x06
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rlc(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_rlc(_readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -419,7 +422,7 @@ local cbOpcodes = {
     -- Opcode: 0x0e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rrc(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_rrc(_readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -476,7 +479,7 @@ local cbOpcodes = {
     -- Opcode: 0x16
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rl(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_rl(_readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -533,7 +536,7 @@ local cbOpcodes = {
     -- Opcode: 0x1e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_rr(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_rr(_readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -590,7 +593,7 @@ local cbOpcodes = {
     -- Opcode: 0x26
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_sla(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_sla(_readByteSwitch[address](address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -647,7 +650,7 @@ local cbOpcodes = {
     -- Opcode: 0x2e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_sra(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_sra(_readByteSwitch[address](address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -704,7 +707,7 @@ local cbOpcodes = {
     -- Opcode: 0x36
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_swap(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_swap(_readByteSwitch[address](address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -761,7 +764,7 @@ local cbOpcodes = {
     -- Opcode: 0x3e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_srl(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_srl(_readByteSwitch[address](address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -817,8 +820,7 @@ local cbOpcodes = {
     end,
     -- Opcode: 0x46
     function()
-        local address = _readTwoRegisters(6, 7)
-        helper_test(0, _mmuReadByte(address))
+        helper_test(0, _mmuReadByte(_readTwoRegisters(6, 7)))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -875,7 +877,7 @@ local cbOpcodes = {
     -- Opcode: 0x4e
     function()
         local address = _readTwoRegisters(6, 7)
-        helper_test(1, _mmuReadByte(address))
+        helper_test(1, _readByteSwitch[address](address))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -932,7 +934,7 @@ local cbOpcodes = {
     -- Opcode: 0x56
     function()
         local address = _readTwoRegisters(6, 7)
-        helper_test(2, _mmuReadByte(address))
+        helper_test(2, _readByteSwitch[address](address))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -989,7 +991,7 @@ local cbOpcodes = {
     -- Opcode: 0x5e
     function()
         local address = _readTwoRegisters(6, 7)
-        helper_test(3, _mmuReadByte(address))
+        helper_test(3, _readByteSwitch[address](address))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -1046,7 +1048,7 @@ local cbOpcodes = {
     -- Opcode: 0x66
     function()
         local address = _readTwoRegisters(6, 7)
-        helper_test(4, _mmuReadByte(address))
+        helper_test(4, _readByteSwitch[address](address))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -1103,7 +1105,7 @@ local cbOpcodes = {
     -- Opcode: 0x6e
     function()
         local address = _readTwoRegisters(6, 7)
-        helper_test(5, _mmuReadByte(address))
+        helper_test(5, _readByteSwitch[address](address))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -1160,7 +1162,7 @@ local cbOpcodes = {
     -- Opcode: 0x76
     function()
         local address = _readTwoRegisters(6, 7)
-        helper_test(6, _mmuReadByte(address))
+        helper_test(6, _readByteSwitch[address](address))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -1217,7 +1219,7 @@ local cbOpcodes = {
     -- Opcode: 0x7e
     function()
         local address = _readTwoRegisters(6, 7)
-        helper_test(7, _mmuReadByte(address))
+        helper_test(7, _readByteSwitch[address](address))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -1274,7 +1276,7 @@ local cbOpcodes = {
     -- Opcode: 0x86
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(0, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(0, _readByteSwitch[address](address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1331,7 +1333,7 @@ local cbOpcodes = {
     -- Opcode: 0x8e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(1, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(1, _readByteSwitch[address](address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1388,7 +1390,7 @@ local cbOpcodes = {
     -- Opcode: 0x96
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(2, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(2, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1445,7 +1447,7 @@ local cbOpcodes = {
     -- Opcode: 0x9e
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(3, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(3, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1502,7 +1504,7 @@ local cbOpcodes = {
     -- Opcode: 0xa6
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(4, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(4, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1559,7 +1561,7 @@ local cbOpcodes = {
     -- Opcode: 0xae
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(5, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(5, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1616,7 +1618,7 @@ local cbOpcodes = {
     -- Opcode: 0xb6
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(6, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(6, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1673,7 +1675,7 @@ local cbOpcodes = {
     -- Opcode: 0xbe
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_reset(7, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_reset(7, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1730,7 +1732,7 @@ local cbOpcodes = {
     -- Opcode: 0xc6
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(0, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(0, _readByteSwitch[address](address)))
 
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1787,7 +1789,7 @@ local cbOpcodes = {
     -- Opcode: 0xce
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(1, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(1, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1844,7 +1846,7 @@ local cbOpcodes = {
     -- Opcode: 0xd6
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(2, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(2, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1901,7 +1903,7 @@ local cbOpcodes = {
     -- Opcode: 0xde
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(3, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(3, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -1958,7 +1960,7 @@ local cbOpcodes = {
     -- Opcode: 0xe6
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(4, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(4, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -2015,7 +2017,7 @@ local cbOpcodes = {
     -- Opcode: 0xee
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(5, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(5, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -2072,7 +2074,7 @@ local cbOpcodes = {
     -- Opcode: 0xf6
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(6, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(6, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -2129,7 +2131,7 @@ local cbOpcodes = {
     -- Opcode: 0xfe
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_set(7, _mmuReadByte(address)))
+        _mmuWriteByte(address, helper_set(7, _readByteSwitch[address](address)))
     
         _registers[12].m = 4
         _registers[12].t = 16
@@ -2187,7 +2189,7 @@ opcodes = {
     end,
     -- Opcode: 0x06
     function()
-        _registers[2] = _mmuReadByte(_registers[10])
+        _registers[2] = _readByteSwitch[_registers[10]](_registers[10])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -2246,7 +2248,7 @@ opcodes = {
     end,
     -- Opcode: 0x0e
     function()
-        _registers[3] = _mmuReadByte(_registers[10])
+        _registers[3] = _readByteSwitch[_registers[10]](_registers[10])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -2305,7 +2307,7 @@ opcodes = {
     end,
     -- Opcode: 0x16
     function()
-        _registers[4] = _mmuReadByte(_registers[10])
+        _registers[4] = _readByteSwitch[_registers[10]](_registers[10])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -2365,7 +2367,7 @@ opcodes = {
     end,
     -- Opcode: 0x1e
     function()
-        _registers[5] = _mmuReadByte(_registers[10])
+        _registers[5] = _readByteSwitch[_registers[10]](_registers[10])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -2405,7 +2407,7 @@ opcodes = {
     -- Opcode: 0x22
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, _registers[1])
+        _writeByteSwitch[address](address, _registers[1])
 
         if (address == 0xff) then
             _writeTwoRegisters(6, 7, 0)
@@ -2439,7 +2441,7 @@ opcodes = {
     end,
     -- Opcode: 0x26
     function()
-        _registers[6] = _mmuReadByte(_registers[10])
+        _registers[6] = _readByteSwitch[_registers[10]](_registers[10])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -2502,7 +2504,7 @@ opcodes = {
     -- Opcode: 0x2a
     function()
         local address = _readTwoRegisters(6, 7)
-        _registers[1] = _mmuReadByte(address)
+        _registers[1] = _readByteSwitch[address](address)
 
         if (address == 0xff) then
             _writeTwoRegisters(6, 7, 0)
@@ -2536,7 +2538,7 @@ opcodes = {
     end,
     -- Opcode: 0x2e
     function()
-        _registers[7] = _mmuReadByte(_registers[10])
+        _registers[7] = _readByteSwitch[_registers[10]](_registers[10])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -2598,7 +2600,7 @@ opcodes = {
     -- Opcode: 0x34
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_inc(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_inc(_readByteSwitch[address](address)))
 
         _registers[12].m = 3
         _registers[12].t = 12
@@ -2606,14 +2608,14 @@ opcodes = {
     -- Opcode: 0x35
     function()
         local address = _readTwoRegisters(6, 7)
-        _mmuWriteByte(address, helper_dec(_mmuReadByte(address)))
+        _mmuWriteByte(address, helper_dec(_readByteSwitch[address](address)))
 
         _registers[12].m = 3
         _registers[12].t = 12
     end,
     -- Opcode: 0x36
     function()
-        _mmuWriteByte(_readTwoRegisters(6, 7), _mmuReadByte(_registers[10]))
+        _mmuWriteByte(_readTwoRegisters(6, 7), _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 3
@@ -2652,7 +2654,7 @@ opcodes = {
     -- Opcode: 0x3a
     function()
         local address = _readTwoRegisters(6, 7)
-        _registers[1] = _mmuReadByte(address)
+        _registers[1] = _readByteSwitch[address](address)
 
         if (address == 0) then
             _writeTwoRegisters(6, 7, 0xff)
@@ -2686,7 +2688,7 @@ opcodes = {
     end,
     -- Opcode: 0x3e
     function()
-        _registers[1] = _mmuReadByte(_registers[10])
+        _registers[1] = _readByteSwitch[_registers[10]](_registers[10])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -3688,7 +3690,7 @@ opcodes = {
     -- Opcode: 0xc6
     function()
         _registers[1] = helper_add(_registers[1],
-            _mmuReadByte(_registers[10]))
+            _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[8][2] = false
         _registers[10] = _registers[10] + 1
@@ -3769,7 +3771,7 @@ opcodes = {
     -- Opcode: 0xce
     function()
         _registers[1] = helper_adc(_registers[1],
-            _mmuReadByte(_registers[10]))
+            _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -3842,7 +3844,7 @@ opcodes = {
     end,
     -- Opcode: 0xd6
     function()
-        _registers[1] = helper_sub(_registers[1], _mmuReadByte(_registers[10]))
+        _registers[1] = helper_sub(_registers[1], _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -3913,7 +3915,7 @@ opcodes = {
     function() end,
     -- Opcode: 0xde
     function()
-        _registers[1] = helper_sbc(_registers[1], _mmuReadByte(_registers[10]))
+        _registers[1] = helper_sbc(_registers[1], _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -3929,7 +3931,7 @@ opcodes = {
     end,
     -- Opcode: 0xe0
     function()
-        _mmuWriteByte(0xFF00 + _mmuReadByte(_registers[10]), _registers[1])
+        _mmuWriteByte(0xFF00 + _readByteSwitch[_registers[10]](_registers[10]), _registers[1])
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 3
@@ -3962,7 +3964,7 @@ opcodes = {
     end,
     -- Opcode: 0xe6
     function()
-        _registers[1] = helper_and(_registers[1], _mmuReadByte(_registers[10]))
+        _registers[1] = helper_and(_registers[1], _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -4008,7 +4010,7 @@ opcodes = {
     function() end,
     -- Opcode: 0xee
     function()
-        _registers[1] = helper_xor(_registers[1], _mmuReadByte(_registers[10]))
+        _registers[1] = helper_xor(_registers[1], _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -4024,7 +4026,7 @@ opcodes = {
     end,
     -- Opcode: 0xf0
     function()
-        _registers[1] = _mmuReadByte(0xFF00 + _mmuReadByte(_registers[10]))
+        _registers[1] = _mmuReadByte(0xFF00 + _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 3
@@ -4062,7 +4064,7 @@ opcodes = {
     end,
     -- Opcode: 0xf6
     function()
-        _registers[1] = helper_or(_registers[1], _mmuReadByte(_registers[10]))
+        _registers[1] = helper_or(_registers[1], _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -4115,7 +4117,7 @@ opcodes = {
     function() end,
     -- Opcode: 0xfe
     function()
-        helper_cp(_registers[1], _mmuReadByte(_registers[10]))
+        helper_cp(_registers[1], _readByteSwitch[_registers[10]](_registers[10]))
 
         _registers[10] = _registers[10] + 1
         _registers[12].m = 2
@@ -4134,6 +4136,9 @@ opcodes = {
 addEventHandler("onClientResourceStart", resourceRoot, function()
     _readTwoRegisters = readTwoRegisters
     _writeTwoRegisters = writeTwoRegisters
+
+    _readByteSwitch = readByteSwitch
+    _writeByteSwitch = writeByteSwitch
 
     _mmuReadByte = mmuReadByte
     _mmuWriteByte = mmuWriteByte

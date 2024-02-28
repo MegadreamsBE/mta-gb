@@ -544,7 +544,7 @@ function renderDebugger(delta)
         registersY = registersY + yPadding
         registersY = registersY + yPadding
 
-        for i=0xFF00, 0xFF12 do
+        for i=0xFF40, 0xFF52 do
             dxDrawText("0x".._string_format("%.4x", i):upper()..": "
                 .._string_format("%.2x", mmuReadByte(i)):upper(), registersX, registersY,
                 registersWindowStartX + registersWindowWidth -
@@ -567,7 +567,7 @@ function renderDebugger(delta)
             registersY = registersY + yPadding
         end
 
-        local isCGB = isGameBoyColor()
+        local isCGB = isGameBoyColor
         local bank = vramBank
 
         local lcdControl = mmuReadByte(0xFF40)

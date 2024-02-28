@@ -33,14 +33,11 @@ local _memoryViolation = function(address, pc)
 end
 
 local _mbc = {
-    {},
-    {
-        rombank = 0,
-        rombankHigh = 0,
-        rambank = 0,
-        ramon = 0,
-        mode = 0
-    }
+    rombank = 0,
+    rombankHigh = 0,
+    rambank = 0,
+    ramon = 0,
+    mode = 0
 }
 
 bios = {}
@@ -79,7 +76,7 @@ oam = _oam
 
 local _wramBank = 1
 
-for i=1, 0xF000 do
+for i=1, 0xFFFF do
     _mram[i] = 0
     _zram[i] = 0
     _ram[i] = 0
@@ -96,15 +93,18 @@ function setupMMU()
 end
 
 function resetMMU()
+    for i=1, 0xFFFF do
+        _mram[i] = 0
+        _zram[i] = 0
+        _ram[i] = 0
+    end
+
     _mbc = {
-        createFilledTable(0x10000),
-        {
-            rombank = 0,
-            rombankHigh = 0,
-            rambank = 0,
-            ramon = 0,
-            mode = 0
-        }
+        rombank = 0,
+        rombankHigh = 0,
+        rambank = 0,
+        ramon = 0,
+        mode = 0
     }
 
     _wram = {
@@ -224,27 +224,27 @@ end
 
 local _statSignal = 0
 
-local writeByteSwitch = switch()
+local _writeByteSwitch = switch()
     .caseRange(0x0, 0x1FFF, function(address, value, onlyWrite)
         if ((_cartridgeType == 2 or _cartridgeType == 3) or (_cartridgeType >= 15 and _cartridgeType <= 19)
             or (_cartridgeType >= 25 and _cartridgeType <= 30)) then
-            _mbc[2].ramon = ((_bitAnd(value, 0x0F) == 0x0A) and 1 or 0)
+            _mbc.ramon = ((_bitAnd(value, 0x0F) == 0x0A) and 1 or 0)
         end
     end)
     .caseRange(0x2000, 0x3FFF, function(address, value, onlyWrite)
         if (_cartridgeType >= 1 and _cartridgeType <= 3) then
-            if (_mbc[2].mode == 0) then
-                _mbc[2].rombank = _bitOr(_bitAnd(value, 0x1F), _bitLShift(_mbc[2].rombankHigh, 5))
+            if (_mbc.mode == 0) then
+                _mbc.rombank = _bitOr(_bitAnd(value, 0x1F), _bitLShift(_mbc.rombankHigh, 5))
             else
-                _mbc[2].rombank = _bitAnd(value, 0x1F)
+                _mbc.rombank = _bitAnd(value, 0x1F)
             end
 
-            if (_mbc[2].rombank == 0x0 or _mbc[2].rombank == 0x20 or _mbc[2].rombank == 0x40 or _mbc[2].rombank == 0x60) then
-                _mbc[2].rombank = _mbc[2].rombank + 1
+            if (_mbc.rombank == 0x0 or _mbc.rombank == 0x20 or _mbc.rombank == 0x40 or _mbc.rombank == 0x60) then
+                _mbc.rombank = _mbc.rombank + 1
             end
 
-            _mbc[2].rombank = _bitAnd(_mbc[2].rombank, _romBankCount - 1)
-            _romOffset = _mbc[2].rombank * 0x4000
+            _mbc.rombank = _bitAnd(_mbc.rombank, _romBankCount - 1)
+            _romOffset = _mbc.rombank * 0x4000
         elseif (_cartridgeType >= 15 and _cartridgeType <= 19) then
             value = _bitAnd(value, 0x7F)
 
@@ -252,64 +252,62 @@ local writeByteSwitch = switch()
                 value = 1
             end
 
-            _mbc[2].rombank = _bitAnd(value, _romBankCount - 1)
-            _romOffset = _mbc[2].rombank * 0x4000
+            _mbc.rombank = _bitAnd(value, _romBankCount - 1)
+            _romOffset = _mbc.rombank * 0x4000
         elseif (_cartridgeType >= 25 and _cartridgeType <= 30) then
             if (address <= 0x2FFF) then
-                _mbc[2].rombank = _bitOr(value, _bitLShift(_mbc[2].rombankHigh, 8))
+                _mbc.rombank = _bitOr(value, _bitLShift(_mbc.rombankHigh, 8))
             else
-                _mbc[2].rombankHigh = _bitAnd(value, 0x01)
-                _mbc[2].rombank = _bitOr(_bitAnd(_mbc[2].rombank, 0xFF), _bitLShift(_mbc[2].rombankHigh, 8))
+                _mbc.rombankHigh = _bitAnd(value, 0x01)
+                _mbc.rombank = _bitOr(_bitAnd(_mbc.rombank, 0xFF), _bitLShift(_mbc.rombankHigh, 8))
             end
 
-            _mbc[2].rombank = _bitAnd(_mbc[2].rombank, _romBankCount - 1)
-            _romOffset = _mbc[2].rombank * 0x4000
+            _mbc.rombank = _bitAnd(_mbc.rombank, _romBankCount - 1)
+            _romOffset = _mbc.rombank * 0x4000
         end
     end)
     .caseRange(0x4000, 0x5FFF, function(address, value, onlyWrite)
         if (_cartridgeType >= 1 and _cartridgeType <= 3) then
-            if (_mbc[2].mode == 1) then
-                _mbc[2].rambank = _bitAnd(value, 0x03)
-                _mbc[2].rambank = _bitAnd(_mbc[2].rambank, _ramBankCount - 1)
-                _ramOffset = _mbc[2].rambank * 0x2000
+            if (_mbc.mode == 1) then
+                _mbc.rambank = _bitAnd(value, 0x03)
+                _mbc.rambank = _bitAnd(_mbc.rambank, _ramBankCount - 1)
+                _ramOffset = _mbc.rambank * 0x2000
             else
-                _mbc[2].rombankHigh = _bitAnd(value, 0x03)
-                _mbc[2].rombank = _bitOr(_bitAnd(_mbc[2].rombank, 0x1F), _bitLShift(_mbc[2].rombankHigh, 5))
+                _mbc.rombankHigh = _bitAnd(value, 0x03)
+                _mbc.rombank = _bitOr(_bitAnd(_mbc.rombank, 0x1F), _bitLShift(_mbc.rombankHigh, 5))
 
-                _mbc[2].rombank = _bitAnd(_mbc[2].rombank, _romBankCount - 1)
-                _romOffset = _mbc[2].rombank * 0x4000
+                _mbc.rombank = _bitAnd(_mbc.rombank, _romBankCount - 1)
+                _romOffset = _mbc.rombank * 0x4000
             end
         elseif (_cartridgeType >= 15 and _cartridgeType <= 19) then
             if (value <= 0x03) then
-                _mbc[2].rambank = _bitAnd(value, _ramBankCount - 1)
-                _ramOffset = _mbc[2].rambank * 0x2000
+                _mbc.rambank = _bitAnd(value, _ramBankCount - 1)
+                _ramOffset = _mbc.rambank * 0x2000
             end
         elseif (_cartridgeType >= 25 and _cartridgeType <= 30) then
-            _mbc[2].rambank = _bitAnd(value, 0x0F)
-            _mbc[2].rambank = _bitAnd(_mbc[2].rambank, _ramBankCount - 1)
-            _ramOffset = _mbc[2].rambank * 0x2000
+            _mbc.rambank = _bitAnd(value, 0x0F)
+            _mbc.rambank = _bitAnd(_mbc.rambank, _ramBankCount - 1)
+            _ramOffset = _mbc.rambank * 0x2000
         end
     end)
     .caseRange(0x6000, 0x7FFF, function(address, value, onlyWrite)
         if (_cartridgeType == 2 or _cartridgeType == 3) then
-            _mbc[2].mode = _bitAnd(value, 0x01)
+            _mbc.mode = _bitAnd(value, 0x01)
         end
     end)
     .caseRange(0x8000, 0x9FFF, function(address, value, onlyWrite)
-        local adjustedAddress = (address - 0x8000) + 1
-
         if (vramBank == 2) then
-            _cacheAttributes[adjustedAddress] = {}
+            _cacheAttributes[address - 0x7FFF] = {}
         end
 
-        _vram[vramBank][adjustedAddress] = value
+        _vram[vramBank][address - 0x7FFF] = value
     end)
     .caseRange(0xA000, 0xBFFF, function(address, value, onlyWrite)
-        if (_mbc[2].ramon == 1) then
+        if (_mbc.ramon == 1) then
             eramUpdated = true
 
             if (_cartridgeType == 2 or _cartridgeType == 3) then
-                if (_mbc[2].mode == 0) then
+                if (_mbc.mode == 0) then
                     _eram[(address - 0xA000) + 1] = value
                     return
                 end
@@ -319,20 +317,17 @@ local writeByteSwitch = switch()
         end
     end)
     .caseRange(0xC000, 0xEFFF, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             if (address >= 0xC000 and address <= 0xCFFF) then
-                address = address - 0xC000
-                _wram[1][address + 1] = value
+                _wram[1][address - 0xBFFF] = value
                 return
             elseif (address >= 0xD000 and address <= 0xDFFF) then
-                address = address - 0xC000
-                _wram[_wramBank + 1][address + 1] = value
+                _wram[_wramBank + 1][address - 0xBFFF] = value
                 return
             end
         end
 
-        address = address - 0xC000
-        _wram[1][address + 1] = value
+        _wram[1][address - 0xBFFF] = value
     end)
     .case(0xFF41, function(address, value, onlyWrite)
         if (onlyWrite) then
@@ -394,7 +389,7 @@ local writeByteSwitch = switch()
         end
     end)
     .case(0xFF4D, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             if (_bitExtract(value, 0, 1) == 1 and _bitExtract(_ram[address + 1] or 0, 0, 1) == 0) then
                 cgbPrepareSpeedChange = true
             end
@@ -403,7 +398,7 @@ local writeByteSwitch = switch()
         _ram[address + 1] = value
     end)
     .case(0xFF4F, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             value = _bitAnd(value, 0x01)
             vramBank = (value == 1) and 2 or 1
         end
@@ -411,7 +406,7 @@ local writeByteSwitch = switch()
         _ram[address + 1] = value
     end)
     .case(0xFF51, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             if (value > 0x7f and value < 0xa0) then
                 value = 0
             end
@@ -423,7 +418,7 @@ local writeByteSwitch = switch()
         end
     end)
     .case(0xFF52, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             value = _bitAnd(value, 0xF0)
             _hdmaSource = _bitOr(_bitAnd(_hdmaSource, 0xFF00), value)
             _hdma[2] = value;
@@ -432,7 +427,7 @@ local writeByteSwitch = switch()
         end
     end)
     .case(0xFF53, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             value = _bitAnd(value, 0x1F)
             _hdmaDestination = _bitOr(_bitOr(_bitAnd(_bitLShift(value, 8), 0xFFFF), _bitAnd(_hdmaDestination, 0xF0)), 0x8000)
             _hdma[3] = value;
@@ -441,7 +436,7 @@ local writeByteSwitch = switch()
         end
     end)
     .case(0xFF54, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             value = _bitAnd(value, 0xF0)
             _hdmaDestination = _bitOr(_bitOr(_bitAnd(_hdmaDestination, 0x1F00), value), 0x8000)
             _hdma[4] = value;
@@ -450,7 +445,7 @@ local writeByteSwitch = switch()
         end
     end)
     .case(0xFF55, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             _hdmaBytes = 16 + (_bitAnd(value, 0x7F) * 16)
     
             if (hdmaEnabled) then
@@ -482,41 +477,33 @@ local writeByteSwitch = switch()
     .case(0xFF68, function(address, value, onlyWrite)
         _ram[address + 1] = value
     
-        if (isGameBoyColor()) then
-            if (not onlyWrite) then
-                updatePaletteSpec(false, value)
-            end
+        if (isGameBoyColor and not onlyWrite) then
+            updatePaletteSpec(false, value)
         end
     end)
     .case(0xFF69, function(address, value, onlyWrite)
         _ram[address + 1] = value
     
-        if (isGameBoyColor()) then
-            if (not onlyWrite) then
-                setColorPalette(false, value)
-            end
+        if (isGameBoyColor and not onlyWrite) then
+            setColorPalette(false, value)
         end
     end)
     .case(0xFF6A, function(address, value, onlyWrite)
         _ram[address + 1] = value
     
-        if (isGameBoyColor()) then
-            if (not onlyWrite) then
-                updatePaletteSpec(true, value)
-            end
+        if (isGameBoyColor and not onlyWrite) then
+            updatePaletteSpec(true, value)
         end
     end)
     .case(0xFF6B, function(address, value, onlyWrite)
         _ram[address + 1] = value
     
-        if (isGameBoyColor()) then
-            if (not onlyWrite) then
-                setColorPalette(true, value)
-            end
+        if (isGameBoyColor and not onlyWrite) then
+            setColorPalette(true, value)
         end
     end)
     .case(0xFF70, function(address, value, onlyWrite)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             _wramBank = _bitAnd(value, 0x07)
     
             if (_wramBank == 0) then
@@ -532,70 +519,68 @@ local writeByteSwitch = switch()
     .caseRange(0xFE00, 0xFEFF, function(address, value, onlyWrite)
         _oam[address + 1] = value
     end)
-    .caseRange(0xFF00, 0xFF7F, function(address, value, onlyWrite)
-        local case = _bitAnd(address, 0xF0)
+    .case(0xFF00, function(address, value, onlyWrite)
+        writeKeypad(value)
+    end)
+    .case(0xFF01, function(address, value, onlyWrite)
+        writeKeypad(value)
+    end)
+    .case(0xFF02, function(address, value, onlyWrite)
+        --print(utf8.char(mmuReadByte(0xFF01)))
+        value = 0x00
+    end)
+    .case(0xFF04, function(address, value, onlyWrite)
+        resetTimerDivider()
+    end)
+    .case(0xFF07, function(address, value, onlyWrite)
+        local wasClockEnabled = timerClockEnabled
 
-        if (case == 0x0) then
-            local internalCase = _bitAnd(address, 0xF)
+        timerClockEnabled = (_bitExtract(value, 2, 1) == 1)
 
-            if (internalCase == 0) then
-                writeKeypad(value)
-            elseif (internalCase == 2) then
-                --print(utf8.char(mmuReadByte(0xFF01)))
-                value = 0x00
-            elseif (internalCase == 4) then
-                resetTimerDivider()
-            elseif (internalCase > 4 and internalCase < 7) then
-                _ram[address + 1] = value
-            elseif (internalCase == 7) then
-                _ram[address + 1] = value
+        local newFrequency = _bitAnd(value, 0x03)
+        
+        handleTACGlitch(wasClockEnabled, timerClockEnabled, timerClockFrequency, newFrequency)
 
-                local wasClockEnabled = timerClockEnabled
-
-                timerClockEnabled = (_bitExtract(value, 2, 1) == 1)
-
-                local newFrequency = _bitAnd(value, 0x03)
-                
-                handleTACGlitch(wasClockEnabled, timerClockEnabled, timerClockFrequency, newFrequency)
-
-                if (timerClockFrequency ~= newFrequency) then
-                    resetTimerClockFrequency(newFrequency)
-                end
-            elseif (internalCase == 15) then
-                interruptFlags = value
-            else
-                _ram[address + 1] = value
-            end
-        elseif (case == 0x10 or case == 0x20 or case == 0x30) then
-            return 0
-        elseif (case == 0x40 or case == 0x50 or case == 0x60 or case == 0x70) then
-            if (address == 0xFF40) then
-                if (_bitExtract(value, 7, 1) == 1) then
-                    enableScreen()
-                else
-                    disableScreen()
-                end
-
-                if (not isGameBoyColor() and _bitExtract(value, 0, 1) == 0) then
-                    value = _bitAnd(value, 0xDF)
-                end
-            elseif (address == 0xFF44) then
-                return
-            elseif (address == 0xFF46) then
-                local dmaAddress = _bitLShift(value, 8)
-
-                if (dmaAddress >= 0x8000 and dmaAddress < 0xE000) then
-                    local i = 1
-
-                    while (i < 0xA1) do
-                        mmuWriteByte(0xFE00 + (i - 1), mmuReadByte(dmaAddress + (i - 1)))
-                        i = i + 1
-                    end
-                end
-            end
-
-            _ram[address + 1] = value
+        if (timerClockFrequency ~= newFrequency) then
+            resetTimerClockFrequency(newFrequency)
         end
+    end)
+    .case(0xFF0F, function(address, value, onlyWrite)
+        interruptFlags = value
+    end)
+    .caseRange(0xFF10, 0xFF3F, function(address, value, onlyWrite)
+        _ram[address + 1] = value
+    end)
+    .case(0xFF40, function(address, value, onlyWrite)
+        if (_bitExtract(value, 7, 1) == 1) then
+            enableScreen()
+        else
+            disableScreen()
+        end
+
+        if (not isGameBoyColor and _bitExtract(value, 0, 1) == 0) then
+            value = _bitAnd(value, 0xDF)
+        end
+
+        _ram[0xFF41] = value
+    end)
+    .case(0xFF44, function(address, value, onlyWrite)
+        return
+    end)
+    .case(0xFF46, function(address, value, onlyWrite)
+        local dmaAddress = _bitLShift(value, 8)
+
+        if (dmaAddress >= 0x8000 and dmaAddress < 0xE000) then
+            local i = 0
+
+            while (i < 0xA0) do
+                mmuWriteByte(0xFE00 + i, mmuReadByte(dmaAddress + i))
+                i = i + 1
+            end
+        end
+    end)
+    .caseRange(0xFF00, 0xFF7F, function(address, value, onlyWrite)
+        _ram[address + 1] = value
     end)
     .caseRange(0xFF80, 0xFFFE, function(address, value, onlyWrite)
         _zram[address + 1] = value
@@ -608,17 +593,15 @@ local writeByteSwitch = switch()
     end)
     .assemble()
 
-local writeByteSwitchLen = #writeByteSwitch
+local _writeByteSwitchLen = #_writeByteSwitch
     
 function mmuWriteByte(address, value, onlyWrite)
-    return writeByteSwitch[address](address, value, onlyWrite or false)
+    return _writeByteSwitch[address](address, value, onlyWrite or false)
 end
 
 function mmuWriteShort(address, value)
-    writeByteSwitch[address](address, _bitAnd(0x00FF, value))
-
-    value = _bitAnd(0xFF00, value) / 256
-    writeByteSwitch[address + 1](address + 1, value - (value % 1))
+    _writeByteSwitch[address](address, _bitAnd(0x00FF, value))
+    _writeByteSwitch[address + 1](address + 1, _bitAnd(0xFF00, value) / 256)
 end
 
 function mmuPushStack(value)
@@ -732,10 +715,10 @@ function mmuPerformGDMA(value)
     registers[12].t = registers[12].t + (clockCycles * 4)
 end
 
-local readByteSwitch = switch()
+local _readByteSwitch = switch()
     .caseRange(0x0, 0xFFF, function(address)
         if (isBiosLoaded()) then
-            if (isGameBoyColor()) then
+            if (isGameBoyColor) then
                 if (address < 0x900 and (address < 0x100 or address >= 0x200)) then
                     return bios[address + 1] or 0
                 end
@@ -758,12 +741,12 @@ local readByteSwitch = switch()
         return _vram[vramBank][(address - 0x8000) + 1] or 0
     end)
     .caseRange(0xA000, 0xBFFF, function(address)
-        if (_mbc[2].ramon == 0) then
+        if (_mbc.ramon == 0) then
             return 0xFF
         end
 
         if (_cartridgeType == 2 or _cartridgeType == 3) then
-            if (_mbc[2].mode == 0) then
+            if (_mbc.mode == 0) then
                 return _eram[(address - 0xA000) + 1] or 0
             end
         end
@@ -771,129 +754,117 @@ local readByteSwitch = switch()
         return _eram[_ramOffset + ((address - 0xA000) + 1)] or 0
     end)
     .caseRange(0xC000, 0xEFFF, function(address)
-        if (isGameBoyColor()) then
+        if (isGameBoyColor) then
             if (address >= 0xC000 and address <= 0xCFFF) then
-                address = address - 0xC000
-                return _wram[1][address + 1] or 0
+                return _wram[1][address - 0xBFFF] or 0
             elseif (address >= 0xD000 and address <= 0xDFFF) then
-                address = address - 0xC000
-                return _wram[_wramBank + 1][address + 1] or 0
+                return _wram[_wramBank + 1][address - 0xBFFF] or 0
             end
         end
 
-        address = address - 0xC000
-        return _wram[1][address + 1] or 0
+        return _wram[1][address - 0xBFFF] or 0
     end)
     .case(0xFF4D, function(address)
-        return _ram[address + 1] or 0
+        return _ram[0xFF4F] or 0
     end)
     .case(0xFF4F, function(address)
-        return _bitOr(_ram[address + 1] or 0, 0xFE)
+        return _bitOr(_ram[0xFF50] or 0, 0xFE)
     end)
-    .case(0xFF51, function(address)
-        if (isGameBoyColor()) then
+    .case(0xFF51, function(_)
+        if (isGameBoyColor) then
             return _hdma[1]
         end
 
-        return _ram[address + 1] or 0
+        return _ram[0xFF52] or 0
     end)
-    .case(0xFF52, function(address)
-        if (isGameBoyColor()) then
+    .case(0xFF52, function(_)
+        if (isGameBoyColor) then
             return _hdma[2]
         end
 
-        return _ram[address + 1] or 0
+        return _ram[0xFF53] or 0
     end)
-    .case(0xFF53, function(address)
-        if (isGameBoyColor()) then
+    .case(0xFF53, function(_)
+        if (isGameBoyColor) then
             return _hdma[3]
         end
 
-        return _ram[address + 1] or 0
+        return _ram[0xFF54] or 0
     end)
-    .case(0xFF54, function(address)
-        if (isGameBoyColor()) then
+    .case(0xFF54, function(_)
+        if (isGameBoyColor) then
             return _hdma[4]
         end
 
-        return _ram[address + 1] or 0
+        return _ram[0xFF55] or 0
     end)
-    .case(0xFF55, function(address)
-        if (isGameBoyColor()) then
+    .case(0xFF55, function(_)
+        if (isGameBoyColor) then
             return _hdma[5]
         end
 
-        return _ram[address + 1] or 0
+        return _ram[0xFF56] or 0
     end)
-    .case(0xFF70, function(address)
-        if (isGameBoyColor()) then
-            return _bitOr(_ram[address + 1] or 0, 0xF8)
+    .case(0xFF70, function(_)
+        if (isGameBoyColor) then
+            return _bitOr(_ram[0xFF71] or 0, 0xF8)
         end
 
         return 0xFF
     end)
-    .caseRange(0xF000, 0xFFFF, function(address)
-        if (address >= 0xF000 and address <= 0xFDFF) then
-            return _ram[address + 1] or 0
-        elseif (address >= 0xFE00 and address <= 0xFE9F) then
-            if (getGPUMode() > 2 and isScreenEnabled()) then
-                return 0xFF
-            end
-
-            return _oam[address + 1] or 0
-        elseif (address >= 0xFF00 and address <= 0xFFFF) then
-            if (address == 0xFFFF) then
-                return interrupts
-            elseif (address > 0xFF7F) then
-                return _zram[address + 1] or 0
-            else
-                local case = _bitAnd(address, 0xF0)
-
-                if (case == 0x0) then
-                    local internalCase = _bitAnd(address, 0xF)
-
-                    if (internalCase == 0) then
-                        return readKeypad()
-                    elseif (internalCase == 4) then
-                        return timerDividerRegister
-                    elseif (internalCase >= 4 and internalCase <= 7) then
-                        return _ram[address + 1] or 0
-                    elseif (internalCase == 15) then
-                        return interruptFlags
-                    else
-                        return _ram[address + 1] or 0
-                    end
-                elseif (case == 0x10 or case == 0x20 or case == 0x30) then
-                    return _ram[address + 1] or 0
-                elseif (case == 0x40 or case == 0x50 or case == 0x60 or case == 0x70) then
-                    if (address == 0xFF44) then
-                        return scanLine
-                    end
-
-                    local value = _ram[address + 1] or 0
-
-                    if (address == 0xFF41) then
-                        value = _bitOr(value, 0x80)
-                    end
-
-                    return value
-                end
-            end
+    .caseRange(0xF000, 0xFDFF, function(address)
+        return _ram[address + 1] or 0
+    end)
+    .caseRange(0xFE00, 0xFE9F, function(address)
+        if (getGPUMode() > 2 and isScreenEnabled()) then
+            return 0xFF
         end
+
+        return _oam[address + 1] or 0
+    end)
+    .case(0xFF00, function(_)
+        return readKeypad()
+    end)
+    .caseRange(0xFF01, 0xFF0D, function(address)
+        return _ram[address + 1]
+    end)
+    .case(0xFF04, function(_)
+        return timerDividerRegister
+    end)
+    .caseRange(0xFF05, 0xFF07, function(address)
+        return _ram[address + 1] or 0
+    end)
+    .case(0xFF0F, function(_)
+        return interruptFlags
+    end)
+    .case(0xFF41, function(_)
+        return _bitOr(_ram[0xFF42], 0x80)
+    end)
+    .case(0xFF44, function(_)
+        return scanLine
+    end)
+    .caseRange(0xFF00, 0xFF7F, function(address)
+        return _ram[address + 1]
+    end)
+    .caseRange(0xFF80, 0xFFFE, function(address)
+        return _zram[address + 1] or 0
+    end)
+    .case(0xFFFF, function(_)
+        return interrupts
     end)
     .default(function(address)
         return _memoryViolation(address, registers[9])
     end)
     .assemble()
 
-local readByteSwitchLen = #readByteSwitch
+local _readByteSwitchLen = #_readByteSwitch
 
 function mmuReadByte(address)
-    return readByteSwitch[address](address)
+    return _readByteSwitch[address](address)
 end
 
 function mmuReadSignedByte(address)
-    local value = readByteSwitch[address](address)
+    local value = _readByteSwitch[address](address)
 
     if (value >= 0x80) then
         value = -((0xFF - value) + 1)
@@ -903,17 +874,17 @@ function mmuReadSignedByte(address)
 end
 
 function mmuReadUInt16(address)
-    local value = readByteSwitch[address + 1](address + 1) or 0
+    local value = _readByteSwitch[address + 1](address + 1) or 0
 
-    value = (value * 256) + (readByteSwitch[address](address) or 0)
+    value = (value * 256) + (_readByteSwitch[address](address) or 0)
 
     return value
 end
 
 function mmuReadInt16(address)
-    local value = readByteSwitch[address + 1](address + 1)
+    local value = _readByteSwitch[address + 1](address + 1)
 
-    value = (value * 256) + readByteSwitch[address](address)
+    value = (value * 256) + _readByteSwitch[address](address)
 
     if (value >= 0x8000) then
         value = -((0xFFFF - value) + 1)
@@ -995,7 +966,6 @@ function saveMMUState()
         zram = _zram,
         wram = _wram,
         ram = _ram,
-        rom = _rom,
         oam = _oam,
         wramBank = _wramBank,
     }
@@ -1023,7 +993,6 @@ function loadMMUState(state)
     _zram = state.zram
     _wram = state.wram
     _ram = state.ram
-    _rom = state.rom
     _wramBank = state.wramBank
     _oam = state.oam
 
@@ -1035,3 +1004,6 @@ addEventHandler("onClientResourceStart", resourceRoot,
         _cacheAttributes = cacheAttributes
     end
 )
+
+readByteSwitch = _readByteSwitch
+writeByteSwitch = _writeByteSwitch

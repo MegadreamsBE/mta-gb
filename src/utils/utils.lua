@@ -9,7 +9,7 @@ function createFilledTable(size, prefilledData, depth)
         if ((depth or 0) > 1) then
             tbl[i] = createFilledTable(size, prefilledData, depth - 1)
         else
-            tbl[i] = prefilledData or false
+            tbl[i] = prefilledData or 0
         end
     end
 
