@@ -19,14 +19,14 @@ function love.load(args)
     require "src/utils/utils"
     require "src/utils/switch"
 
-    require "src/debug/debugger"
     require "src/debug/disassembler"
 
-    require "src/logic/opcodes"
     require "src/logic/cpu"
     require "src/logic/gpu"
     require "src/logic/timer"
     require "src/logic/mmu"
+
+    require "src/debug/debugger"
 
     require "src/utils/profile"
 

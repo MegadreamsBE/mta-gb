@@ -26,19 +26,18 @@
     <script src="src/rom.lua" type="client" />
 
     <!--
-    #########   Debug   ########
-    -->
-    <script src="src/debug/debugger.lua" type="client" />
-    <script src="src/debug/disassembler.lua" type="client" />
-
-    <!--
     #########   Logic   ########
     -->
-    <script src="src/logic/opcodes.lua" type="client" />
     <script src="src/logic/cpu.lua" type="client" />
     <script src="src/logic/gpu.lua" type="client" />
     <script src="src/logic/timer.lua" type="client" />
     <script src="src/logic/mmu.lua" type="client" />
 
-    <oop>true</oop>
+    <!--
+    #########   Debug   ########
+    -->
+    <script src="src/debug/debugger.lua" type="client" />
+    <script src="src/debug/disassembler.lua" type="client" />
+
+    <script src="src/utils/profile.lua" type="client" />
 </meta>

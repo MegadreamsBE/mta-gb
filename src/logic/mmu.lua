@@ -331,19 +331,15 @@ local _writeByteSwitch = switch()
     end)
     .case(0xFF41, function(address, value, onlyWrite)
         if (onlyWrite) then
-            _ram[address + 1] = value
+            _ram[address + 1] = _bitOr(value, 0x80)
             return
         end
 
-        local currentStat = mmuReadByte(0xFF41)
-        local newStat = _bitOr(_bitAnd(value, 0x78), _bitAnd(currentStat, 0x07))
-
-        _ram[address + 1] = newStat
+        local newStat = _bitOr(_bitAnd(value, 0x78), _bitAnd(_ram[0xFF42], 0x07))
 
         local lcdc = mmuReadByte(0xFF40)
         local mode = getGPUMode()
 
-        statInterrupt = _bitAnd(_bitRShift(newStat, 3), 0x0F)
         _statSignal = _bitAnd(_bitRShift(newStat, 3), 0x0F)
 
         if (_bitExtract(lcdc, 7) == 1) then
@@ -370,22 +366,23 @@ local _writeByteSwitch = switch()
 
         if (isScreenEnabled()) then
             local lyc = mmuReadByte(0xFF45)
-            local stat = mmuReadByte(0xFF41)
-            
+ 
             if (lyc == getScanLine()) then
-                stat = _bitOr(stat, 0x04)
+                newStat = _bitOr(newStat, 0x04)
 
-                if (_bitExtract(stat, 6) == 1 and _statSignal == 0) then
+                if (_bitExtract(newStat, 6) == 1 and _statSignal == 0) then
                     requestInterrupt(1)
                 end
 
                 _statSignal = _bitReplace(_statSignal, 3, 1)
             else
-                stat = _bitAnd(stat, 0xFB)
+                newStat = _bitAnd(newStat, 0xFB)
                 _statSignal = _bitReplace(_statSignal, 3, 0)
             end
 
-            _ram[address + 1] = stat
+            _ram[address + 1] = _bitOr(newStat, 0x80)
+        else
+            _ram[address + 1] = _bitOr(newStat, 0x80)
         end
     end)
     .case(0xFF4D, function(address, value, onlyWrite)
@@ -395,7 +392,7 @@ local _writeByteSwitch = switch()
             end
         end
 
-        _ram[address + 1] = value
+        _ram[0xFF4E] = value
     end)
     .case(0xFF4F, function(address, value, onlyWrite)
         if (isGameBoyColor) then
@@ -403,7 +400,7 @@ local _writeByteSwitch = switch()
             vramBank = (value == 1) and 2 or 1
         end
 
-        _ram[address + 1] = value
+        _ram[0xFF50] = value
     end)
     .case(0xFF51, function(address, value, onlyWrite)
         if (isGameBoyColor) then
@@ -463,8 +460,8 @@ local _writeByteSwitch = switch()
                     if (getGPUMode() == 0) then
                         local clockCycles = mmuPerformHDMA()
     
-                        registers[12].m = registers[12].m + clockCycles
-                        registers[12].t = registers[12].t + (clockCycles * 4)
+                        clockM = clockM + clockCycles
+                        clockT = clockT + (clockCycles * 4)
                     end
                 else
                     mmuPerformGDMA(value)
@@ -532,6 +529,12 @@ local _writeByteSwitch = switch()
     .case(0xFF04, function(address, value, onlyWrite)
         resetTimerDivider()
     end)
+    .case(0xFF05, function(address, value, onlyWrite)
+        tima = value
+    end)
+    .case(0xFF06, function(address, value, onlyWrite)
+        tma = value
+    end)
     .case(0xFF07, function(address, value, onlyWrite)
         local wasClockEnabled = timerClockEnabled
 
@@ -589,7 +592,7 @@ local _writeByteSwitch = switch()
         interrupts = value
     end)
     .default(function(address)
-        return _memoryViolation(address, registers[9])
+        return _memoryViolation(address, lastProgramCounter)
     end)
     .assemble()
 
@@ -605,9 +608,9 @@ function mmuWriteShort(address, value)
 end
 
 function mmuPushStack(value)
-    registers[11] = registers[11] - 2
+    stackPointer = stackPointer - 2
 
-    mmuWriteShort(registers[11], value)
+    mmuWriteShort(stackPointer, value)
 
     if (isDebuggerEnabled()) then
         _table_insert(stackDebug, 1, value)
@@ -615,9 +618,9 @@ function mmuPushStack(value)
 end
 
 function mmuPopStack()
-    local value = mmuReadUInt16(registers[11])
+    local value = mmuReadUInt16(stackPointer)
 
-    registers[11] = registers[11] + 2
+    stackPointer = stackPointer + 2
 
     if (isDebuggerEnabled()) then
         _table_remove(stackDebug, 1)
@@ -711,8 +714,8 @@ function mmuPerformGDMA(value)
         clockCycles = 1 + 8 * (_bitAnd(value, 0x7F) + 1)
     end
 
-    registers[12].m = registers[12].m + clockCycles
-    registers[12].t = registers[12].t + (clockCycles * 4)
+    clockM = clockM + clockCycles
+    clockT = clockT + (clockCycles * 4)
 end
 
 local _readByteSwitch = switch()
@@ -765,7 +768,7 @@ local _readByteSwitch = switch()
         return _wram[1][address - 0xBFFF] or 0
     end)
     .case(0xFF4D, function(address)
-        return _ram[0xFF4F] or 0
+        return _ram[0xFF4E] or 0
     end)
     .case(0xFF4F, function(address)
         return _bitOr(_ram[0xFF50] or 0, 0xFE)
@@ -825,25 +828,40 @@ local _readByteSwitch = switch()
     .case(0xFF00, function(_)
         return readKeypad()
     end)
-    .caseRange(0xFF01, 0xFF0D, function(address)
+    .caseRange(0xFF01, 0xFF03, function(address)
         return _ram[address + 1]
     end)
     .case(0xFF04, function(_)
         return timerDividerRegister
     end)
-    .caseRange(0xFF05, 0xFF07, function(address)
+    .case(0xFF05, function(_)
+        return tima
+    end)
+    .case(0xFF06, function(_)
+        return tma
+    end)
+    .case(0xFF07, function(address)
+        return _ram[address + 1] or 0
+    end)
+    .caseRange(0xFF08, 0xFF0D, function(address)
         return _ram[address + 1] or 0
     end)
     .case(0xFF0F, function(_)
         return interruptFlags
     end)
+    .caseRange(0xFF10, 0xFF40, function(address)
+        return _ram[address + 1]
+    end)
     .case(0xFF41, function(_)
-        return _bitOr(_ram[0xFF42], 0x80)
+        return _ram[0xFF42]
+    end)
+    .caseRange(0xFF42, 0xFF43, function(address)
+        return _ram[address + 1]
     end)
     .case(0xFF44, function(_)
         return scanLine
     end)
-    .caseRange(0xFF00, 0xFF7F, function(address)
+    .caseRange(0xFF45, 0xFF7F, function(address)
         return _ram[address + 1]
     end)
     .caseRange(0xFF80, 0xFFFE, function(address)
@@ -853,7 +871,11 @@ local _readByteSwitch = switch()
         return interrupts
     end)
     .default(function(address)
-        return _memoryViolation(address, registers[9])
+        if (address <= 0xFFFF) then
+            return _ram[address + 1] or 0
+        end
+
+        return _memoryViolation(address, lastProgramCounter)
     end)
     .assemble()
 

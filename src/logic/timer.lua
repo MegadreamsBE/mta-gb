@@ -105,14 +105,14 @@ function timerStep(ticks)
         local frequency = _frequencyToCounter[timerClockFrequency + 1]
         local tima = _readByteSwitch[0xFF05](0xFF05)
 
-        local cyclesToIncrement = math.floor(_counter / frequency)
-        _counter = _counter % frequency 
-        
-        tima = tima + cyclesToIncrement
-
-        if (tima >= 0xff) then
-            tima = _readByteSwitch[0xFF06](0xFF06)
-            requestInterrupt(2)
+        while (_counter >= frequency) do
+            _counter = _counter - frequency
+            tima = tima + 1
+            
+            if (tima == 0xff) then
+                tima = _readByteSwitch[0xFF06](0xFF06)
+                requestInterrupt(2)
+            end
         end
 
         _writeByteSwitch[0xFF05](0xFF05, tima)

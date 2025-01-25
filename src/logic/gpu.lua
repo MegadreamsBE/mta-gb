@@ -624,22 +624,11 @@ function renderBackground(lcdControl, maxWidth)
 
             local pixels = _pixels[i + 1][scanLine + 1]
 
-            if (1~=2 or COLORS[color + 1][1] ~= pixels[2] or COLORS[color + 1][2] ~= pixels[3] or COLORS[color + 1][3] ~= pixels[4]) then
+            if (COLORS[color + 1][1] ~= pixels[2] or COLORS[color + 1][2] ~= pixels[3] or COLORS[color + 1][3] ~= pixels[4]) then
                 pixels[1] = true
                 pixels[2] = COLORS[color + 1][1]
                 pixels[3] = COLORS[color + 1][2]
                 pixels[4] = COLORS[color + 1][3]
-
-                if (i == 56 and scanLine == 40) then
-                    pixels[2] = 255
-                    pixels[3] = 0
-                    pixels[4] = 0
-
-                    print("Color: " .. color)
-                    print("ColorNum: " .. colorNum)
-                    print("Palette: " .. palette)
-                    print("lcdControl: " .. lcdControl)
-                end
             end
         end
 
@@ -903,7 +892,7 @@ function gpuStep(ticks)
                 requestInterrupt(1)
             end
 
-            if (scanLine == _readByteSwitch[0xFF45](0xFF45)) then
+            if ((scanLine + 1) == _readByteSwitch[0xFF45](0xFF45)) then
                 lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
                 
                 if (_bitExtract(lcdStatus, 6, 1) == 1) then
@@ -930,8 +919,8 @@ function gpuStep(ticks)
                     local clockCycles = mmuPerformHDMA()
                     _modeClock = _modeClock + clockCycles
 
-                    registers[12].m = registers[12].m + clockCycles
-                    registers[12].t = registers[12].t + (clockCycles * 4)
+                    clockM = clockM + clockCycles
+                    clockT = clockT + (clockCycles * 4)
                 end
 
                 if (scanLine == 144) then
@@ -1012,7 +1001,7 @@ function gpuStep(ticks)
             requestInterrupt(1)
         end
 
-        if (scanLine == _readByteSwitch[0xFF45](0xFF45)) then
+        if ((scanLine + 1) == _readByteSwitch[0xFF45](0xFF45)) then
             lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
             
             if (_bitExtract(lcdStatus, 6, 1) == 1) then
@@ -1043,7 +1032,7 @@ function enableScreen()
     lcdStatus = _bitReplace(lcdStatus, 1, 0, 1)
     lcdStatus = _bitReplace(lcdStatus, 0, 0, 1)
 
-    if (scanLine == _readByteSwitch[0xFF45](0xFF45)) then
+    if ((scanLine + 1) == _readByteSwitch[0xFF45](0xFF45)) then
         lcdStatus = _bitReplace(lcdStatus, 1, 2, 1)
 
         requestInterrupt(1)

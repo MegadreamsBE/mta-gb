@@ -1,0 +1,1 @@
+lovec wrappers/love $1

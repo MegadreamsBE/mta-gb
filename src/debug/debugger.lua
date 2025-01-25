@@ -19,16 +19,15 @@ local DEBUGGER_REGISTERS = {
 }
 
 local DEBUGGER_REGISTER_MAPPING = {
-    ['a'] = 1, 
-    ['b'] = 2, 
-    ['c'] = 3, 
-    ['d'] = 4, 
-    ['e'] = 5, 
-    ['h'] = 6, 
-    ['l'] = 7, 
-    ['f'] = 8, 
-    ['sp'] = 11, 
-    ['pc'] = 10
+    ['a'] = register1, 
+    ['b'] = register2, 
+    ['c'] = register3, 
+    ['d'] = register4, 
+    ['e'] = register5, 
+    ['h'] = register6, 
+    ['l'] = register7, 
+    ['sp'] = stackPointer, 
+    ['pc'] = programCounter
 }
 
 -----------------------------------
@@ -211,7 +210,7 @@ function startDebugger()
             end
 
             if (_debugMemoryPointer == -1) then
-                _debugMemoryPointer = registers[10]
+                _debugMemoryPointer = programCounter
             end
 
             _debugMemoryPointer = _debugMemoryPointer - 1
@@ -229,7 +228,7 @@ function startDebugger()
             end
 
             if (_debugMemoryPointer == -1) then
-                _debugMemoryPointer = registers[10]
+                _debugMemoryPointer = programCounter
             end
 
             _debugMemoryPointer = _debugMemoryPointer + 1
@@ -256,7 +255,7 @@ function startDebugger()
             if (_memoryPointerMemory[_currentMenu] ~= nil) then
                 _debugMemoryPointer = _memoryPointerMemory[_currentMenu]
             else
-                _debugMemoryPointer = registers[10]
+                _debugMemoryPointer = programCounter
             end
 
             _lastRender = 0
@@ -277,7 +276,7 @@ function startDebugger()
             if (_memoryPointerMemory[_currentMenu] ~= nil) then
                 _debugMemoryPointer = _memoryPointerMemory[_currentMenu]
             else
-                _debugMemoryPointer = registers[10]
+                _debugMemoryPointer = programCounter
             end
 
             _lastRender = 0
@@ -293,33 +292,33 @@ function debuggerStep()
     if (LOG_TRACE and _traceFile) then
         local flags = ""
 
-        flags = flags..((registers[8][1]) and "Z" or "-")
-        flags = flags..((registers[8][2]) and "N" or "-")
-        flags = flags..((registers[8][3]) and "H" or "-")
-        flags = flags..((registers[8][4]) and "C" or "-")
+        flags = flags..((flagZero) and "Z" or "-")
+        flags = flags..((flagSubstract) and "N" or "-")
+        flags = flags..((flagHalfCarry) and "H" or "-")
+        flags = flags..((flagCarry) and "C" or "-")
 
-        disassembleSingleInstruction(registers[10])
+        disassembleSingleInstruction(programCounter)
 
-        local instruction = "[??]0x"..string.format("%.4x", registers[10])..": "
-        local opcode = mmuReadByte(registers[10])
+        local instruction = "[??]0x"..string.format("%.4x", programCounter)..": "
+        local opcode = mmuReadByte(programCounter)
         local instructionBytes = ""
         local opcodeLen = getOpcodeLength(opcode + 1)
 
         for i=1, opcodeLen do
-            instructionBytes = instructionBytes..string.format("%.2x", mmuReadByte(registers[10] + (i - 1))):lower().." "
+            instructionBytes = instructionBytes..string.format("%.2x", mmuReadByte(programCounter + (i - 1))):lower().." "
         end
 
         instruction = instruction..string.format("%-09s", instructionBytes)
-        instruction = instruction.." "..(disassembledData[registers[10] + 1] or "unknown"):lower()
+        instruction = instruction.." "..(disassembledData[programCounter + 1] or "unknown"):lower()
 
         fileWrite(_traceFile, 
-            "A:"..string.format("%.2x", registers[1]):upper()..
+            "A:"..string.format("%.2x", register1):upper()..
             " F:"..flags..
             " BC:"..string.format("%.4x", readTwoRegisters(2, 3)):lower()..
             " DE:"..string.format("%.4x", readTwoRegisters(4, 5)):lower()..
             " HL:"..string.format("%.4x", readTwoRegisters(6, 7)):lower()..
-            " SP:"..string.format("%.4x", registers[11])..
-            " PC:"..string.format("%.4x", registers[10])..
+            " SP:"..string.format("%.4x", stackPointer)..
+            " PC:"..string.format("%.4x", programCounter)..
             " (cy: "..getCPUClock().t..")"..
             " ppu:"..((isScreenEnabled()) and "+" or "-")..getGPUMode()..
             " |"..instruction..
@@ -350,7 +349,7 @@ function debuggerStep()
         end
     end
 
-    if (_breakpoints[registers[10]] and not _debuggerInducedPause
+    if (_breakpoints[programCounter] and not _debuggerInducedPause
         and not _passthrough) then
         pauseCPU()
         _debuggerInducedPause = true
@@ -390,11 +389,11 @@ function renderDebugger(delta)
         dxDrawRectangle(screenStartX, screenStartY, screenWidth, screenHeight
             , tocolor(0, 0, 0, 200))
 
-        local romMemoryWindowStartX = screenStartX + WINDOW_SCALE
-        local romMemoryWindowStartY = screenStartY + WINDOW_SCALE
+        local romMemoryWindowStartX = screenStartX
+        local romMemoryWindowStartY = screenStartY
 
         local romMemoryWindowWidth = (75 * WINDOW_SCALE)
-        local romMemoryWindowHeight = ((DEBUGGER_HEIGHT - (100 * WINDOW_SCALE)) * WINDOW_SCALE)
+        local romMemoryWindowHeight = DEBUGGER_HEIGHT * WINDOW_SCALE
 
         dxDrawRectangle(romMemoryWindowStartX, romMemoryWindowStartY, romMemoryWindowWidth, romMemoryWindowHeight,
             tocolor(255, 196, 196, 150))
@@ -406,7 +405,7 @@ function renderDebugger(delta)
         local renderLineCount = (romMemoryWindowHeight / dxGetFontHeight(1 * WINDOW_SCALE, "default-bold"))
 
         local romMemorySize = MMU_MEMORY_SIZE
-        local startValue = _math_floor(registers[10] - (renderLineCount * 0.5))
+        local startValue = _math_floor(programCounter - (renderLineCount * 0.5))
 
         if (startValue < 0) then
             startValue = 0
@@ -420,7 +419,7 @@ function renderDebugger(delta)
             local romMemoryValue = mmuReadByte(i)
             local r, g, b = 255, 255, 255
 
-            if (i == registers[10]) then
+            if (i == programCounter) then
                 r, g, b = 11, 51, 255
             elseif (i == _debugMemoryPointer and _currentMenu == 0) then
                 r, g, b = 255, 51, 11
@@ -440,7 +439,7 @@ function renderDebugger(delta)
         local romWindowStartX = romMemoryWindowStartX + romMemoryWindowWidth
         local romWindowStartY = romMemoryWindowStartY
 
-        local romWindowWidth = (((DEBUGGER_WIDTH * WINDOW_SCALE) - (200 * WINDOW_SCALE)) * WINDOW_SCALE) - romMemoryWindowWidth
+        local romWindowWidth = ((DEBUGGER_WIDTH * WINDOW_SCALE) - (200 * WINDOW_SCALE)) - romMemoryWindowWidth
         local romWindowHeight = romMemoryWindowHeight
 
         dxDrawRectangle(romWindowStartX, romWindowStartY
@@ -454,7 +453,7 @@ function renderDebugger(delta)
         local renderLineCount = (romWindowHeight / dxGetFontHeight(1 * WINDOW_SCALE, "default-bold"))
 
         local romSize = #rom
-        local startValue = _math_floor(registers[10] - (renderLineCount * 0.5))
+        local startValue = _math_floor(programCounter - (renderLineCount * 0.5))
 
         if (_debugMemoryPointer ~= -1 and _currentMenu == 1) then
             startValue = _math_floor(_debugMemoryPointer - (renderLineCount * 0.5))
@@ -470,7 +469,7 @@ function renderDebugger(delta)
             if (romValue ~= nil) then
                 local r, g, b = 255, 255, 255
 
-                if (i == registers[10]) then
+                if (i == programCounter) then
                     r, g, b = 11, 51, 255
                 elseif (i == _debugMemoryPointer and _currentMenu == 1) then
                     r, g, b = 255, 51, 11
@@ -501,7 +500,7 @@ function renderDebugger(delta)
         local registersWindowStartY = screenStartY + WINDOW_SCALE
 
         local registersWindowWidth = ((DEBUGGER_WIDTH * WINDOW_SCALE) - (registersWindowStartX - screenStartX)) - (50 * WINDOW_SCALE)
-        local registersWindowHeight = ((DEBUGGER_HEIGHT - (100 * WINDOW_SCALE)) * WINDOW_SCALE)
+        local registersWindowHeight = DEBUGGER_HEIGHT * WINDOW_SCALE
 
         dxDrawRectangle(registersWindowStartX, registersWindowStartY, registersWindowWidth, registersWindowHeight,
             tocolor(255, 255, 255, 150))
@@ -511,24 +510,24 @@ function renderDebugger(delta)
 
         for _, registerPair in pairs(DEBUGGER_REGISTERS) do
             if (type(registerPair) == "table") then
-                local value = registers[DEBUGGER_REGISTER_MAPPING[registerPair[1]]] * 256
+                local value = DEBUGGER_REGISTER_MAPPING[registerPair[1]] * 256
 
-                if (DEBUGGER_REGISTER_MAPPING[registerPair[2]] == 8) then
+                if (registerPair[2] == 'f') then
                     value = value + (
-                        ((registers[8][1]) and 1 or 0) * 128 +
-                        ((registers[8][2]) and 1 or 0) * 64 +
-                        ((registers[8][3]) and 1 or 0) * 32 +
-                        ((registers[8][4]) and 1 or 0) * 16
+                        ((flagZero) and 1 or 0) * 128 +
+                        ((flagSubstract) and 1 or 0) * 64 +
+                        ((flagHalfCarry) and 1 or 0) * 32 +
+                        ((flagCarry) and 1 or 0) * 16
                     )
                 else
-                    value = value + registers[DEBUGGER_REGISTER_MAPPING[registerPair[2]]]
+                    value = value + DEBUGGER_REGISTER_MAPPING[registerPair[2]]
                 end
 
                 dxDrawText(registerPair[1]:upper()..registerPair[2]:upper()
                     .." = ".._string_format("%.4x", value):upper(), registersX, registersY,
                     registersWindowStartX + registersWindowWidth - (10 * WINDOW_SCALE), 0, tocolor(0, 0, 0), 1 * WINDOW_SCALE, "default-bold")
             else
-                local value = registers[DEBUGGER_REGISTER_MAPPING[registerPair]]
+                local value = DEBUGGER_REGISTER_MAPPING[registerPair]
 
                 dxDrawText(registerPair:upper()
                     .." = ".._string_format("%.4x", value):upper(), registersX, registersY,
@@ -584,12 +583,12 @@ function renderDebugger(delta)
             palette = 0xFC
         end
 
-        local tileRenderStart = SCREEN_WIDTH - (16 * (((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE)))
+        local tileRenderStart = SCREEN_WIDTH - (16 * ((8 * size) + (2 * WINDOW_SCALE)))
 
         local currentX = tileRenderStart
         local currentY = (SCREEN_HEIGHT / 2) - ((((math.ceil((384 * (((isCGB) and 2 or 1))) / 16) + 1) * 
-            (((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE))) + (20 * WINDOW_SCALE) +
-            ((math.ceil(39 / 16) + 1) * ((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE))) / 2)
+            ((8 * size) + (2 * WINDOW_SCALE))) + (20 * WINDOW_SCALE) +
+            ((math.ceil(39 / 16) + 1) * (8 * size) + (2 * WINDOW_SCALE))) / 2)
 
         local backgroundPalettes = getBackgroundPalettes()
 
@@ -651,11 +650,11 @@ function renderDebugger(delta)
                     address = address + 2
                 end
 
-                currentX = currentX + ((8 * WINDOW_SCALE) * size) + 2 * WINDOW_SCALE
+                currentX = currentX + (8 * size) + 2 * WINDOW_SCALE
 
                 if (((384 * (renderBank - 1)) + (tile + 1)) % 16 == 0) then
                     currentX = tileRenderStart
-                    currentY = currentY + ((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE)
+                    currentY = currentY + (8 * size) + (2 * WINDOW_SCALE)
                 end
             end
 
@@ -748,11 +747,11 @@ function renderDebugger(delta)
                 address = address + 2
             end
 
-            currentX = currentX + ((8 * WINDOW_SCALE) * size) + 2 * WINDOW_SCALE
+            currentX = currentX + (8 * size) + 2 * WINDOW_SCALE
 
             if ((oam + 1) % 16 == 0) then
                 currentX = tileRenderStart
-                currentY = currentY + ((8 * WINDOW_SCALE) * size) + (2 * WINDOW_SCALE)
+                currentY = currentY + (8 * size) + (2 * WINDOW_SCALE)
             end
         end
 
